@@ -1,0 +1,45 @@
+:root { --ql-bg:#090D16; --ql-panel:#151E2D; --ql-line:#273244; --ql-text:#F1F5F9; --ql-muted:#94A3B8; --ql-green:#24D6A0; --ql-blue:#4F8CFF; }
+.ql-brand { display:flex; align-items:center; gap:12px; padding:14px 0 22px; border-bottom:1px solid var(--ql-line); margin-bottom:22px; }
+.ql-brand-mark { width:39px; height:39px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:#17362f; color:var(--ql-green); font-size:22px; font-weight:800; letter-spacing:-3px; padding-right:3px; }
+.ql-brand-mark span { color:#d9fff1; }
+.ql-brand strong { display:block; color:var(--ql-text); font-size:15px; letter-spacing:.12em; line-height:1.2; }
+.ql-brand small { display:block; color:#718096; font-size:9px; letter-spacing:.23em; margin-top:4px; }
+.ql-sidebar-label,.ql-eyebrow { color:#718096; font-size:10px; letter-spacing:.16em; font-weight:700; }
+.ql-sidebar-label { margin:5px 0 10px; }
+.ql-sidebar-gap { margin-top:26px; border-top:1px solid var(--ql-line); padding-top:22px; }
+.ql-side-footer { margin-top:38px; padding-top:18px; border-top:1px solid var(--ql-line); color:var(--ql-muted); font-size:12px; line-height:1.8; }
+.ql-side-footer small { color:#6b788c; font-size:11px; }
+.ql-side-footer b { color:#566175; }
+.ql-live-dot { display:inline-block; height:6px; width:6px; border-radius:50%; background:#f5b942; margin-right:6px; vertical-align:middle; }
+.ql-header { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding:12px 0 24px; border-bottom:1px solid var(--ql-line); margin-bottom:25px; }
+.ql-header h1 { color:var(--ql-text); font-size:31px; letter-spacing:-.035em; margin:6px 0 4px; line-height:1.15; font-weight:700; }
+.ql-header p { color:var(--ql-muted); margin:0; font-size:12px; }
+.ql-header-context { min-width:195px; text-align:right; display:flex; flex-direction:column; gap:3px; }
+.ql-context-label { color:#6e7e94; font-size:10px; letter-spacing:.08em; }
+.ql-header-context strong { color:var(--ql-text); font-size:16px; font-weight:650; }
+.ql-header-context em { font-style:normal; color:#536177; padding:0 5px; }
+.ql-context-status { color:#f5b942; font-size:11px; }
+.ql-section-head,.ql-panel-header { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; }
+.ql-section-head { margin:0 0 14px; }
+.ql-section-head h2,.ql-panel-header h2,.ql-info-title h2 { font-size:17px; color:var(--ql-text); margin:3px 0 0; line-height:1.2; font-weight:650; }
+.ql-tag { border:1px solid #334354; border-radius:5px; padding:4px 8px; color:#aeb9c9; font-size:10px; white-space:nowrap; }
+.ql-metric { min-height:114px; padding:16px 17px; border:1px solid var(--ql-line); border-radius:8px; background:var(--ql-panel); margin-bottom:16px; }
+.ql-metric.ql-accent-green { border-top:2px solid var(--ql-green); }
+.ql-metric-label { color:var(--ql-muted); font-size:11px; }
+.ql-metric-value { color:var(--ql-text); font-size:30px; line-height:1.28; font-weight:700; letter-spacing:-.03em; }
+.ql-metric-note { color:#6f7f95; font-size:10px; }
+.ql-panel-header { padding:4px 2px 10px; }
+.ql-legend { color:var(--ql-green); font-size:11px; white-space:nowrap; }
+.ql-info-title { padding:4px 0 16px; }
+.ql-status-banner { background:#322d1f; border:1px solid #66522e; color:#f5c66d; border-radius:5px; padding:8px 10px; font-size:11px; margin-bottom:12px; }
+.ql-status-banner span { padding-right:5px; }
+.ql-info-row { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #253143; padding:9px 0; color:#8190a5; font-size:11px; }
+.ql-info-row:last-child { border-bottom:0; }
+.ql-info-row strong { color:#c9d3df; font-weight:500; text-align:right; }
+.ql-note { display:flex; gap:11px; color:#9aabc0; font-size:11px; line-height:1.55; border-top:1px solid #253143; padding:11px 0; }
+.ql-note b { color:var(--ql-green); font-size:11px; font-weight:600; }
+.ql-future { border:1px solid var(--ql-line); background:var(--ql-panel); border-radius:8px; min-height:330px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:32px; }
+.ql-future h2 { color:var(--ql-text); font-size:24px; margin:10px 0 0; }
+.ql-future p { color:var(--ql-muted); font-size:13px; }
+@media (max-width:1100px) { .ql-header h1 {font-size:25px;} .ql-header-context {min-width:150px;} .ql-metric {padding:12px; min-height:108px;} }
+@media (max-width:760px) { .ql-header {align-items:flex-start; flex-direction:column;} .ql-header-context {text-align:left;} .ql-section-head,.ql-panel-header {align-items:flex-start; flex-wrap:wrap;} .ql-metric {min-height:95px;} }

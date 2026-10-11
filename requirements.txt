@@ -1,0 +1,6 @@
+# Milestone 1: UI and verification only. AKShare joins when real data is integrated.
+streamlit>=1.54,<2
+plotly>=6.3,<7
+numpy>=1.26,<3
+pandas>=2.2,<3
+pytest>=8,<10
