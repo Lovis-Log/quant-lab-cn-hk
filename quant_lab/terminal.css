@@ -19,12 +19,16 @@
 .ql-header-context strong { color:var(--ql-text); font-size:16px; font-weight:650; }
 .ql-header-context em { font-style:normal; color:#536177; padding:0 5px; }
 .ql-context-status { color:#f5b942; font-size:11px; }
+.ql-context-status.ql-context-live { color:#24D6A0; }
 .ql-section-head,.ql-panel-header { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; }
 .ql-section-head { margin:0 0 14px; }
 .ql-section-head h2,.ql-panel-header h2,.ql-info-title h2 { font-size:17px; color:var(--ql-text); margin:3px 0 0; line-height:1.2; font-weight:650; }
 .ql-tag { border:1px solid #334354; border-radius:5px; padding:4px 8px; color:#aeb9c9; font-size:10px; white-space:nowrap; }
 .ql-metric { min-height:114px; padding:16px 17px; border:1px solid var(--ql-line); border-radius:8px; background:var(--ql-panel); margin-bottom:16px; }
 .ql-metric.ql-accent-green { border-top:2px solid var(--ql-green); }
+.ql-metric.ql-accent-up { border-top:2px solid #F06A78; }
+.ql-metric.ql-accent-down { border-top:2px solid #24D6A0; }
+.ql-metric.ql-accent-neutral { border-top:2px solid #4F8CFF; }
 .ql-metric-label { color:var(--ql-muted); font-size:11px; }
 .ql-metric-value { color:var(--ql-text); font-size:30px; line-height:1.28; font-weight:700; letter-spacing:-.03em; }
 .ql-metric-note { color:#6f7f95; font-size:10px; }
@@ -32,6 +36,7 @@
 .ql-legend { color:var(--ql-green); font-size:11px; white-space:nowrap; }
 .ql-info-title { padding:4px 0 16px; }
 .ql-status-banner { background:#322d1f; border:1px solid #66522e; color:#f5c66d; border-radius:5px; padding:8px 10px; font-size:11px; margin-bottom:12px; }
+.ql-status-banner.ql-status-ok { background:#17362f; border-color:#286d57; color:#7ae7bc; }
 .ql-status-banner span { padding-right:5px; }
 .ql-info-row { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #253143; padding:9px 0; color:#8190a5; font-size:11px; }
 .ql-info-row:last-child { border-bottom:0; }
