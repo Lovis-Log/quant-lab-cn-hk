@@ -3,6 +3,7 @@
 from datetime import date, datetime, timezone
 from dataclasses import dataclass
 import logging
+import os
 from pathlib import Path
 import re
 import traceback
@@ -14,7 +15,8 @@ from quant_lab.processing import DataValidationError, clean_stock_history
 
 
 LOGGER = logging.getLogger(__name__)
-LOG_PATH = Path(__file__).resolve().parents[1] / "logs" / "data_errors.log"
+DATA_ROOT = Path(os.environ.get("QUANT_LAB_DATA_DIR", Path(__file__).resolve().parents[1]))
+LOG_PATH = DATA_ROOT / "logs" / "data_errors.log"
 ADJUSTMENT_LABELS = {"": "不复权", "qfq": "前复权", "hfq": "后复权"}
 
 

@@ -42,6 +42,42 @@ python -m venv .venv
 
 浏览器通常打开 `http://localhost:8501`。不必激活虚拟环境，直接使用其 Python 可避免 PowerShell 执行策略问题。查询真实行情需要联网。
 
+## Windows 桌面版
+
+- **安装版**：双击 `dist\installer\QuantLab-CN-HK-Setup.exe`，默认安装到 Windows 程序目录。安装后从开始菜单的 **Quant Lab CN-HK** 启动；安装时可选桌面快捷方式。正常卸载不会删除个人研究数据。
+- **免安装版**：双击 `dist\QuantLab\QuantLab.exe`。必须保留整个 `QuantLab` 文件夹，不能只复制 EXE。Python 运行时已包含在该文件夹内，目标电脑无需另装 Python。
+- 两种方式都在本机自动启动原有 Streamlit 后端，随机选一个空闲端口并**只监听 `127.0.0.1`**，随后在独立 pywebview 窗口打开；不会自动打开系统浏览器。关闭窗口后只停止本次启动的后端进程。
+- Windows 电脑还需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。本安装包目前不内置它；若缺失，启动器会显示安装提示。当前构建的 EXE 和安装包未做商业代码签名，Windows 可能提示未知发布者。
+- 用户设置、WebView 缓存和日志写入 `%LOCALAPPDATA%\QuantLabCNHK`，不写入安装目录。主要日志是 `logs\launcher.log`、`logs\streamlit.log` 和 `logs\data_errors.log`。
+
+### 开发环境启动桌面窗口
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --no-cache-dir -r requirements-desktop.txt
+.\.venv\Scripts\python.exe desktop_launcher.py
+```
+
+开发调试用 `python.exe` 可查看错误；需要无控制台窗口时可用 `.\.venv\Scripts\pythonw.exe desktop_launcher.py`。原有 `streamlit run app.py` 方式仍可使用。
+
+### 重建 EXE 和安装包
+
+在 Windows PowerShell 中运行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -BuildInstaller
+```
+
+第二条命令需要 `ISCC.exe`（Inno Setup 7/6）在 PATH、标准安装目录，或 `.tools\InnoSetup7` 便携目录。构建脚本先运行测试、再用 PyInstaller `onedir` 模式生成 EXE；加 `-BuildInstaller` 时继续生成 Inno Setup 安装包。所有构建输出位于被 Git 忽略的 `dist\`。可用 `-SkipTests` 跳过已单独通过的测试。可选的真实浏览器打包冒烟测试为 `python tools\verify_packaged.py`，需要另装 Playwright 和 Chrome，应用本身不依赖它们。
+
+### 常见问题
+
+- **提示缺少 WebView2**：安装上述微软官方 Runtime 后重试。
+- **启动超时或空白窗口**：检查 `%LOCALAPPDATA%\QuantLabCNHK\logs` 下的启动与服务日志。启动器最多等待 35 秒服务就绪、30 秒窗口加载。
+- **8501 已占用**：桌面版自动选择其他 `127.0.0.1` 端口，不需要关闭原有 Web 版。
+- **行情请求失败**：检查网络与数据源日志；应用不会把演示数据当成真实行情。
+- **AI 功能未启用**：按下文配置你自己的 `OPENAI_API_KEY`；离线受控实验不需要 Key。
+
 运行测试：
 
 ```powershell
