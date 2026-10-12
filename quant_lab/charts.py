@@ -91,10 +91,10 @@ def demo_chart() -> go.Figure:
     return fig
 
 
-def _historical_layout(fig: go.Figure) -> go.Figure:
+def _historical_layout(fig: go.Figure, currency: str) -> go.Figure:
     fig.update_layout(
         height=520,
-        margin={"l": 18, "r": 18, "t": 24, "b": 20},
+        margin={"l": 86, "r": 22, "t": 24, "b": 35},
         paper_bgcolor="#151E2D",
         plot_bgcolor="#151E2D",
         font={"color": "#94A3B8", "family": "Arial, sans-serif", "size": 11},
@@ -104,8 +104,11 @@ def _historical_layout(fig: go.Figure) -> go.Figure:
     )
     fig.update_xaxes(showgrid=True, gridcolor="#273244", zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#273244", zeroline=False)
-    fig.update_yaxes(title_text="价格（元/股）", row=1, col=1)
-    fig.update_yaxes(title_text="成交量（股）", row=2, col=1)
+    unit = "元/股" if currency == "CNY" else "港元/股"
+    fig.update_yaxes(title_text=f"价格（{unit}）", title_standoff=10,
+                     tickformat=",.0f", row=1, col=1)
+    fig.update_yaxes(title_text="成交量（股）", title_standoff=10,
+                     tickformat=",.0f", row=2, col=1)
     fig.update_xaxes(title_text="交易日", row=2, col=1)
     return fig
 
@@ -119,18 +122,19 @@ def _volume_colors(history: pd.DataFrame) -> list[str]:
     ]
 
 
-def history_price_chart(history: pd.DataFrame) -> go.Figure:
+def history_price_chart(history: pd.DataFrame, currency: str = "CNY") -> go.Figure:
     """Actual unadjusted close and provider volume on two aligned axes."""
     fig = make_subplots(
         rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.055,
         row_heights=[0.75, 0.25],
     )
+    unit = "元/股" if currency == "CNY" else "港元/股"
     fig.add_trace(
         go.Scatter(
             x=history["date"], y=history["close"], mode="lines",
             line={"color": "#4F8CFF", "width": 2},
             name="收盘价",
-            hovertemplate="%{x|%Y-%m-%d}<br>收盘 %{y:.2f} 元/股<extra></extra>",
+            hovertemplate=f"%{{x|%Y-%m-%d}}<br>收盘 %{{y:.2f}} {unit}<extra></extra>",
         ), row=1, col=1,
     )
     fig.add_trace(
@@ -141,10 +145,10 @@ def history_price_chart(history: pd.DataFrame) -> go.Figure:
             hovertemplate="%{x|%Y-%m-%d}<br>成交量 %{y:,.0f} 股<extra></extra>",
         ), row=2, col=1,
     )
-    return _historical_layout(fig)
+    return _historical_layout(fig, currency)
 
 
-def history_candlestick_chart(history: pd.DataFrame) -> go.Figure:
+def history_candlestick_chart(history: pd.DataFrame, currency: str = "CNY") -> go.Figure:
     """Actual daily OHLC candles with Chinese-market rise/fall colors."""
     fig = make_subplots(
         rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.055,
@@ -167,4 +171,4 @@ def history_candlestick_chart(history: pd.DataFrame) -> go.Figure:
         ), row=2, col=1,
     )
     fig.update_layout(xaxis_rangeslider_visible=False)
-    return _historical_layout(fig)
+    return _historical_layout(fig, currency)

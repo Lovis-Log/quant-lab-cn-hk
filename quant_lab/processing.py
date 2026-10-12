@@ -14,10 +14,12 @@ class DataValidationError(ValueError):
     """The provider returned data that cannot be safely interpreted."""
 
 
-def clean_tencent_history(raw: pd.DataFrame, start: date, end: date) -> pd.DataFrame:
-    """Normalize Tencent's daily stock rows to a validated, ascending table.
+def clean_stock_history(raw: pd.DataFrame, start: date, end: date) -> pd.DataFrame:
+    """Normalize AKShare daily stock rows to a validated, ascending table.
 
-    Prices are unadjusted yuan per share, volume is shares, amount is yuan.
+    Prices use the selected market currency per share; volume is shares and
+    amount is in the same currency. Nonpositive adjusted prices are rejected
+    because the current ratio-return and execution models require positivity.
     """
     if not isinstance(raw, pd.DataFrame):
         raise DataValidationError("数据源没有返回表格。")
@@ -44,7 +46,7 @@ def clean_tencent_history(raw: pd.DataFrame, start: date, end: date) -> pd.DataF
     if result["date"].duplicated().any():
         raise DataValidationError("历史行情包含重复交易日。")
     if (result.loc[:, list(PRICE_COLUMNS)] <= 0).any().any():
-        raise DataValidationError("不复权价格必须大于零。")
+        raise DataValidationError("价格包含非正数，当前收益率和回测模型无法处理；请缩短区间或换用不复权口径。")
     if (result["volume"] < 0).any() or (result["amount"] < 0).any():
         raise DataValidationError("成交量或成交额不能为负。")
     if (result["high"] < result["low"]).any():
@@ -54,3 +56,7 @@ def clean_tencent_history(raw: pd.DataFrame, start: date, end: date) -> pd.DataF
     if (result["low"] - 0.01 > result[["open", "close"]].min(axis=1)).any():
         raise DataValidationError("开盘价或收盘价低于最低价。")
     return result
+
+
+# Kept for the lesson-2 tests and external notebooks using the old function name.
+clean_tencent_history = clean_stock_history

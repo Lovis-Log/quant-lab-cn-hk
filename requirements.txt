@@ -1,7 +1,10 @@
-# Milestone 2: A-share historical daily data via AKShare (Eastmoney source).
+# Quant Lab CN/HK research platform; OpenAI calls require a user-supplied API key.
 streamlit>=1.54,<2
 plotly>=6.3,<7
 numpy>=1.26,<3
 pandas>=2.2,<3
 pytest>=8,<10
 akshare==1.19.1
+scipy>=1.16,<2
+scikit-learn>=1.7,<2
+openai>=2,<3

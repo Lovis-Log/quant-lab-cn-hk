@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import math
 
+import numpy as np
 import pandas as pd
 
 
@@ -14,6 +15,16 @@ class PriceSummary:
     trading_days: int
     first_close: float
     last_close: float
+
+
+@dataclass(frozen=True)
+class PerformanceStats:
+    cumulative_return: float
+    annualized_return: float
+    annualized_volatility: float | None
+    max_drawdown: float
+    sharpe: float | None
+    ending_equity: float
 
 
 def simple_price_return(first_close: float, last_close: float) -> float:
@@ -42,3 +53,27 @@ def summarize_prices(history: pd.DataFrame) -> PriceSummary:
         first_close=first_close,
         last_close=last_close,
     )
+
+
+def performance_stats(
+    equity: pd.Series, annual_risk_free: float = 0.0, periods_per_year: int = 252
+) -> PerformanceStats:
+    """Evaluate an equity curve; daily returns and Sharpe are sample estimates."""
+    values = pd.to_numeric(equity, errors="coerce").astype(float)
+    if len(values) < 2 or not np.isfinite(values.to_numpy()).all() or (values <= 0).any():
+        raise ValueError("净值序列至少需要两个正的有限值。")
+    if annual_risk_free <= -1 or periods_per_year < 1:
+        raise ValueError("无风险利率或年交易日参数无效。")
+    returns = values.pct_change().dropna()
+    total = float(values.iloc[-1] / values.iloc[0] - 1)
+    annual = float((values.iloc[-1] / values.iloc[0]) ** (periods_per_year / len(returns)) - 1)
+    drawdown = values / values.cummax() - 1
+    volatility: float | None = None
+    sharpe: float | None = None
+    if len(returns) >= 2:
+        daily_std = float(returns.std(ddof=1))
+        if daily_std > 0:
+            volatility = daily_std * math.sqrt(periods_per_year)
+            daily_rf = (1 + annual_risk_free) ** (1 / periods_per_year) - 1
+            sharpe = (float(returns.mean()) - daily_rf) / daily_std * math.sqrt(periods_per_year)
+    return PerformanceStats(total, annual, volatility, float(drawdown.min()), sharpe, float(values.iloc[-1]))
