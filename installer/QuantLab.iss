@@ -1,11 +1,17 @@
 #define MyAppName "Quant Lab CN/HK"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.1.0-rc.1"
+#endif
+#ifndef MyAppFileVersion
+  #define MyAppFileVersion "1.1.0.0"
+#endif
 #define MyAppExeName "QuantLab.exe"
 
 [Setup]
 AppId={{1F4CE834-8E9B-4F8B-A228-FD09E48E60D3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppFileVersion}
 AppPublisher=Quant Lab CN/HK
 DefaultDirName={autopf}\Quant Lab CN-HK
 DefaultGroupName=Quant Lab CN-HK

@@ -8,6 +8,7 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules, copy_metada
 
 ROOT = Path(SPECPATH).resolve()
 datas = [
+    (str(ROOT / "VERSION"), "."),
     (str(ROOT / "app.py"), "."),
     (str(ROOT / ".streamlit" / "config.toml"), ".streamlit"),
     (str(ROOT / "quant_lab" / "terminal.css"), "quant_lab"),

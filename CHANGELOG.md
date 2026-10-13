@@ -1,5 +1,12 @@
 # 更新记录
 
+## 2026-10-13 · v1.1.0-rc.1 发布流程
+
+- 增加统一 `VERSION`、安装器版本参数和带版本号的安装包副本。
+- Windows 构建自动保存日志、源码提交、测试状态、文件大小和 SHA-256。
+- 增加 GitHub Release 发布工具：草稿上传、附件校验后发布；凭据仅在内存中使用。
+- 将每次安装包发布 Release 和记录过程写入 `AGENTS.md`，建立 `docs/RELEASES.md` 与逐版记录。
+
 ## 2026-10-13 · 数据层、终端与学习系统
 
 - 建立 Git 恢复分支 `codex/recovery-before-architecture-upgrade-20261013`，确认原有 28 项测试通过后开始升级。
