@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
-    from playwright.sync_api import sync_playwright, Error
+    from playwright.sync_api import sync_playwright, Error, expect
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--data-dir", type=Path)
@@ -33,10 +33,12 @@ def main():
         exe = args.exe.resolve()
         exe.relative_to((ROOT / ".tools").resolve())
         app_file = exe.parent / "_internal" / "app.py"
-        original = app_file.read_text(encoding="utf-8")
+        original = app_file.read_bytes()
         fixture = str(ROOT / "tools" / "gui_api_fixture.py")
-        app_file.write_text(f"import runpy\nrunpy.run_path({fixture!r})\n" + original, encoding="utf-8")
-    probe_file = directory / "probe.json"
+        app_file.write_bytes(f"import runpy\nrunpy.run_path({fixture!r})\n".encode("utf-8") + original)
+    # The user data directory is reused to test restarts; the probe file must
+    # belong to this launch, not the previous window's now-closed CDP endpoint.
+    probe_file = directory / ("probe-" + uuid4().hex + ".json")
     env = {**os.environ, "QUANT_LAB_DATA_DIR": str(directory),
            "QUANT_LAB_GUI_TEST_SECONDS": "120", "QUANT_LAB_GUI_PROBE": "1",
            "QUANT_LAB_SMOKE_RESULT": str(probe_file)}
@@ -77,17 +79,25 @@ def main():
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()
+                    page.get_by_role("button", name="恢复自动刷新", exact=True).wait_for(timeout=10000)
                 page.get_by_text("DeepSeek AI 助手", exact=True).click()
                 key = page.get_by_label("DeepSeek API Key", exact=True)
                 assert key.get_attribute("type") == "password"
                 assert key.input_value() == ""  # Session-only keys must not return after restart.
                 key.fill("sk-isolated-ui-dummy-key")
-                key.press("Tab")
+                key.press("Enter")
                 if args.mock_ai:
+                    expect(page.get_by_role("button", name="测试连接", exact=True)).to_be_enabled(timeout=10000)
                     page.get_by_role("button", name="测试连接", exact=True).click()
                     page.get_by_text("连接成功；已取得官方可用模型列表。", exact=True).wait_for(timeout=10000)
-                    page.get_by_role("combobox", name="DeepSeek 模型", exact=True).click()
-                    page.get_by_role("option", name="模拟模型 B · mock-b", exact=True).click()
+                    picker = page.get_by_role("combobox", name="DeepSeek 模型", exact=True)
+                    picker.click()
+                    page.screenshot(path=str(directory/"model-picker.png"), full_page=True)
+                    print(json.dumps({"model_options": page.get_by_role("option").all_inner_texts()}, ensure_ascii=False), flush=True)
+                    # Native keyboard selection avoids depending on the popup's
+                    # DOM representation in a particular WebView2 runtime.
+                    picker.fill("mock-b")
+                    picker.press("Enter")
                     page.get_by_label("问题（确认后发送）", exact=True).fill("解释最大回撤并给出手算例子")
                     page.get_by_role("button", name="发送到 DeepSeek", exact=True).click()
                     page.get_by_text("实际模型：mock-b-actual", exact=True).wait_for(timeout=20000)
@@ -96,10 +106,18 @@ def main():
                     page.get_by_text("学习笔记 #", exact=False).wait_for(timeout=10000)
                     summary.update({"model_switch": True, "streamed_answer": True, "answer_saved": True})
                     page.get_by_role("button", name="清除密钥", exact=True).click()
-                    assert page.get_by_label("DeepSeek API Key", exact=True).input_value() == ""
+                    expect(page.get_by_label("DeepSeek API Key", exact=True)).to_have_value("", timeout=10000)
                     summary["key_cleared"] = True
                 else:
                     manual = page.get_by_label("手动模型 ID", exact=True)
+                    import sqlite3
+                    database = directory / "research.sqlite3"
+                    if database.exists():
+                        with sqlite3.connect(database) as db:
+                            previous_model = db.execute("SELECT value_json FROM settings WHERE key='deepseek_model'").fetchone()
+                        if previous_model:
+                            assert manual.input_value() == json.loads(previous_model[0])
+                            summary["model_preference_restored"] = True
                     manual.fill("manual-model-validation")
                     manual.press("Tab")
                     summary["password_and_model_controls"] = True
@@ -116,13 +134,21 @@ def main():
         summary.update({"loaded_event": True, "child_stopped": True, "exit_code": child.returncode})
         (directory/"gui-result.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps(summary, ensure_ascii=False))
+    except Exception:
+        try:
+            page.screenshot(path=str(directory/"gui-failure.png"), full_page=True)
+            print(json.dumps({"gui_failure_record": str(directory/"gui-failure.png"),
+                              "password_field_length": len(page.get_by_label("DeepSeek API Key", exact=True).input_value())}))
+        except Exception:
+            pass
+        raise
     finally:
         if child is not None and child.poll() is None:
             # Only this freshly created process tree; never a process-name kill.
             subprocess.run(["taskkill", "/PID", str(child.pid), "/T", "/F"], capture_output=True)
             child.wait(timeout=10)
         if app_file is not None and original is not None:
-            app_file.write_text(original, encoding="utf-8")
+            app_file.write_bytes(original)
 
 
 if __name__ == "__main__":

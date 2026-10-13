@@ -102,6 +102,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prepare-old",action="store_true")
     parser.add_argument("--upgrade",type=Path)
+    parser.add_argument("--resume",action="store_true",help="Resume GUI checks after a verified installation")
     args = parser.parse_args()
     if args.prepare_old:
         old_version = (ROOT/"dist/QuantLab/_internal/VERSION").read_text(encoding="utf-8").strip()
@@ -126,11 +127,19 @@ def main():
     state = json.loads(state_path.read_text(encoding="utf-8"))
     root = Path(state["root"])
     version = (ROOT/"VERSION").read_text().strip()
-    new_installer = compile_installer(state,version,"new")
-    install(state,new_installer,"new")
+    if args.resume:
+        assert (root/"new-install.log").is_file()
+        assert digest(Path(state["install_dir"])/"QuantLab.exe") == digest(ROOT/"dist/QuantLab/QuantLab.exe")
+    else:
+        new_installer = compile_installer(state,version,"new")
+        install(state,new_installer,"new")
     assert (Path(state["install_dir"])/"_internal/VERSION").read_text().strip() == version
     python = ROOT/".venv/Scripts/python.exe"
     exe = Path(state["install_dir"])/"QuantLab.exe"
+    database = Path(state["user_data"])/"research.sqlite3"
+    with sqlite3.connect(database) as db:
+        has_notes = db.execute("SELECT 1 FROM sqlite_master WHERE name='learning_notes'").fetchone()
+        previous_notes = list(db.execute("SELECT id,title,content,model FROM learning_notes")) if has_notes else []
     # First test untouched installed entry, then the same component with a
     # temporary mocked API transport, then untouched entry after restart.
     for phase,mock in (("gui-original",False),("gui-mock",True),("gui-restart",False)):
@@ -139,17 +148,23 @@ def main():
             cmd.append("--mock-ai")
         command(cmd,root/f"{phase}.log")
     from quant_lab import storage
-    database = Path(state["user_data"])/"research.sqlite3"
     record = storage.get_experiment(1,database)
     assert record["notes"] == "旧学习笔记必须保留"
     assert storage.replay_experiment(record).audit_id == state["audit_id"]
     assert len(storage.list_watchlist(database)) == 1
-    assert len(storage.list_learning_notes(database)) == 1
+    assert len(storage.list_learning_notes(database)) == len(previous_notes)+1
     assert storage.load_settings(database)["refresh_enabled"] is False
+    assert storage.load_settings(database)["deepseek_model"] == "manual-model-validation"
     with sqlite3.connect(database) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        current_notes = list(db.execute("SELECT id,title,content,model FROM learning_notes"))
+        assert all(row in current_notes for row in previous_notes)
         assert hashlib.sha256(db.execute("SELECT raw_csv FROM experiments").fetchone()[0]).hexdigest() == state["raw_blob_sha256"]
     assert list((Path(state["user_data"])/"backups").glob("*.sqlite3"))
+    secret = b"sk-isolated-ui-dummy-key"
+    assert secret not in database.read_bytes()
+    for log in Path(state["user_data"]).rglob("*.log"):
+        assert secret not in log.read_bytes()
     uninstaller = Path(state["install_dir"])/"unins000.exe"
     command([uninstaller,"/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART",f"/LOG={root/'uninstall.log'}"],root/"uninstall-output.log")
     assert database.exists() and not exe.exists()
