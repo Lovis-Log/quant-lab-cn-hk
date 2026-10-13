@@ -1,9 +1,9 @@
 #define MyAppName "Quant Lab CN/HK"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.0-rc.1"
+  #define MyAppVersion "1.2.0-rc.1"
 #endif
 #ifndef MyAppFileVersion
-  #define MyAppFileVersion "1.1.0.0"
+  #define MyAppFileVersion "1.2.0.0"
 #endif
 #define MyAppExeName "QuantLab.exe"
 

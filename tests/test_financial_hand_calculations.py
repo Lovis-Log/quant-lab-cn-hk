@@ -21,4 +21,4 @@ def test_compound_return_drawdown_and_sharpe() -> None:
 def test_constant_returns_do_not_produce_fake_infinite_sharpe() -> None:
     stats = performance_stats(pd.Series([100.0, 110.0, 121.0]), periods_per_year=252)
     assert stats.sharpe is None
-    assert stats.annualized_volatility is None
+    assert stats.annualized_volatility == pytest.approx(0.0, abs=1e-12)

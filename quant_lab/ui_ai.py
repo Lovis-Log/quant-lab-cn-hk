@@ -15,6 +15,8 @@ from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec
 from quant_lab.ui_helpers import bundle_key, require_history
+from quant_lab import names
+from quant_lab.security import redact
 
 
 def _raw_history(bundle: HistoryBundle) -> pd.DataFrame:
@@ -33,6 +35,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     if not require_history(bundle):
         return
     data_key = bundle_key(bundle)
+    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     configured = api_configured()
     if not configured:
         st.info("未配置 OPENAI_API_KEY。你仍可运行下方的受控实验并查看确定性审计记录；AI 草拟与审阅需要自行配置 API Key。")
@@ -102,6 +105,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
         try:
             context = {
                 "market": bundle.market, "symbol": bundle.symbol,
+                "company_name": bundle.company_name,
                 "source": bundle.source, "adjustment": bundle.adjustment_label,
                 "currency": bundle.currency,
                 "first_date": str(bundle.frame["date"].iloc[0].date()),
@@ -128,7 +132,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
                 st.write(f"• {item}")
     report_text = (
         f"# Quant Lab CN/HK 研究审计\n\n"
-        f"标的：{bundle.market} {bundle.symbol}\n\n"
+        f"标的：{names.security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
         f"来源：{bundle.source}；价格口径：{bundle.adjustment_label}；币种：{bundle.currency}\n\n"
         f"实际交易日：{bundle.frame['date'].iloc[0]:%Y-%m-%d} 至 "
         f"{bundle.frame['date'].iloc[-1]:%Y-%m-%d}；记录数：{len(bundle.frame)}\n\n"
@@ -143,7 +147,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     if report is not None:
         report_text += f"\n\n## AI 审阅（未经独立核实）\n\n{report.summary}\n"
     st.download_button(
-        "下载可复核研究报告", report_text.encode("utf-8-sig"),
+        "下载可复核研究报告", redact(report_text).encode("utf-8-sig"),
         file_name=f"quant_lab_{bundle.symbol}_{experiment.audit_id}.md",
         mime="text/markdown",
     )

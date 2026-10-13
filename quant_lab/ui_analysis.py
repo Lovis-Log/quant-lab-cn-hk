@@ -12,6 +12,8 @@ from quant_lab.portfolio import analyze_portfolio
 from quant_lab.processing import DataValidationError
 from quant_lab.statistics import evaluate_linear_model, one_sample_return_test
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
+from quant_lab.ui_knowledge import render_knowledge
+from quant_lab import names
 
 
 def render_risk(bundle: HistoryBundle | None) -> None:
@@ -20,6 +22,7 @@ def render_risk(bundle: HistoryBundle | None) -> None:
     if not require_history(bundle):
         return
     history = bundle.frame
+    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     if len(history) >= 3:
         daily = history["close"].pct_change().dropna()
         price_stats = performance_stats(history["close"])
@@ -30,8 +33,10 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         cols[3].metric("历史最大回撤", percent(price_stats.max_drawdown))
     st.caption("方差与标准差使用样本口径（分母 n−1）；年化波动率约等于日标准差 × √252。历史波动不保证未来风险。")
     if st.session_state.get("learning_mode", True):
-        with st.expander("知识解释：方差、波动率与回撤"):
-            st.write("样本方差是日收益偏离均值的平方和除以 n−1；标准差是方差的平方根。年化波动率近似日标准差乘 √252。最大回撤则衡量从此前净值峰值跌得最深的一次。")
+        render_knowledge("variance", float(daily.var(ddof=1)) if len(history)>=3 else None, key="risk")
+        render_knowledge("std", float(daily.std(ddof=1)) if len(history)>=3 else None, key="risk")
+        render_knowledge("volatility", price_stats.annualized_volatility if len(history)>=3 else None, key="risk")
+        render_knowledge("drawdown", price_stats.max_drawdown if len(history)>=3 else None, key="risk")
 
     other = "000001" if bundle.market == "A 股" and bundle.symbol != "000001" else (
         "600519" if bundle.market == "A 股" else "00941" if bundle.symbol != "00941" else "00700"
@@ -79,14 +84,19 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         return
     st.caption(f"共同交易日 {len(result.closes)} 天；权重只使用截至 {result.train_last_date:%Y-%m-%d} 的训练收益率。")
     st.markdown("#### 组合权重")
-    st.dataframe(result.weights.style.format("{:.1%}"), width="stretch")
+    labels = {code: names.security_label(bundle.market, code) for code in codes}
+    st.dataframe(result.weights.rename(index=labels).style.format("{:.1%}"), width="stretch")
     cols = st.columns(2)
     with cols[0]:
         st.markdown("#### 相关系数")
-        st.dataframe(result.correlation.round(3), width="stretch")
+        st.dataframe(result.correlation.rename(index=labels, columns=labels).round(3), width="stretch")
     with cols[1]:
         st.markdown("#### 日收益率协方差")
-        st.dataframe(result.covariance.round(6), width="stretch")
+        st.dataframe(result.covariance.rename(index=labels, columns=labels).round(6), width="stretch")
+    if st.session_state.get("learning_mode", True):
+        st.caption(f"下面解释 {labels[codes[0]]} 与 {labels[codes[1]]} 的共同交易日样本。")
+        render_knowledge("correlation", float(result.correlation.loc[codes[0], codes[1]]), key="portfolio")
+        render_knowledge("covariance", float(result.covariance.loc[codes[0], codes[1]]), key="portfolio")
     figure = go.Figure()
     for name, color in (("等权", "#4F8CFF"), ("逆波动率", "#24D6A0")):
         figure.add_trace(go.Scatter(
@@ -120,6 +130,8 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     cols[2].metric("年化波动率估计", percent(test.annualized_volatility))
     cols[3].metric("均值为零检验 p 值", "—" if test.p_value is None else f"{test.p_value:.3f}")
     st.caption("单样本 t 检验的零假设是“平均日收益率为 0”。其 p 值依赖样本近似独立等条件；时间序列自相关、厚尾和反复试参数会削弱解释力。p 值不是策略获利概率。")
+    if st.session_state.get("learning_mode", True):
+        render_knowledge("p_value", test.p_value, key="statistics", observations=test.observations)
 
     fraction = st.slider("机器学习训练比例", 0.55, 0.85, 0.70, 0.05)
     key = (bundle_key(bundle), fraction)
@@ -147,6 +159,9 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     cols[1].metric("零收益基线 MAE", f"{result.baseline_mae:.4%}")
     cols[2].metric("样本外 R²", f"{result.r_squared:.3f}")
     cols[3].metric("方向一致率", f"{result.directional_accuracy:.1%}")
+    if st.session_state.get("learning_mode", True):
+        render_knowledge("mae", result.mae, key="statistics", observations=result.test_rows)
+        render_knowledge("r_squared", result.r_squared, key="statistics", observations=result.test_rows)
     st.caption(
         f"训练 {result.train_rows} 行（标签至 {result.train_end:%Y-%m-%d}）；"
         f"测试 {result.test_rows} 行（特征始于 {result.test_start:%Y-%m-%d}）；"

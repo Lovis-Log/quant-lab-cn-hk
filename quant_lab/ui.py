@@ -1,6 +1,9 @@
 """Streamlit terminal shell and market-data workspace."""
 
 from datetime import date, datetime, timedelta
+from dataclasses import replace, asdict
+import time
+import sqlite3
 from html import escape
 from pathlib import Path
 import re
@@ -24,6 +27,13 @@ from quant_lab.ui_strategy import render_backtest, render_strategy
 from quant_lab.ui_learning import render_academy
 from quant_lab.ui_research import render_research_notes
 from quant_lab.ui_terminal import render_watchlist
+from quant_lab import names
+from quant_lab.market_data import normalize_symbol
+from quant_lab.storage import list_watchlist
+from quant_lab.ui_updates import initialize_settings, persist_setting, toggle_refresh, beijing, show_history_status, INTERVALS
+from quant_lab.ui_knowledge import render_knowledge
+from quant_lab.ui_deepseek import render_deepseek
+from quant_lab.ai_context import bundle_context, experiment_context
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
@@ -50,7 +60,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         st.html('<div class="ql-sidebar-label">WORKSPACE / 导航</div>')
         page = st.radio("功能导航", PAGES, label_visibility="collapsed")
         st.html('<div class="ql-sidebar-label ql-sidebar-gap">RESEARCH SETUP / 研究参数</div>')
-        market = st.selectbox("市场", ("A 股", "港股"))
+        market = st.selectbox("市场", ("A 股", "港股"), key="market_selection")
         symbol = st.text_input(
             "A 股股票代码（非指数）" if market == "A 股" else "港股股票代码（非指数）",
             value="600519" if market == "A 股" else "00700",
@@ -68,13 +78,36 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             else None
         )
         adjustment = ADJUSTMENTS[st.selectbox("价格口径", tuple(ADJUSTMENTS))]
-        pattern = r"\d{6}" if market == "A 股" else r"\d{5}"
-        valid_symbol = bool(re.fullmatch(pattern, symbol))
+        try:
+            symbol = normalize_symbol(market, symbol)
+            valid_symbol = True
+        except ValueError:
+            valid_symbol = False
         can_load = (
             valid_symbol and dates is not None and dates[0] <= dates[1]
         )
         clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
-        st.toggle("学习模式（显示知识入口）", value=True, key="learning_mode")
+        st.toggle("学习模式（显示知识入口）", key="learning_mode", on_change=persist_setting, args=("learning_mode",))
+        if valid_symbol:
+            st.caption("当前选择：" + names.security_label(market, symbol))
+        try:
+            watch_items = list_watchlist()
+        except (OSError, ValueError, sqlite3.Error):
+            watch_items = []
+        if watch_items:
+            def choose_watch():
+                chosen = st.session_state.get("sidebar_watch")
+                if chosen:
+                    st.session_state["market_selection"] = chosen[0]
+                    st.session_state[f"symbol_{chosen[0]}"] = chosen[1]
+            st.selectbox("从自选股选择", [None] + watch_items, key="sidebar_watch", on_change=choose_watch,
+                         format_func=lambda item: "手动输入" if item is None else names.security_label(*item))
+        st.toggle("自动刷新行情（仅市场页）", key="refresh_enabled", on_change=persist_setting, args=("refresh_enabled",))
+        st.selectbox("自动刷新间隔", INTERVALS, key="refresh_interval_seconds",
+                     format_func=lambda seconds: f"{seconds//60} 分钟", on_change=persist_setting, args=("refresh_interval_seconds",))
+        st.caption("自动刷新仅在软件和市场页会话运行时生效；关闭软件后不更新。")
+        if st.session_state.get("settings_error"):
+            st.warning(st.session_state.pop("settings_error"))
         if not valid_symbol:
             st.caption("A 股请输入 6 位、港股请输入 5 位股票代码。")
         elif dates is None:
@@ -101,7 +134,7 @@ def _header(page: str, market: str, symbol: str, latest_date: str | None) -> Non
         '<p>中国 A 股与港股量化研究 · 历史数据与模拟实验</p></div>'
         '<div class="ql-header-context">'
         '<span class="ql-context-label">当前研究标的</span>'
-        f'<strong>{escape(market)} <em>/</em> {escape(symbol or "未填写")}</strong>'
+        f'<strong>{escape(names.security_label(market, symbol) if symbol else "未填写")}</strong>'
         f'<span class="ql-context-status {status_class}">{escape(status)}</span>'
         '</div></div>'
     )
@@ -200,8 +233,8 @@ def _main_page(
         with col:
             _metric(label, value, note, accent)
     if st.session_state.get("learning_mode", True):
-        with st.expander("知识解释：简单价格收益率"):
-            st.write("收益率 = 末期收盘价 ÷ 初期收盘价 − 1。例如 10 元到 11 元是 10%。这里只比较价格，不含现金分红和交易费用。可在 Quant Academy 调整数字练习。")
+        render_knowledge("simple_return", summary.simple_return if has_data else None,
+                         key="market", observations=len(history) if has_data else None)
 
     chart_col, info_col = st.columns([3.35, 1], gap="small")
     with chart_col:
@@ -215,13 +248,13 @@ def _main_page(
                 price_tab, candle_tab = st.tabs(("收盘价与成交量", "日 K 线"))
                 with price_tab:
                     st.plotly_chart(
-                        history_price_chart(history, currency), width="stretch", theme=None,
+                        history_price_chart(history, currency).update_layout(title_text=names.security_label(market, symbol, bundle.company_name)), width="stretch", theme=None,
                         config={"displaylogo": False, "scrollZoom": False},
                         alt=f"{source}真实历史日线的收盘价（{unit}每股）和成交量（股）。",
                     )
                 with candle_tab:
                     st.plotly_chart(
-                        history_candlestick_chart(history, currency), width="stretch", theme=None,
+                        history_candlestick_chart(history, currency).update_layout(title_text=names.security_label(market, symbol, bundle.company_name)), width="stretch", theme=None,
                         config={"displaylogo": False, "scrollZoom": False},
                         alt=f"{source}真实历史日线的开高低收 K 线及成交量。红色上涨，绿色下跌。",
                     )
@@ -245,7 +278,7 @@ def _main_page(
     with info_col:
         latest = history["date"].iloc[-1].strftime("%Y-%m-%d") if has_data else "—"
         received = (
-            bundle.received_at.astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+            beijing(bundle.received_at)
             if bundle is not None and bundle.received_at is not None else "—"
         )
         status_class = "ql-status-ok" if has_data else ""
@@ -283,6 +316,7 @@ def _main_page(
         )
         if has_data:
             table = _display_history(history, currency)
+            table.insert(0, "股票", names.security_label(market, symbol, bundle.company_name))
             st.dataframe(table, width="stretch", hide_index=True, height=280)
             first = table["日期"].iloc[0].replace("-", "")
             last = table["日期"].iloc[-1].replace("-", "")
@@ -300,6 +334,53 @@ def _main_page(
     render_watchlist(market, symbol)
 
 
+def _market_workspace(query, market, symbol, adjustment):
+    interval = st.session_state.get("refresh_interval_seconds", 300)
+    auto = st.session_state.get("refresh_enabled", True)
+
+    @st.fragment(run_every=interval if auto else None)
+    def body():
+        current = st.session_state.get("loaded_query") == query
+        bundle = st.session_state.get("loaded_bundle") if current else None
+        error = st.session_state.get("load_error") if current else None
+        wait = st.session_state.get("history_manual_at", float('-inf')) + 5 - time.monotonic()
+        first, second = st.columns(2)
+        requested = first.button("立即更新历史日线", disabled=query is None, key="history_refresh")
+        manual = requested and wait <= 0
+        if requested and wait > 0:
+            st.info(f"上一次立即更新刚发起，请等待 {wait:.0f} 秒后再点击；本次没有重复请求。")
+        pause = second.button("暂停自动刷新" if auto else "恢复自动刷新", on_click=toggle_refresh, key="refresh_pause")
+        if pause:
+            st.rerun()
+        now = datetime.now(ZoneInfo("Asia/Shanghai"))
+        next_attempt = st.session_state.get("history_next_attempt") if current else None
+        updated = st.session_state.pop("_history_loaded_this_run", False)
+        if manual or (auto and bundle is not None and next_attempt and now >= next_attempt):
+            if manual:
+                st.session_state["history_manual_at"] = time.monotonic()
+            previous = bundle
+            try:
+                new_bundle = fetch_history(*query, force=True)
+                bundle = replace(new_bundle, company_name=names.security_name(market, symbol))
+                error = bundle.update_error
+                updated = True
+            except (DataUnavailableError, DataValidationError, ValueError):
+                error = "历史日线更新失败；保留上次有效数据，数据可能过期。"
+                if previous is not None:
+                    bundle = replace(previous, update_result="请求失败", update_error=error,
+                                     last_attempt_at=now, cached=True)
+            st.session_state["loaded_bundle"] = bundle
+            st.session_state["loaded_query"] = query
+            st.session_state["load_error"] = error
+            next_attempt = now + timedelta(seconds=interval)
+            st.session_state["history_next_attempt"] = next_attempt
+        latest = str(bundle.frame.date.iloc[-1].date()) if bundle is not None and not bundle.frame.empty else None
+        _header("市场数据", market, symbol, latest)
+        show_history_status(bundle, next_attempt, session_cache=not updated)
+        _main_page(bundle, error, market, symbol, adjustment)
+    body()
+
+
 def render_app() -> None:
     st.set_page_config(
         page_title="Quant Lab CN/HK",
@@ -308,22 +389,30 @@ def render_app() -> None:
         initial_sidebar_state="expanded",
     )
     st.html(CSS_PATH)
+    initialize_settings()
     page, market, symbol, dates, adjustment, clicked = _sidebar()
     bundle: HistoryBundle | None = None
     error: str | None = None
+    query = None
+    st.session_state["active_backtest_context"] = None
+    record = None
     if dates is not None:
         query = (market, symbol, dates[0], dates[1], adjustment)
         if clicked:
             try:
                 with st.spinner("正在获取并验证真实历史日线…"):
-                    st.session_state["loaded_bundle"] = fetch_history(
+                    fetched = fetch_history(
                         market, symbol, *dates, adjustment
                     )
-                st.session_state["load_error"] = None
+                    st.session_state["loaded_bundle"] = replace(fetched, company_name=names.security_name(market, symbol))
+                    st.session_state["_history_loaded_this_run"] = True
+                st.session_state["load_error"] = fetched.update_error
             except (DataUnavailableError, DataValidationError, ValueError) as exc:
-                st.session_state["loaded_bundle"] = None
+                if st.session_state.get("loaded_query") != query:
+                    st.session_state["loaded_bundle"] = None
                 st.session_state["load_error"] = str(exc)
             st.session_state["loaded_query"] = query
+            st.session_state["history_next_attempt"] = datetime.now(ZoneInfo("Asia/Shanghai")) + timedelta(seconds=st.session_state["refresh_interval_seconds"])
         if st.session_state.get("loaded_query") == query:
             bundle = st.session_state.get("loaded_bundle")
             error = st.session_state.get("load_error")
@@ -332,25 +421,34 @@ def render_app() -> None:
         bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
         if bundle is not None and not bundle.frame.empty else None
     )
-    _header(page, market, symbol, latest_date)
     if page == "市场数据":
-        _main_page(bundle, error, market, symbol, adjustment)
-        return
-    if page == "Quant Academy":
+        _market_workspace(query, market, symbol, adjustment)
+        bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
+    elif page == "Quant Academy":
+        _header(page, market, symbol, latest_date)
         render_academy()
-        return
-    if page == "研究笔记":
-        render_research_notes()
-        return
-    if error:
-        st.error(error)
-    if page == "策略实验室":
-        render_strategy(bundle)
-    elif page == "历史回测":
-        render_backtest(bundle)
-    elif page == "风险与组合":
-        render_risk(bundle)
-    elif page == "统计与机器学习":
-        render_statistics(bundle)
+    elif page == "研究笔记":
+        _header(page, market, symbol, latest_date)
+        record = render_research_notes()
     else:
-        render_ai(bundle)
+        _header(page, market, symbol, latest_date)
+        if error:
+            st.warning(error)
+        if page == "策略实验室":
+            render_strategy(bundle)
+        elif page == "历史回测":
+            render_backtest(bundle)
+        elif page == "风险与组合":
+            render_risk(bundle)
+        elif page == "统计与机器学习":
+            render_statistics(bundle)
+        else:
+            render_ai(bundle)
+    context = experiment_context(record) if record else bundle_context(page, bundle)
+    context["page"] = page
+    if st.session_state.get("active_backtest_context"):
+        context.update(st.session_state["active_backtest_context"])
+    if page == "Quant Academy":
+        context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
+                   "data_status": "离线教学实验，不是股票行情。"}
+    render_deepseek(context)

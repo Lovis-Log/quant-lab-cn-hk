@@ -14,6 +14,7 @@ import pandas as pd
 from quant_lab.processing import DataValidationError, clean_stock_history
 from quant_lab.market_data import MarketSnapshot, normalize_symbol, ADJUSTMENTS
 from quant_lab.paths import user_data_dir
+from quant_lab.refresh import RefreshCache
 
 
 LOGGER = logging.getLogger(__name__)
@@ -31,6 +32,11 @@ class HistoryBundle:
     adjustment: str
     received_at: datetime | None = None
     cached: bool = False
+    cache_age_seconds: float = 0.0
+    update_result: str = "取得新数据"
+    update_error: str | None = None
+    last_attempt_at: datetime | None = None
+    company_name: str = ""
 
     @property
     def adjustment_label(self) -> str:
@@ -123,31 +129,26 @@ class HistoryCache:
         self.provider = provider
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
-        self._values: dict[tuple, tuple[float, HistoryBundle]] = {}
-        self._lock = Lock()
+        self.cache = RefreshCache(ttl_seconds, max_entries)
 
     def get(self, market: str, symbol: str, start: date, end: date,
-            adjustment: str = "") -> HistoryBundle:
+            adjustment: str = "", *, force: bool = False) -> HistoryBundle:
         key = (market, normalize_symbol(market, symbol), start, end, adjustment)
-        with self._lock:
-            now = time.monotonic()
-            cached = self._values.get(key)
-            if cached and now - cached[0] < self.ttl_seconds:
-                return replace(cached[1], frame=cached[1].frame.copy(deep=True), cached=True)
-            bundle = self.provider.history(*key)
-            self._values[key] = (time.monotonic(), bundle)
-            if len(self._values) > self.max_entries:
-                oldest = min(self._values, key=lambda entry: self._values[entry][0])
-                del self._values[oldest]
-            return replace(bundle, frame=bundle.frame.copy(deep=True))
+        view = self.cache.get(key, lambda: self.provider.history(*key), force=force,
+                              same=lambda a, b: a.frame.equals(b.frame))
+        if view.value is None:
+            raise DataUnavailableError("历史行情暂时无法获取；没有上次有效数据。")
+        return replace(view.value, frame=view.value.frame.copy(deep=True), cached=view.cached,
+                       cache_age_seconds=view.age_seconds, update_result=view.result,
+                       update_error=view.error, last_attempt_at=view.attempted_at)
 
 
 HISTORY_CACHE = HistoryCache(DEFAULT_PROVIDER)
 
 
 def fetch_history_cached(market: str, symbol: str, start: date, end: date,
-                         adjustment: str = "") -> HistoryBundle:
-    return HISTORY_CACHE.get(market, symbol, start, end, adjustment)
+                         adjustment: str = "", *, force: bool = False) -> HistoryBundle:
+    return HISTORY_CACHE.get(market, symbol, start, end, adjustment, force=force)
 
 
 class SnapshotCache:
@@ -158,25 +159,26 @@ class SnapshotCache:
         self.provider = provider
         self.ttl_seconds = ttl_seconds
         self.min_request_gap = min_request_gap
-        self._values: dict[tuple[str, str], tuple[float, MarketSnapshot]] = {}
+        self.cache = RefreshCache(ttl_seconds)
         self._lock = Lock()
         self._last_request_at = float("-inf")
 
     def get(self, market: str, symbol: str, force: bool = False) -> tuple[MarketSnapshot, bool]:
         key = (market, normalize_symbol(market, symbol))
-        with self._lock:
-            now = time.monotonic()
-            cached = self._values.get(key)
-            minimum_gap = 60 if force else self.ttl_seconds
-            if cached and now - cached[0] < minimum_gap:
-                return cached[1], True
-            remaining = self.min_request_gap - (now - self._last_request_at)
-            if remaining > 0:
-                time.sleep(remaining)
-            self._last_request_at = time.monotonic()
-            snapshot = self.provider.snapshot(*key)
-            self._values[key] = (time.monotonic(), snapshot)
-            return snapshot, False
+        def load():
+            with self._lock:
+                remaining = self.min_request_gap - (time.monotonic()-self._last_request_at)
+                if remaining > 0:
+                    time.sleep(remaining)
+                self._last_request_at = time.monotonic()
+                return self.provider.snapshot(*key)
+        view = self.cache.get(key, load, force=force,
+                              same=lambda a, b: (a.observation_date,a.last_close) == (b.observation_date,b.last_close))
+        if view.value is None:
+            raise DataUnavailableError("行情参考暂时无法获取；没有上次有效数据。")
+        quote = replace(view.value, cached=view.cached, cache_age_seconds=view.age_seconds,
+                        update_result=view.result, update_error=view.error, last_attempt_at=view.attempted_at)
+        return quote, quote.cached
 
 
 SNAPSHOT_CACHE = SnapshotCache(DEFAULT_PROVIDER)

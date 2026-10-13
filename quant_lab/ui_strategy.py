@@ -12,6 +12,9 @@ from quant_lab.research import run_experiment, sensitivity_table
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec, build_signals
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
 from quant_lab.storage import save_experiment
+from quant_lab import names
+from quant_lab.ui_knowledge import render_knowledge
+from dataclasses import asdict
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -46,6 +49,7 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
     if spec is None:
         return
     signals = build_signals(bundle.frame, spec)
+    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     chart = go.Figure()
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["close"], name="收盘价",
@@ -69,7 +73,11 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
             x=points["date"], y=points["close"], mode="markers", name=name,
             marker={"color": color, "symbol": marker, "size": 10},
         ))
+    chart.update_layout(title_text=names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     st.plotly_chart(style_figure(chart, 480), width="stretch", theme=None)
+    if st.session_state.get("learning_mode", True):
+        render_knowledge("moving_average", float(signals.ma_long.iloc[-1]) if signals.ma_long.notna().any() else None,
+                         key="strategy", observations=len(signals))
     st.caption("MA 是最近 N 个交易日收盘价的算术平均；样本不足时没有均线。信号使用当日收盘数据，回测在下一交易日开盘尝试成交。")
     display = signals.tail(30).rename(columns={
         "date": "交易日", "close": "收盘价", "ma_short": "短均线",
@@ -120,7 +128,10 @@ def _raw_fills(bundle: HistoryBundle) -> pd.DataFrame:
         return bundle.frame
     start = bundle.frame["date"].iloc[0].date()
     end = bundle.frame["date"].iloc[-1].date()
-    return fetch_history(bundle.market, bundle.symbol, start, end, "").frame
+    raw = fetch_history(bundle.market, bundle.symbol, start, end, "", force=True)
+    if raw.update_error:
+        raise DataUnavailableError("不复权成交数据更新失败；请稍后重试，不能混用不同获取批次。")
+    return raw.frame
 
 
 def render_backtest(bundle: HistoryBundle | None) -> None:
@@ -156,6 +167,12 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     result = st.session_state.get("backtest_result")
     if result is None:
         return
+    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.session_state["active_backtest_context"] = {
+        "strategy": asdict(spec), "costs": asdict(config), "audit_id": result.audit_id,
+        "performance": {"strategy": asdict(result.full_stats), "benchmark": asdict(result.benchmark_stats),
+                        "train": asdict(result.train_stats), "test": asdict(result.test_stats)},
+    }
     with st.container(border=True):
         cols = st.columns(4)
         cols[0].metric("策略累计收益", percent(result.full_stats.cumulative_return))
@@ -164,8 +181,14 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
         cols[3].metric("夏普比率", "—" if result.full_stats.sharpe is None else f"{result.full_stats.sharpe:.2f}")
         st.caption(f"同成本买入并持有基准：{result.benchmark_stats.cumulative_return:+.2%}；实验指纹：`{result.audit_id}`。这些是模型结果，不是可实现收益。")
         if st.session_state.get("learning_mode", True):
-            with st.expander("知识解释：收益、回撤、夏普"):
-                st.write("累计收益比较末期与初期净值；最大回撤是相对先前峰值的最深跌幅；夏普比率用平均超额日收益除以样本日收益标准差，并乘以 √252。样本短或波动为零时不报告夏普。")
+            render_knowledge("drawdown", result.full_stats.max_drawdown, key="backtest", observations=len(bundle.frame))
+            render_knowledge("sharpe", result.full_stats.sharpe, key="backtest", observations=len(bundle.frame))
+            render_knowledge("volatility", result.full_stats.annualized_volatility, key="backtest")
+            render_knowledge("annual_return", result.full_stats.annualized_return, key="backtest", observations=len(bundle.frame))
+            render_knowledge("benchmark", result.benchmark_stats.cumulative_return, key="backtest")
+            render_knowledge("costs", key="backtest")
+            render_knowledge("slippage", config.slippage_bps, key="backtest")
+            render_knowledge("bias", key="backtest")
     figure = go.Figure()
     figure.add_trace(go.Scatter(
         x=result.strategy.equity["date"],
@@ -178,6 +201,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
         name="同成本买入并持有", line={"color": "#4F8CFF", "width": 1.5},
     ))
     figure.add_vline(x=result.split_date, line_color="#F5B942", line_dash="dot")
+    figure.update_layout(title_text=names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     st.plotly_chart(style_figure(figure, 430), width="stretch", theme=None)
     st.caption(f"黄色虚线起为样本外区间（{result.split_date:%Y-%m-%d}）。前复权/后复权只用于生成信号；开盘成交与净值始终使用不复权价格。")
     st.dataframe(pd.DataFrame(
@@ -209,7 +233,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     st.dataframe(grid, width="stretch", hide_index=True)
     st.caption("A 股模拟 T+1、用户设定的买入单位、零成交量和简化涨跌停；港股交易单位也由用户输入。停牌、涨跌停队列、公司行动、幸存者偏差和真实费用无法由日线完整重建。")
     with st.expander("保存本次实验与研究笔记"):
-        title = st.text_input("研究标题", value=f"{bundle.symbol} {STRATEGY_NAMES[spec.kind]}实验")
+        title = st.text_input("研究标题", value=f"{names.security_label(bundle.market, bundle.symbol, bundle.company_name)} {STRATEGY_NAMES[spec.kind]}实验")
         hypothesis = st.text_area("研究假设", value="该均线规则在样本外仍具有可观察的风险收益特征。")
         notes = st.text_area("学习笔记", value="")
         if st.button("保存实验", key="save_experiment"):
@@ -222,6 +246,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
                     train_fraction=train_fraction, result=result,
                     source=bundle.source, adjustment=bundle.adjustment,
                     received_at=bundle.received_at,
+                    company_name=bundle.company_name,
                 )
                 st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
             except (OSError, ValueError, sqlite3.Error) as exc:

@@ -68,14 +68,16 @@ def test_snapshot_cache_throttles_and_preserves_failure(monkeypatch) -> None:
     first, cached = cache.get("A 股", "600519")
     assert not cached and first.status.startswith("历史日线")
     clock["now"] = 130
-    assert cache.get("A 股", "600519", force=True)[1] is True
-    assert provider.calls == 1
+    failed, cached = cache.get("A 股", "600519", force=True)
+    assert cached and failed.update_error and failed.update_result == "请求失败"
+    assert failed.last_close == first.last_close and failed.received_at == first.received_at
+    assert provider.calls == 2
     clock["now"] = 200
-    with pytest.raises(DataUnavailableError):
-        cache.get("A 股", "600519", force=True)
+    renewed, cached = cache.get("A 股", "600519", force=True)
+    assert not cached and renewed.update_result == "检查成功，数据未变化"
     clock["now"] = 201
     assert cache.get("A 股", "600519")[1] is True
-    assert provider.calls == 2
+    assert provider.calls == 3
 
 
 def test_history_cache_returns_defensive_copies(monkeypatch) -> None:

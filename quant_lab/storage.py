@@ -19,6 +19,9 @@ from quant_lab.market_data import normalize_symbol
 from quant_lab.paths import user_data_dir
 from quant_lab.research import ExperimentResult
 from quant_lab.strategy import StrategySpec
+from quant_lab.migrations import migrate
+from quant_lab.security import redact
+from quant_lab.market_data import display_security
 
 
 def database_path() -> Path:
@@ -33,23 +36,7 @@ def _connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     try:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys=ON")
-        connection.executescript("""
-        CREATE TABLE IF NOT EXISTS watchlist (
-            market TEXT NOT NULL, symbol TEXT NOT NULL,
-            added_at TEXT NOT NULL, PRIMARY KEY (market, symbol)
-        );
-        CREATE TABLE IF NOT EXISTS experiments (
-            id INTEGER PRIMARY KEY, title TEXT NOT NULL, hypothesis TEXT NOT NULL,
-            notes TEXT NOT NULL, market TEXT NOT NULL, symbol TEXT NOT NULL,
-            start_date TEXT NOT NULL, end_date TEXT NOT NULL,
-            strategy_json TEXT NOT NULL, config_json TEXT NOT NULL,
-            train_fraction REAL NOT NULL, metrics_json TEXT NOT NULL,
-            source TEXT NOT NULL, adjustment TEXT NOT NULL,
-            received_at TEXT, created_at TEXT NOT NULL, audit_id TEXT NOT NULL,
-            raw_sha256 TEXT NOT NULL, signal_sha256 TEXT NOT NULL,
-            raw_csv BLOB NOT NULL, signal_csv BLOB NOT NULL
-        );
-        """)
+        migrate(connection, target)
         yield connection
         connection.commit()
     except Exception:
@@ -68,7 +55,7 @@ def list_watchlist(path: Path | None = None) -> list[tuple[str, str]]:
         )]
 
 
-def add_watchlist(market: str, symbol: str, path: Path | None = None) -> str:
+def add_watchlist(market: str, symbol: str, path: Path | None = None, *, company_name: str = "") -> str:
     symbol = normalize_symbol(market, symbol)
     with _connect(path) as db:
         count = db.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0]
@@ -76,8 +63,8 @@ def add_watchlist(market: str, symbol: str, path: Path | None = None) -> str:
                              (market, symbol)).fetchone()
         if count >= 10 and not present:
             raise ValueError("自选股最多保存 10 只，以控制免费数据接口请求量。")
-        db.execute("INSERT OR IGNORE INTO watchlist VALUES (?, ?, ?)",
-                   (market, symbol, datetime.now(timezone.utc).isoformat()))
+        db.execute("INSERT OR IGNORE INTO watchlist (market,symbol,added_at,company_name) VALUES (?, ?, ?, ?)",
+                   (market, symbol, datetime.now(timezone.utc).isoformat(), redact(company_name)))
     return symbol
 
 
@@ -96,6 +83,7 @@ def save_experiment(
     spec: StrategySpec, config: BacktestConfig, train_fraction: float,
     result: ExperimentResult, source: str, adjustment: str,
     received_at: datetime | None, path: Path | None = None,
+    company_name: str = "",
 ) -> int:
     if not title.strip() or not hypothesis.strip():
         raise ValueError("研究标题和假设不能为空。")
@@ -119,18 +107,19 @@ def save_experiment(
                 title, hypothesis, notes, market, symbol, start_date, end_date,
                 strategy_json, config_json, train_fraction, metrics_json,
                 source, adjustment, received_at, created_at, audit_id,
-                raw_sha256, signal_sha256, raw_csv, signal_csv
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                raw_sha256, signal_sha256, raw_csv, signal_csv, company_name
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
-            title.strip(), hypothesis.strip(), notes.strip(), market, symbol,
+            redact(title.strip()), redact(hypothesis.strip()), redact(notes.strip()), market, symbol,
             str(raw_history["date"].iloc[0].date()), str(raw_history["date"].iloc[-1].date()),
             json.dumps(asdict(spec), ensure_ascii=False),
             json.dumps(asdict(config), ensure_ascii=False), train_fraction,
-            json.dumps(stats, ensure_ascii=False, default=str), source, adjustment,
+            json.dumps(stats, ensure_ascii=False, default=str), redact(source), adjustment,
             received_at.isoformat() if received_at else None,
             datetime.now(timezone.utc).isoformat(), result.audit_id,
             hashlib.sha256(raw_bytes).hexdigest(), hashlib.sha256(signal_bytes).hexdigest(),
             zlib.compress(raw_bytes), zlib.compress(signal_bytes),
+            redact(company_name),
         ))
         return int(cursor.lastrowid)
 
@@ -141,7 +130,7 @@ def list_experiments(path: Path | None = None) -> list[dict]:
     with _connect(path) as db:
         rows = db.execute("""
             SELECT id, title, market, symbol, start_date, end_date, created_at,
-                   audit_id, source FROM experiments ORDER BY id DESC
+                   audit_id, source, company_name FROM experiments ORDER BY id DESC
         """).fetchall()
         return [dict(row) for row in rows]
 
@@ -190,6 +179,8 @@ def export_experiment_zip(record: dict) -> bytes:
             "strategy": record["strategy"], "config": record["config"],
             "train_fraction": record["train_fraction"],
             "source": record["source"], "adjustment": record["adjustment"],
+            "market": record["market"], "symbol": record["symbol"],
+            "company_name": record.get("company_name", ""),
             "audit_id": record["audit_id"],
             "raw_sha256": record["raw_sha256"],
             "signal_sha256": record["signal_sha256"],
@@ -199,13 +190,13 @@ def export_experiment_zip(record: dict) -> bytes:
 
 def render_report(record: dict) -> str:
     metrics = record["metrics"]
-    return "\n".join([
+    return redact("\n".join([
         f"# {record['title']}", "", f"- 实验编号：{record['id']}",
         f"- 假设：{record['hypothesis']}",
-        f"- 标的：{record['market']} {record['symbol']}",
+        f"- 标的：{display_security(record['market'], record['symbol'], record.get('company_name'))}",
         f"- 区间：{record['start_date']} 至 {record['end_date']}",
         f"- 数据来源：{record['source']}；复权：{record['adjustment'] or '不复权'}",
-        f"- 行情接收时间（UTC）：{record['received_at'] or '未记录'}",
+        f"- 上次成功获取时间（北京时间 UTC+08:00）：{_beijing(record['received_at'])}",
         f"- 实验时间（UTC）：{record['created_at']}",
         f"- 实验指纹：{record['audit_id']}",
         f"- 原始/信号数据 SHA-256：{record['raw_sha256']} / {record['signal_sha256']}",
@@ -222,4 +213,72 @@ def render_report(record: dict) -> str:
         "## 复现", "",
         "本地 SQLite 记录内含本次使用的原始成交价格和信号价格完整快照，"
         "可用相同策略、费用和训练比例重新运行。日线回测仍不证明可实际成交。", "",
-    ])
+    ]))
+
+
+def _beijing(value: str | None) -> str:
+    from zoneinfo import ZoneInfo
+    if not value:
+        return "未记录（旧实验）"
+    dt = datetime.fromisoformat(value)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(ZoneInfo("Asia/Shanghai")).isoformat(sep=" ")
+
+
+SETTING_KEYS = {"refresh_enabled", "refresh_interval_seconds", "learning_mode", "deepseek_model"}
+
+
+def load_settings(path: Path | None = None) -> dict:
+    if not (path or database_path()).exists():
+        return {}
+    with _connect(path) as db:
+        return {r["key"]: json.loads(r["value_json"]) for r in db.execute("SELECT * FROM settings")
+                if r["key"] in SETTING_KEYS}
+
+
+def save_setting(key: str, value, path: Path | None = None) -> None:
+    if key not in SETTING_KEYS:
+        raise ValueError("该设置不允许写入研究数据库。")
+    if isinstance(value, str) and redact(value) != value:
+        raise ValueError("不能把密钥写入普通设置。")
+    with _connect(path) as db:
+        db.execute("INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json",
+                   (key, json.dumps(value, ensure_ascii=False)))
+
+
+def cached_security_name(market: str, symbol: str, path: Path | None = None) -> dict | None:
+    if not (path or database_path()).exists():
+        return None
+    with _connect(path) as db:
+        row = db.execute("SELECT * FROM security_names WHERE market=? AND symbol=?", (market, symbol)).fetchone()
+        return dict(row) if row else None
+
+
+def save_security_name(market: str, symbol: str, name: str, source: str,
+                       fetched_at: datetime, path: Path | None = None) -> None:
+    with _connect(path) as db:
+        db.execute("""INSERT INTO security_names VALUES (?,?,?,?,?) ON CONFLICT(market,symbol)
+                   DO UPDATE SET name=excluded.name,source=excluded.source,fetched_at=excluded.fetched_at""",
+                   (market, symbol, redact(name), source, fetched_at.isoformat()))
+
+
+def save_learning_note(title: str, content: str, *, model: str = "", origin: str = "手写",
+                       market: str | None = None, symbol: str | None = None,
+                       experiment_id: int | None = None, path: Path | None = None,
+                       secrets=()) -> int:
+    if not title.strip() or not content.strip():
+        raise ValueError("笔记标题与内容不能为空。")
+    with _connect(path) as db:
+        cur = db.execute("""INSERT INTO learning_notes
+            (title,content,origin,model,market,symbol,experiment_id,created_at) VALUES (?,?,?,?,?,?,?,?)""",
+            (redact(title, secrets), redact(content, secrets), redact(origin, secrets), redact(model, secrets), market, symbol,
+             experiment_id, datetime.now(timezone.utc).isoformat()))
+        return int(cur.lastrowid)
+
+
+def list_learning_notes(path: Path | None = None) -> list[dict]:
+    if not (path or database_path()).exists():
+        return []
+    with _connect(path) as db:
+        return [dict(row) for row in db.execute("SELECT * FROM learning_notes ORDER BY id DESC")]

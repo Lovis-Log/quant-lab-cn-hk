@@ -78,6 +78,11 @@ def configure_logging(root: Path) -> None:
         )
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         LOGGER.addHandler(handler)
+        # Capture WebView2 initialization and JS-bridge diagnostics, which were
+        # absent from the earlier timeout probe's launcher log.
+        renderer_logger = logging.getLogger("pywebview")
+        renderer_logger.setLevel(logging.INFO)
+        renderer_logger.addHandler(handler)
 
 
 @contextmanager
@@ -253,11 +258,28 @@ def run_desktop(smoke_test: bool = False) -> int:
                 return 0
             import webview
 
+            probe_debug_port = None
+            if os.environ.get("QUANT_LAB_GUI_PROBE") == "1":
+                probe_debug_port = choose_loopback_port()
+                webview.settings["REMOTE_DEBUGGING_PORT"] = probe_debug_port
+                _write_probe_result({"ready": True, "port": port, "debug_port": probe_debug_port,
+                                     "state": "starting", "data_dir": str(root)})
+
+            class ProbeAPI:
+                _window = None
+                def close(self):
+                    if self._window:
+                        threading.Thread(target=self._window.destroy, daemon=True).start()
+            probe_api = ProbeAPI() if probe_debug_port else None
+
             url = f"http://{HOST}:{port}"
             window = webview.create_window(
                 APP_TITLE, url, width=1440, height=900,
                 min_size=(1100, 700), background_color="#090D16",
+                js_api=probe_api,
             )
+            if probe_api:
+                probe_api._window = window
             window.events.shown += shown.set
             window.events.before_load += before_load.set
             window.events.loaded += loaded.set
@@ -308,6 +330,7 @@ def run_desktop(smoke_test: bool = False) -> int:
                     "webview_shown": shown.is_set(),
                     "webview_before_load": before_load.is_set(),
                     "webview_loaded": loaded.is_set(),
+                    "debug_port": locals().get("probe_debug_port"),
                 })
 
 

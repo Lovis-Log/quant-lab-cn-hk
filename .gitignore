@@ -11,3 +11,7 @@ logs/
 build/
 dist/
 .tools/
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
