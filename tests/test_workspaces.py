@@ -8,6 +8,7 @@ import pandas as pd
 from streamlit.testing.v1 import AppTest
 
 from quant_lab.data import HistoryBundle
+from quant_lab.storage import list_experiments
 
 
 def sample_bundle() -> HistoryBundle:
@@ -52,3 +53,20 @@ def test_research_actions_run_from_loaded_history() -> None:
             button.click().run()
             assert not app.exception, page
             assert not app.get("error"), page
+
+
+def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    bundle = sample_bundle()
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    with patch("quant_lab.ui.fetch_history", return_value=bundle):
+        app = AppTest.from_file(entrypoint, default_timeout=30).run()
+        app.sidebar.button[0].click().run()
+        app.sidebar.radio[0].set_value("历史回测").run()
+        next(item for item in app.get("button") if item.label == "运行历史回测").click().run()
+        next(item for item in app.get("button") if item.label == "保存实验").click().run()
+        assert not app.exception
+        assert len(list_experiments(tmp_path / "research.sqlite3")) == 1
+        app.sidebar.radio[0].set_value("研究笔记").run()
+        assert not app.exception
+        assert any("实验指纹" in item.value for item in app.get("caption"))

@@ -5,7 +5,9 @@ actual limit queues, corporate-action cash flows, or exchange-specific fees.
 """
 
 from dataclasses import dataclass
+import math
 
+import numpy as np
 import pandas as pd
 
 
@@ -24,10 +26,11 @@ class BacktestConfig:
     def __post_init__(self) -> None:
         if self.market not in {"A 股", "港股"}:
             raise ValueError("回测市场必须是 A 股或港股。")
-        if self.initial_cash <= 0 or self.lot_size < 1:
+        if not math.isfinite(self.initial_cash) or self.initial_cash <= 0 or self.lot_size < 1:
             raise ValueError("初始资金和交易单位必须大于零。")
-        if min(self.commission_bps, self.min_commission, self.buy_tax_bps,
-               self.sell_tax_bps, self.slippage_bps) < 0:
+        costs = (self.commission_bps, self.min_commission, self.buy_tax_bps,
+                 self.sell_tax_bps, self.slippage_bps)
+        if not all(math.isfinite(value) and value >= 0 for value in costs):
             raise ValueError("交易成本参数不能为负。")
         if self.slippage_bps >= 10_000:
             raise ValueError("滑点必须小于 100%。")
@@ -75,6 +78,8 @@ def run_backtest(
         raise ValueError("原始行情必须按唯一交易日升序排列。")
     if close_signals.isna().any() or not set(close_signals.unique()).issubset({0, 1}):
         raise ValueError("信号只能是 0 或 1。")
+    if not np.isfinite(raw_history[["open", "close", "volume"]].to_numpy(dtype=float)).all():
+        raise ValueError("成交价格和成交量必须为有限数值。")
     if raw_history[["open", "close"]].isna().any().any() or (
         raw_history[["open", "close"]] <= 0
     ).any().any():

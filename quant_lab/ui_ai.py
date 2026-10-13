@@ -10,7 +10,7 @@ from quant_lab.ai_research import (
     AIUnavailableError, api_configured, audit_snapshot, draft_hypothesis, draft_report,
 )
 from quant_lab.backtest import illustrative_config
-from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history
+from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
 from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec

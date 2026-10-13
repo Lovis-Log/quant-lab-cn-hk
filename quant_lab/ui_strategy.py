@@ -1,15 +1,17 @@
 """Strategy signals and conservative historical backtest workspaces."""
 
 import pandas as pd
+import sqlite3
 import plotly.graph_objects as go
 import streamlit as st
 
 from quant_lab.backtest import BacktestConfig, illustrative_config
-from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history
+from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
 from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment, sensitivity_table
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec, build_signals
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
+from quant_lab.storage import save_experiment
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -161,6 +163,9 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
         cols[2].metric("最大回撤", percent(result.full_stats.max_drawdown))
         cols[3].metric("夏普比率", "—" if result.full_stats.sharpe is None else f"{result.full_stats.sharpe:.2f}")
         st.caption(f"同成本买入并持有基准：{result.benchmark_stats.cumulative_return:+.2%}；实验指纹：`{result.audit_id}`。这些是模型结果，不是可实现收益。")
+        if st.session_state.get("learning_mode", True):
+            with st.expander("知识解释：收益、回撤、夏普"):
+                st.write("累计收益比较末期与初期净值；最大回撤是相对先前峰值的最深跌幅；夏普比率用平均超额日收益除以样本日收益标准差，并乘以 √252。样本短或波动为零时不报告夏普。")
     figure = go.Figure()
     figure.add_trace(go.Scatter(
         x=result.strategy.equity["date"],
@@ -203,3 +208,21 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     )
     st.dataframe(grid, width="stretch", hide_index=True)
     st.caption("A 股模拟 T+1、用户设定的买入单位、零成交量和简化涨跌停；港股交易单位也由用户输入。停牌、涨跌停队列、公司行动、幸存者偏差和真实费用无法由日线完整重建。")
+    with st.expander("保存本次实验与研究笔记"):
+        title = st.text_input("研究标题", value=f"{bundle.symbol} {STRATEGY_NAMES[spec.kind]}实验")
+        hypothesis = st.text_area("研究假设", value="该均线规则在样本外仍具有可观察的风险收益特征。")
+        notes = st.text_area("学习笔记", value="")
+        if st.button("保存实验", key="save_experiment"):
+            try:
+                record_id = save_experiment(
+                    title=title, hypothesis=hypothesis, notes=notes,
+                    market=bundle.market, symbol=bundle.symbol,
+                    raw_history=st.session_state["backtest_raw"],
+                    signal_history=bundle.frame, spec=spec, config=config,
+                    train_fraction=train_fraction, result=result,
+                    source=bundle.source, adjustment=bundle.adjustment,
+                    received_at=bundle.received_at,
+                )
+                st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
+            except (OSError, ValueError, sqlite3.Error) as exc:
+                st.error(f"保存失败：{exc}")

@@ -14,17 +14,20 @@ from quant_lab.charts import demo_chart, history_candlestick_chart, history_pric
 from quant_lab.data import (
     DataUnavailableError,
     HistoryBundle,
-    fetch_history,
+    fetch_history_cached as fetch_history,
 )
 from quant_lab.metrics import summarize_prices
 from quant_lab.processing import DataValidationError
 from quant_lab.ui_ai import render_ai
 from quant_lab.ui_analysis import render_risk, render_statistics
 from quant_lab.ui_strategy import render_backtest, render_strategy
+from quant_lab.ui_learning import render_academy
+from quant_lab.ui_research import render_research_notes
+from quant_lab.ui_terminal import render_watchlist
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "AI 研究助手")
+PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "AI 研究助手", "Quant Academy", "研究笔记")
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 
@@ -71,6 +74,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             valid_symbol and dates is not None and dates[0] <= dates[1]
         )
         clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
+        st.toggle("学习模式（显示知识入口）", value=True, key="learning_mode")
         if not valid_symbol:
             st.caption("A 股请输入 6 位、港股请输入 5 位股票代码。")
         elif dates is None:
@@ -89,7 +93,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
 def _header(page: str, market: str, symbol: str, latest_date: str | None) -> None:
     page_title = "市场数据实验室" if page == "市场数据" else page
     status = f"● 历史数据截至 {latest_date}" if latest_date else "● 尚未加载真实行情"
-    status_class = "ql-context-live" if latest_date else ""
+    status_class = ""
     st.html(
         '<div class="ql-header">'
         '<div><div class="ql-eyebrow">QUANT LAB / RESEARCH TERMINAL</div>'
@@ -195,6 +199,9 @@ def _main_page(
     for col, (label, value, note, accent) in zip(st.columns(4, gap="small"), metrics):
         with col:
             _metric(label, value, note, accent)
+    if st.session_state.get("learning_mode", True):
+        with st.expander("知识解释：简单价格收益率"):
+            st.write("收益率 = 末期收盘价 ÷ 初期收盘价 − 1。例如 10 元到 11 元是 10%。这里只比较价格，不含现金分红和交易费用。可在 Quant Academy 调整数字练习。")
 
     chart_col, info_col = st.columns([3.35, 1], gap="small")
     with chart_col:
@@ -237,6 +244,10 @@ def _main_page(
 
     with info_col:
         latest = history["date"].iloc[-1].strftime("%Y-%m-%d") if has_data else "—"
+        received = (
+            bundle.received_at.astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+            if bundle is not None and bundle.received_at is not None else "—"
+        )
         status_class = "ql-status-ok" if has_data else ""
         status_text = "已加载真实历史数据" if has_data else "尚未加载真实行情"
         with st.container(border=True):
@@ -246,9 +257,12 @@ def _main_page(
                 f'<div class="ql-status-banner {status_class}"><span>●</span> {status_text}</div>'
                 f'<div class="ql-info-row"><span>数据类型</span><strong>{market}股票 · 历史日线</strong></div>'
                 f'<div class="ql-info-row"><span>数据来源</span><strong>{source}</strong></div>'
+                f'<div class="ql-info-row"><span>本地缓存</span><strong>{"是" if bundle is not None and bundle.cached else "否"}</strong></div>'
                 f'<div class="ql-info-row"><span>价格口径</span><strong>{adjustment_label}</strong></div>'
                 f'<div class="ql-info-row"><span>价格币种</span><strong>{currency}</strong></div>'
                 f'<div class="ql-info-row"><span>最新交易日</span><strong>{latest}</strong></div>'
+                f'<div class="ql-info-row"><span>接收时间（北京时间）</span><strong>{received}</strong></div>'
+                '<div class="ql-info-row"><span>延迟状态</span><strong>历史日线；确切延迟未知</strong></div>'
                 '<div class="ql-info-row"><span>成交量单位</span><strong>股</strong></div>'
                 '<div class="ql-info-row"><span>实时行情</span><strong>不提供</strong></div>'
             )
@@ -283,6 +297,7 @@ def _main_page(
                 width="stretch", hide_index=True, height=160,
             )
             st.caption("加载并验证真实历史行情后可查看和导出 CSV。")
+    render_watchlist(market, symbol)
 
 
 def render_app() -> None:
@@ -320,6 +335,12 @@ def render_app() -> None:
     _header(page, market, symbol, latest_date)
     if page == "市场数据":
         _main_page(bundle, error, market, symbol, adjustment)
+        return
+    if page == "Quant Academy":
+        render_academy()
+        return
+    if page == "研究笔记":
+        render_research_notes()
         return
     if error:
         st.error(error)

@@ -45,13 +45,9 @@ def resource_root() -> Path:
 
 
 def user_data_dir() -> Path:
-    override = os.environ.get("QUANT_LAB_DATA_DIR")
-    if override:
-        return Path(override).expanduser().resolve()
-    base = os.environ.get("LOCALAPPDATA")
-    if not base:
-        base = str(Path.home() / "AppData" / "Local")
-    return (Path(base) / "QuantLabCNHK").resolve()
+    from quant_lab.paths import user_data_dir as shared_user_data_dir
+
+    return shared_user_data_dir()
 
 
 def prepare_user_data(root: Path) -> None:

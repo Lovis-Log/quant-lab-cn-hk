@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
+import sys
 from pathlib import Path
 import socket
 import subprocess
@@ -64,6 +66,7 @@ def main() -> None:
     port = free_port()
     log_path = data_dir / "packaged-child.log"
     child: subprocess.Popen | None = None
+    offline = "--offline" in sys.argv[1:]
     try:
         with log_path.open("w", encoding="utf-8") as log_file:
             child = subprocess.Popen(
@@ -82,17 +85,33 @@ def main() -> None:
                     page = browser.new_page(viewport={"width": 1440, "height": 900})
                     page.goto(f"http://127.0.0.1:{port}", wait_until="domcontentloaded")
                     page.get_by_text("市场数据实验室").wait_for(timeout=30_000)
-                    page.get_by_role("button", name="加载真实历史日线").click()
-                    page.get_by_text("已加载真实历史数据").wait_for(timeout=30_000)
-                    page.get_by_text("历史回测", exact=True).click()
-                    page.get_by_role("button", name="运行历史回测").click()
-                    page.get_by_text("策略累计收益").wait_for(timeout=30_000)
+                    if offline:
+                        page.get_by_role("button", name="暂停自动刷新").click()
+                        page.get_by_role("button", name="加入自选").click()
+                        page.get_by_text("已加入 A 股 600519").wait_for(timeout=10_000)
+                        page.get_by_text("Quant Academy", exact=True).click()
+                        page.get_by_text("金融数学实验室").wait_for(timeout=10_000)
+                        page.get_by_role("combobox", name="选择课程").click()
+                        page.get_by_role("option", name="6. 夏普比率").click()
+                        page.get_by_text("年化夏普示例").wait_for(timeout=10_000)
+                        page.get_by_text("研究笔记", exact=True).click()
+                        page.get_by_text("尚无已保存实验").wait_for(timeout=10_000)
+                        database = data_dir / "research.sqlite3"
+                        with sqlite3.connect(database) as db:
+                            assert db.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0] == 1
+                    else:
+                        page.get_by_role("button", name="加载真实历史日线").click()
+                        page.get_by_text("已加载真实历史数据").wait_for(timeout=30_000)
+                        page.get_by_text("历史回测", exact=True).click()
+                        page.get_by_role("button", name="运行历史回测").click()
+                        page.get_by_text("策略累计收益").wait_for(timeout=30_000)
                     if page.locator('[data-testid="stException"]').count():
                         raise RuntimeError("Streamlit displayed an exception in the packaged app")
                 finally:
                     browser.close()
         print(json.dumps({"service_ready": True, "browser_loaded": True,
-                          "real_history_loaded": True, "backtest_loaded": True,
+                          "offline_mode": offline,
+                          "real_history_loaded": not offline, "backtest_loaded": not offline,
                           "port": port, "data_dir": str(data_dir)}, ensure_ascii=False))
     except Exception:
         if log_path.exists():

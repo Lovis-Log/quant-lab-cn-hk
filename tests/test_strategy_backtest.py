@@ -88,3 +88,19 @@ def test_max_drawdown_is_relative_to_previous_peak() -> None:
 
     assert summary.max_drawdown == pytest.approx(-0.25)
     assert summary.cumulative_return == pytest.approx(0.0)
+
+
+def test_slippage_changes_both_fills_and_equity_by_hand() -> None:
+    history = price_path([10, 10, 11], [10, 10, 11])
+    config = zero_cost_config(initial_cash=1100, slippage_bps=100)
+    result = run_backtest(history, pd.Series([1, 0, 0]), config)
+    assert result.orders["price"].tolist() == pytest.approx([10.1, 10.89])
+    assert result.equity["cash"].iloc[-1] == pytest.approx(1179.0)
+
+
+def test_nonfinite_financial_inputs_are_rejected() -> None:
+    with pytest.raises(ValueError):
+        zero_cost_config(initial_cash=float("inf"))
+    history = price_path([10, float("inf")], [10, 11])
+    with pytest.raises(ValueError, match="有限数值"):
+        run_backtest(history, pd.Series([1, 1]), zero_cost_config())

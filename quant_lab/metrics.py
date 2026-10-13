@@ -62,7 +62,7 @@ def performance_stats(
     values = pd.to_numeric(equity, errors="coerce").astype(float)
     if len(values) < 2 or not np.isfinite(values.to_numpy()).all() or (values <= 0).any():
         raise ValueError("净值序列至少需要两个正的有限值。")
-    if annual_risk_free <= -1 or periods_per_year < 1:
+    if not math.isfinite(annual_risk_free) or annual_risk_free <= -1 or periods_per_year < 1:
         raise ValueError("无风险利率或年交易日参数无效。")
     returns = values.pct_change().dropna()
     total = float(values.iloc[-1] / values.iloc[0] - 1)
@@ -72,7 +72,7 @@ def performance_stats(
     sharpe: float | None = None
     if len(returns) >= 2:
         daily_std = float(returns.std(ddof=1))
-        if daily_std > 0:
+        if daily_std > 1e-12:
             volatility = daily_std * math.sqrt(periods_per_year)
             daily_rf = (1 + annual_risk_free) ** (1 / periods_per_year) - 1
             sharpe = (float(returns.mean()) - daily_rf) / daily_std * math.sqrt(periods_per_year)

@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history
+from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
 from quant_lab.metrics import performance_stats
 from quant_lab.portfolio import analyze_portfolio
 from quant_lab.processing import DataValidationError
@@ -29,6 +29,9 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         cols[2].metric("年化波动率估计", percent(price_stats.annualized_volatility))
         cols[3].metric("历史最大回撤", percent(price_stats.max_drawdown))
     st.caption("方差与标准差使用样本口径（分母 n−1）；年化波动率约等于日标准差 × √252。历史波动不保证未来风险。")
+    if st.session_state.get("learning_mode", True):
+        with st.expander("知识解释：方差、波动率与回撤"):
+            st.write("样本方差是日收益偏离均值的平方和除以 n−1；标准差是方差的平方根。年化波动率近似日标准差乘 √252。最大回撤则衡量从此前净值峰值跌得最深的一次。")
 
     other = "000001" if bundle.market == "A 股" and bundle.symbol != "000001" else (
         "600519" if bundle.market == "A 股" else "00941" if bundle.symbol != "00941" else "00700"
