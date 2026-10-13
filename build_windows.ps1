@@ -14,6 +14,8 @@ if ($version -notmatch '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$') {
 }
 $fileVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
 $recordDir = Join-Path $projectRoot "dist\release\$version"
+$runnerFile = Join-Path $projectRoot 'tools\run_logged.py'
+$logFile = Join-Path $recordDir 'build.log'
 $buildStarted = [DateTime]::UtcNow.ToString('o')
 New-Item -ItemType Directory -Path $recordDir -Force | Out-Null
 
@@ -25,17 +27,17 @@ if (-not (Test-Path -LiteralPath $specFile)) {
 }
 
 Push-Location -LiteralPath $projectRoot
-Start-Transcript -Path (Join-Path $recordDir 'build.log') -Append | Out-Null
 try {
     $sourceCommit = (& git rev-parse HEAD).Trim()
     $sourceDirty = [bool](& git status --porcelain)
+    "$buildStarted version=$version source_commit=$sourceCommit source_dirty=$sourceDirty" | Set-Content -LiteralPath $logFile -Encoding UTF8
     $testStatus = 'skipped'
     if (-not $SkipTests) {
-        & $pythonExe -m pytest -q
+        & $pythonExe $runnerFile --log $logFile -- $pythonExe -m pytest -q
         if ($LASTEXITCODE -ne 0) { throw 'Tests failed; build stopped.' }
         $testStatus = 'passed'
     }
-    & $pythonExe -m PyInstaller --noconfirm --clean $specFile
+    & $pythonExe $runnerFile --log $logFile -- $pythonExe -m PyInstaller --noconfirm --clean $specFile
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $exeFile)) {
         throw 'PyInstaller did not produce dist\QuantLab\QuantLab.exe.'
     }
@@ -64,7 +66,7 @@ try {
             throw 'Inno Setup compiler ISCC.exe was not found. The EXE build is complete.'
         }
         $compilerPath = if ($compiler -is [string]) { $compiler } else { $compiler.Source }
-        & $compilerPath "/DMyAppVersion=$version" "/DMyAppFileVersion=$fileVersion" (Join-Path $projectRoot 'installer\QuantLab.iss')
+        & $pythonExe $runnerFile --log $logFile -- $compilerPath "/DMyAppVersion=$version" "/DMyAppFileVersion=$fileVersion" (Join-Path $projectRoot 'installer\QuantLab.iss')
         if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
         Write-Output "Installer built: $(Join-Path $projectRoot 'dist\installer\QuantLab-CN-HK-Setup.exe')"
         $versionedInstaller = Join-Path $projectRoot "dist\installer\QuantLab-CN-HK-$version-Setup.exe"
@@ -85,6 +87,5 @@ try {
     Write-Output "Build record: $recordDir"
 }
 finally {
-    Stop-Transcript | Out-Null
     Pop-Location
 }
