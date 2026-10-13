@@ -1,0 +1,30 @@
+{
+  "version": "1.1.0-rc.1",
+  "source_commit": "08678c1e66bb03e26af9c63894fd25cf278a2277",
+  "verified_at_utc": "2026-10-13T11:18:12.704922+00:00",
+  "pytest": {
+    "status": "passed",
+    "count": 45
+  },
+  "packaged_offline_browser": {
+    "status": "passed",
+    "service_ready": true,
+    "browser_loaded": true,
+    "child_stopped": true,
+    "checks": [
+      "academy_sharpe_lesson",
+      "watchlist_sqlite",
+      "empty_research_notes"
+    ]
+  },
+  "webview_gui": {
+    "status": "not_verified",
+    "previous_probe": "hidden window did not signal loaded within 30 seconds"
+  },
+  "live_provider_end_to_end": {
+    "status": "not_run"
+  },
+  "installation_uninstallation": {
+    "status": "not_run"
+  }
+}

@@ -16,4 +16,4 @@
 
 | 版本 | 状态 | 记录 |
 | --- | --- | --- |
-| v1.1.0-rc.1 | 准备中，预发布 | [发布说明与过程](releases/v1.1.0-rc.1.md) |
+| [v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1) | 已发布，预发布 | [发布说明与过程](releases/v1.1.0-rc.1.md) |

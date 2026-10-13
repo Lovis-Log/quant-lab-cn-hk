@@ -2,6 +2,8 @@
 
 ## 2026-10-13 · v1.1.0-rc.1 发布流程
 
+- 已发布 [v1.1.0-rc.1 预发布安装包](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1)，45 项测试和打包离线浏览器检查通过；四个附件远程 SHA-256 已核对，过程与回执归档到 `docs/releases/`。
+
 - 增加统一 `VERSION`、安装器版本参数和带版本号的安装包副本。
 - Windows 构建自动保存日志、源码提交、测试状态、文件大小和 SHA-256。
 - 增加 GitHub Release 发布工具：草稿上传、附件校验后发布；凭据仅在内存中使用。

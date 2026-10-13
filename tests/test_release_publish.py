@@ -1,6 +1,7 @@
 """A Release must stay unpublished when an uploaded asset fails verification."""
 
 import hashlib
+import json
 import sys
 
 import pytest
@@ -38,6 +39,12 @@ def test_release_is_published_only_after_asset_verification(tmp_path, monkeypatc
             calls.append((method, kwargs.get("json")))
             if url.endswith("/git/ref/tags/v1.0.0"):
                 return Response({"object": {"type": "commit", "sha": sha}})
+            if method == "GET" and url.endswith("/release/1"):
+                return Response({"url": url, "draft": False, "tag_name": "v1.0.0", "prerelease": True,
+                                 "html_url": "https://github.com/example/releases/tag/v1.0.0",
+                                 "assets": [{"name": artifact.name, "size": artifact.stat().st_size,
+                                             "digest": f"sha256:{hashlib.sha256(artifact.read_bytes()).hexdigest()}",
+                                             "browser_download_url": "https://github.com/example/releases/download/v1.0.0/installer.exe"}]})
             if method == "GET":
                 return Response([])
             if "uploads.github.com" in url:
@@ -52,9 +59,12 @@ def test_release_is_published_only_after_asset_verification(tmp_path, monkeypatc
     monkeypatch.setattr(publish_release, "credentials", lambda: "test-placeholder")
     monkeypatch.setattr(publish_release.requests, "Session", Session)
     monkeypatch.setattr(sys, "argv", ["publish_release.py", "--tag", "v1.0.0",
-                                     "--notes", str(notes), "--assets", str(artifact), "--prerelease"])
+                                     "--notes", str(notes), "--assets", str(artifact), "--prerelease",
+                                     "--receipt", str(tmp_path / "receipt.json")])
     if valid_digest:
         publish_release.main()
+        receipt = json.loads((tmp_path / "receipt.json").read_text(encoding="utf-8"))
+        assert "/download/v1.0.0/" in receipt["assets"][0]["url"]
     else:
         with pytest.raises(RuntimeError, match="SHA-256"):
             publish_release.main()

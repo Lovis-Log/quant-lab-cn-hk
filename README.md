@@ -82,6 +82,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 每次可交付安装包通过 [GitHub Releases](https://github.com/Lovis-Log/quant-lab-cn-hk/releases) 发布。发布过程及每版验证结果见 [docs/RELEASES.md](docs/RELEASES.md)。验证未完整的版本标记预发布，并在说明中记录限制。
 
+当前安装包：[v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1)，为预发布版，已知 GUI 验证限制见 Release 说明。
+
 ### 常见问题
 
 - **提示缺少 WebView2**：安装上述微软官方 Runtime 后重试。

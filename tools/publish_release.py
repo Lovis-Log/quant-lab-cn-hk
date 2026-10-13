@@ -129,6 +129,14 @@ def main() -> None:
         uploaded.append({"name": asset["name"], "size": asset["size"],
                          "sha256": asset["sha256"], "url": remote_asset["browser_download_url"]})
     release = request("PATCH", release["url"], json={"draft": False})
+    release = request("GET", release["url"])
+    if release["draft"] or release["tag_name"] != args.tag:
+        raise RuntimeError("发布状态核对失败；请检查 GitHub Release。")
+    for asset in uploaded:
+        published = next((a for a in release["assets"] if a["name"] == asset["name"]), None)
+        if not published or published["size"] != asset["size"] or published.get("digest") != f"sha256:{asset['sha256']}":
+            raise RuntimeError("发布后的附件核对失败；请检查 GitHub Release。")
+        asset["url"] = published["browser_download_url"]
     receipt = {"tag": args.tag, "commit": sha, "url": release["html_url"],
                "prerelease": release["prerelease"], "assets": uploaded,
                "verified_at_utc": datetime.now(timezone.utc).isoformat()}
