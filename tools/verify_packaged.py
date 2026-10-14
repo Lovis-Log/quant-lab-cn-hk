@@ -98,7 +98,7 @@ def main() -> None:
                         course.click()
                         course.fill("夏普")
                         page.get_by_role("option", name="6. 夏普比率").click()
-                        page.get_by_text("年化夏普示例").wait_for(timeout=10_000)
+                        page.get_by_test_id("stAlertContentInfo").filter(has_text="年化夏普示例").wait_for(timeout=10_000)
                         page.get_by_text("研究笔记", exact=True).click()
                         page.get_by_text("尚无已保存实验").wait_for(timeout=10_000)
                         database = data_dir / "research.sqlite3"

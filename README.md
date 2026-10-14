@@ -55,7 +55,7 @@ python -m venv .venv
 ## Windows 桌面版
 
 - **安装版**：双击 `dist\installer\QuantLab-CN-HK-Setup.exe`，默认安装到 Windows 程序目录。安装后从开始菜单的 **Quant Lab CN-HK** 启动；安装时可选桌面快捷方式。正常卸载不会删除个人研究数据。
-- **免安装版**：双击 `dist\QuantLab\QuantLab.exe`。必须保留整个 `QuantLab` 文件夹，不能只复制 EXE。Python 运行时已包含在该文件夹内，目标电脑无需另装 Python。
+- **免安装版**：双击 `dist/packages/2.0.0-rc.1/QuantLab/QuantLab.exe`。必须保留整个 `QuantLab` 文件夹，不能只复制 EXE。Python 运行时已包含在该文件夹内，目标电脑无需另装 Python。
 - 两种方式都在本机自动启动原有 Streamlit 后端，随机选一个空闲端口并**只监听 `127.0.0.1`**，随后在独立 pywebview 窗口打开；不会自动打开系统浏览器。关闭窗口后只停止本次启动的后端进程。
 - Windows 电脑还需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。本安装包目前不内置它；若缺失，启动器会显示安装提示。当前构建的 EXE 和安装包未做商业代码签名，Windows 可能提示未知发布者。
 - 用户设置、WebView 缓存、日志和 `research.sqlite3` 写入 `%LOCALAPPDATA%\QuantLabCNHK`，不写入安装目录。主要日志是 `logs\launcher.log`、`logs\streamlit.log` 和 `logs\data_errors.log`。可用 `QUANT_LAB_DATA_DIR` 指定另一用户可写目录。
@@ -88,7 +88,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 `1.2.1-rc.1` 名称和 DeepSeek 修复曾仅在本地交付，记录保留。当前 V2 独立升级遵循项目通用同步与预发布流程；实际发布状态见 [发布记录](docs/RELEASES.md)。
 
-V2 本地构建路径为 `dist\QuantLab\QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.0.0-rc.1-Setup.exe`，实际验证与构建状态见 [V2 验收报告](docs/V2_ACCEPTANCE.md)。[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为 V2 新验收证据。
+V2 本地构建路径为 `dist/packages/2.0.0-rc.1/QuantLab/QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.0.0-rc.1-Setup.exe`，实际验证与构建状态见 [V2 验收报告](docs/V2_ACCEPTANCE.md)。[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为 V2 新验收证据。
 
 ### 常见问题
 
