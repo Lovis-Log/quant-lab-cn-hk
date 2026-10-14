@@ -1,0 +1,89 @@
+{
+  "version": "1.2.0-rc.1",
+  "build_source_commit": "7d4cd07cb2b522bb1e77b3c9470d9c620781ac48",
+  "validation_run_date_beijing": "2026-10-13",
+  "archive_checked_date_beijing": "2026-10-14",
+  "delivery": {
+    "mode": "local_only",
+    "remote_push": false,
+    "release_published": false
+  },
+  "pytest": {
+    "passed": 70,
+    "failed": 0,
+    "skipped": 0,
+    "source": "dist/release/1.2.0-rc.1/build.log"
+  },
+  "packaged_webview_unmodified": {
+    "mock_api": false,
+    "actual_webview_dom_loaded": true,
+    "password_and_model_controls": true,
+    "loaded_event": true,
+    "child_stopped": true,
+    "exit_code": 0
+  },
+  "packaged_browser_offline": {
+    "service_ready": true,
+    "browser_loaded": true,
+    "offline_mode": true,
+    "real_history_loaded": false,
+    "backtest_loaded": false,
+    "child_stopped": true
+  },
+  "isolated_installed_webview_mock_api": {
+    "mock_api": true,
+    "actual_webview_dom_loaded": true,
+    "model_switch": true,
+    "streamed_answer": true,
+    "answer_saved": true,
+    "key_cleared": true,
+    "loaded_event": true,
+    "child_stopped": true,
+    "exit_code": 0
+  },
+  "isolated_installed_restart": {
+    "mock_api": false,
+    "actual_webview_dom_loaded": true,
+    "model_preference_restored": true,
+    "password_and_model_controls": true,
+    "loaded_event": true,
+    "child_stopped": true,
+    "exit_code": 0
+  },
+  "installation_upgrade_uninstallation": {
+    "old_version": "1.1.0-rc.1",
+    "new_version": "1.2.0-rc.1",
+    "isolated_app_id": "08969AF5-B239-418D-A32C-8AF6C3B04FA7",
+    "install_upgrade_uninstall": true,
+    "legacy_snapshot_unchanged": true,
+    "replay_passed": true,
+    "settings_and_notes_survived_restart": true,
+    "key_not_restored_to_session": true,
+    "gui_original_and_mock_stream_passed": true,
+    "user_data_preserved_after_uninstall": true
+  },
+  "previous_release_probe_check": {
+    "previous_release": "1.1.0-rc.1",
+    "unmodified_previous_gui_dom_loaded": true,
+    "loaded_event": true,
+    "normal_user_session": true,
+    "own_service_stopped": true
+  },
+  "windows_vault": {
+    "status": "passed",
+    "method": "isolated disposable dummy write/read/delete",
+    "dummy_removed": true,
+    "real_key_used": false,
+    "evidence": "2026-10-13 verify_credentials.py result recorded in CONTINUE_1.2.0.md"
+  },
+  "secrets": {
+    "dummy_key_absent_from_isolated_database_and_logs": true,
+    "test_user_data_archived_to_git": false,
+    "mock_injection_in_shipped_entry": false
+  },
+  "limits": {
+    "real_deepseek_paid_call": "not_run_no_user_key",
+    "live_market_end_to_end": "not_claimed_by_offline_smoke",
+    "installation_test": "unique AppId and owned directory with same shipping payload; daily install not touched"
+  }
+}

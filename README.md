@@ -84,6 +84,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 上一已发布安装包：[v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1)。本轮 `1.2.0-rc.1` 仅在本地提交和打包，按用户要求不推送或发布 Release。
 
+本地交付文件为 `dist\QuantLab\QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-1.2.0-rc.1-Setup.exe`。70 项测试、真实 WebView 控件及隔离升级/卸载验收已通过；流式 AI 验收使用模拟 API，真实账户连接尚需在软件内测试。详细范围和校验值见 [本轮验收记录](docs/UPGRADE_1.2.0.md)。
+
 ### 常见问题
 
 - **提示缺少 WebView2**：安装上述微软官方 Runtime 后重试。
