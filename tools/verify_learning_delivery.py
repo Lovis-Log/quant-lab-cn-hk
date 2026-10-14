@@ -16,6 +16,8 @@ from quant_lab.migrations import SCHEMA_VERSION
 
 def main():
     version = (ROOT / "VERSION").read_text().strip()
+    manifest = json.loads((ROOT / "dist/release" / version / "build-manifest.json").read_text(encoding="utf-8-sig"))
+    payload = Path(manifest["payload_dir"])
     root = ROOT / ".tools" / ("learning-delivery-" + uuid4().hex)
     root.mkdir()
     state = {"root":str(root),"app_id":str(uuid4()).upper(),
@@ -35,8 +37,8 @@ def main():
     exe = Path(state["install_dir"]) / "QuantLab.exe"
     entry = exe.parent / "_internal/app.py"
     original = entry.read_bytes()
-    assert digest(exe) == digest(ROOT / "dist/QuantLab/QuantLab.exe")
-    assert original == (ROOT / "dist/QuantLab/_internal/app.py").read_bytes()
+    assert digest(exe) == digest(payload / "QuantLab.exe")
+    assert original == (payload / "_internal/app.py").read_bytes()
     for phase, flags in (("original",["--research-fixes","--learning-center"]),
                          ("mock",["--research-fixes","--mock-ai"]),
                          ("restart",["--resume-learning"])):

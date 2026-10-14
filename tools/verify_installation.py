@@ -35,6 +35,10 @@ def command(args, log):
 def compile_installer(state, version, phase):
     root = Path(state["root"]).resolve()
     root.relative_to((ROOT/".tools").resolve())
+    manifest_path = ROOT / "dist/release" / version / "build-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig")) if manifest_path.exists() else {}
+    payload = Path(manifest.get("payload_dir", ROOT / "dist/QuantLab")).resolve()
+    payload.relative_to((ROOT / "dist").resolve())
     script = (ROOT/"installer/QuantLab.iss").read_text(encoding="utf-8")
     script = script.replace('#define MyAppName "Quant Lab CN/HK"', '#define MyAppName "Quant Lab Isolated Validation"')
     lines = []
@@ -47,7 +51,7 @@ def compile_installer(state, version, phase):
             "OutputBaseFilename=": "OutputBaseFilename=IsolatedValidationSetup",
             "SetupIconFile=": "SetupIconFile=" + str(ROOT/"assets/quantlab.ico"),
             "PrivilegesRequired=": "PrivilegesRequired=lowest",
-            'Source: "..\\dist\\QuantLab\\*"': f'Source: "{ROOT / "dist/QuantLab"}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs',
+            'Source:': f'Source: "{payload}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs',
         }
         replaced = next((value for prefix,value in replacements.items() if line.startswith(prefix)), line)
         if replaced.startswith("Name:") and "Quant Lab CN-HK" in replaced:
@@ -127,9 +131,12 @@ def main():
     state = json.loads(state_path.read_text(encoding="utf-8"))
     root = Path(state["root"])
     version = (ROOT/"VERSION").read_text().strip()
+    manifest_path = ROOT / "dist/release" / version / "build-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig")) if manifest_path.exists() else {}
+    payload = Path(manifest.get("payload_dir", ROOT / "dist/QuantLab"))
     if args.resume:
         assert (root/"new-install.log").is_file()
-        assert digest(Path(state["install_dir"])/"QuantLab.exe") == digest(ROOT/"dist/QuantLab/QuantLab.exe")
+        assert digest(Path(state["install_dir"])/"QuantLab.exe") == digest(payload/"QuantLab.exe")
     else:
         new_installer = compile_installer(state,version,"new")
         install(state,new_installer,"new")

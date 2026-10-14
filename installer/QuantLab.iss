@@ -6,6 +6,9 @@
   #define MyAppFileVersion "2.0.0.0"
 #endif
 #define MyAppExeName "QuantLab.exe"
+#ifndef MyPayloadDir
+  #define MyPayloadDir "..\dist\QuantLab"
+#endif
 
 [Setup]
 AppId={{1F4CE834-8E9B-4F8B-A228-FD09E48E60D3}
@@ -32,7 +35,7 @@ WizardStyle=modern
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加任务："; Flags: unchecked
 
 [Files]
-Source: "..\dist\QuantLab\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyPayloadDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\Quant Lab CN-HK"; Filename: "{app}\{#MyAppExeName}"

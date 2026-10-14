@@ -78,7 +78,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -BuildInstaller
 ```
 
-第二条命令需要 `ISCC.exe`（Inno Setup 7/6）在 PATH、标准安装目录，或 `.tools\InnoSetup7` 便携目录。构建脚本先运行测试、再用 PyInstaller `onedir` 模式生成 EXE；加 `-BuildInstaller` 时继续生成 Inno Setup 安装包。所有构建输出位于被 Git 忽略的 `dist\`。可用 `-SkipTests` 跳过已单独通过的测试。可选的真实浏览器打包冒烟测试为 `python tools\verify_packaged.py`；`python tools\verify_packaged.py --offline` 可离线检查启动、学院、自选股持久化和研究笔记。两种冒烟测试都需要另装 Playwright 和 Chrome，应用本身不依赖它们。
+第二条命令需要 `ISCC.exe`（Inno Setup 7/6）在 PATH、标准安装目录，或 `.tools\InnoSetup7` 便携目录。构建脚本先运行测试、再用 PyInstaller `onedir` 模式生成版本独立目录 `dist\\packages\\<版本>\\QuantLab`，避免清理正在使用的旧版目录；加 `-BuildInstaller` 时继续生成 Inno Setup 安装包。所有构建输出位于被 Git 忽略的 `dist\`。可用 `-SkipTests` 跳过已单独通过的测试。可选的真实浏览器打包冒烟测试为 `python tools\verify_packaged.py`；`python tools\verify_packaged.py --offline` 可离线检查启动、学院、自选股持久化和研究笔记。两种冒烟测试都需要另装 Playwright 和 Chrome，应用本身不依赖它们。
 
 ### GitHub Release 与过程记录
 

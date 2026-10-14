@@ -19,7 +19,10 @@ from urllib.request import ProxyHandler, build_opener
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXE = ROOT / "dist" / "QuantLab" / "QuantLab.exe"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+MANIFEST_PATH = ROOT / "dist/release" / VERSION / "build-manifest.json"
+MANIFEST = json.loads(MANIFEST_PATH.read_text(encoding="utf-8-sig")) if MANIFEST_PATH.exists() else {}
+EXE = Path(MANIFEST.get("payload_dir", ROOT / "dist/QuantLab")) / "QuantLab.exe"
 
 
 def free_port() -> int:
