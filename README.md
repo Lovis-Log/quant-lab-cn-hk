@@ -20,7 +20,8 @@ quant_lab/backtest.py    下一开盘模拟成交、成本与限制
 quant_lab/research.py    样本内外回测与参数敏感性
 quant_lab/portfolio.py   同币种多资产配置
 quant_lab/statistics.py  假设检验与时间序列回归
-quant_lab/ai_research.py 可选 OpenAI 假设与报告草拟
+quant_lab/ai_research.py DeepSeek 假设与报告草拟、本地参数验证
+quant_lab/securities.py 可搜索证券目录与带来源时间的快照
 quant_lab/ui*.py         页面、侧栏、各研究工作区
 quant_lab/charts.py      Plotly 真实行情与演示图表
 quant_lab/demo_data.py   明确标记的模拟版式数据
@@ -82,9 +83,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 每次可交付安装包通过 [GitHub Releases](https://github.com/Lovis-Log/quant-lab-cn-hk/releases) 发布。发布过程及每版验证结果见 [docs/RELEASES.md](docs/RELEASES.md)。验证未完整的版本标记预发布，并在说明中记录限制。
 
-上一已发布安装包：[v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1)。本轮 `1.2.0-rc.1` 仅在本地提交和打包，按用户要求不推送或发布 Release。
+上一已发布安装包：[v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1)。本轮 `1.2.1-rc.1` 延续名称和 DeepSeek 升级，仅在本地提交和打包，不推送或发布 Release。
 
-本地交付文件为 `dist\QuantLab\QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-1.2.0-rc.1-Setup.exe`。70 项测试、真实 WebView 控件及隔离升级/卸载验收已通过；流式 AI 验收使用模拟 API，真实账户连接尚需在软件内测试。详细范围和校验值见 [本轮验收记录](docs/UPGRADE_1.2.0.md)。
+本地交付路径为 `dist\QuantLab\QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-1.2.1-rc.1-Setup.exe`。本次名称、股票候选及研究助手修复的实际验证范围与校验值见 [1.2.1 本地构建记录](docs/releases/v1.2.1-rc.1.md)；上一版的升级/卸载记录保留在 [1.2.0 验收记录](docs/UPGRADE_1.2.0.md)。
 
 ### 常见问题
 
@@ -92,7 +93,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 - **启动超时或空白窗口**：检查 `%LOCALAPPDATA%\QuantLabCNHK\logs` 下的启动与服务日志。启动器最多等待 35 秒服务就绪、30 秒窗口加载。
 - **8501 已占用**：桌面版自动选择其他 `127.0.0.1` 端口，不需要关闭原有 Web 版。
 - **行情请求失败**：检查网络与数据源日志；应用不会把演示数据当成真实行情。
-- **AI 功能未启用**：按下文配置你自己的 `OPENAI_API_KEY`；离线受控实验不需要 Key。
+- **AI 功能未启用**：在 DeepSeek 侧栏配置密钥并选择模型；研究页面共用同一连接，离线受控实验不需要 Key。
 
 运行测试：
 
@@ -102,7 +103,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 ## 使用方法
 
-1. 左侧选择市场、股票代码、日期范围与价格口径；A 股用六位代码（如 `600519`），港股用五位代码（如 `00700`）。点击 **加载真实历史日线**。
+1. 左侧选择市场，在“搜索股票候选（代码 / 名称）”里选股票或手动输入代码，设置日期范围与价格口径。A 股用六位代码（如 `600519`），港股用五位代码（如 `00700`）。点击 **加载真实历史日线**。
 2. **市场数据**：查看实际交易日、价格/成交量、K 线、区间指标和 CSV 导出。
 3. **策略实验室**：调节单均线、双均线或趋势策略周期，观察收盘后信号。
 4. **历史回测**：设置示例资金、交易单位、费用、滑点和 A 股涨跌停假设；比较策略与同成本买入持有基准、样本内外及参数敏感性。
@@ -129,7 +130,7 @@ CSV 使用 UTF-8 with BOM，便于 Windows Excel 识别中文列名。已验证�
 
 默认密钥仅在当前会话内。选“记住密钥”并应用时写入 Windows 凭据管理器；重启后可显式读取已记住密钥。系统安全存储不可用时仍为会话模式，绝不写入明文文件或 SQLite。“清除密钥”清除会话及本应用已记住凭据，不修改其他工具配置。
 
-使用的是用户自己的 DeepSeek API 账户。只有“发送到 DeepSeek”触发付费对话；测试连接/刷新列表只查询模型，重绘、行情轮询和课程切换不发送对话。支持流式回答、清空对话及把选定回答保存为学习笔记。发送前可查看当前程序事实摘要，默认不附带私人笔记、完整行情或数据库；切换数据或实验后不会发送上一份研究的对话历史。没有 Key 时离线课程、知识解释与研究功能照常使用。
+使用的是用户自己的 DeepSeek API 账户。“发送到 DeepSeek”“生成 AI 假设”“让 AI 审阅实验”分别触发付费请求；测试连接/刷新列表只查询模型，重绘、行情轮询和课程切换不发送对话。支持流式回答、清空对话及把选定回答保存为学习笔记。发送前可查看当前程序事实摘要，默认不附带私人笔记、完整行情或数据库；切换数据或实验后不会发送上一份研究的对话历史。没有 Key 时离线课程、知识解释与研究功能照常使用。
 
 接口说明：[DeepSeek 官方模型列表](https://api-docs.deepseek.com/api/list-models/)、[Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/)。首次真实连接请在软件内测试，不要把 Key 发到聊天。
 
@@ -147,6 +148,12 @@ SQLite schema 版本为 2；首次打开旧库时在用户数据目录 `backups/
 - 回测信号可以使用选定的复权价格，但模拟成交和净值始终使用同日期的**不复权开盘/收盘价**。日线无法验证订单簿成交、真实费用、停牌细节、涨跌停队列或幸存者偏差；详见 [docs/METHODOLOGY.md](docs/METHODOLOGY.md)。
 - 上游请求或字段验证失败时，错误会显示在页面，详细异常写入用户数据目录的 `logs/data_errors.log`；不会用模拟数据替代。
 
-## 兼容的 OpenAI 研究模块
+## DeepSeek 研究助手与股票候选
 
-AI 草拟功能需要用户自己的 OpenAI API Key。请在启动应用的同一个 PowerShell 会话中设置 `OPENAI_API_KEY`，可选用 `OPENAI_MODEL` 指定账户可访问且支持结构化输出的模型；默认使用 `gpt-6-luna`。不要将 Key 写入仓库或聊天消息。没有 Key 时，其余研究功能照常可用。AI 报告的证据表和实验指纹由本地代码生成，AI 文本需人工复核。
+“AI 研究助手”直接共用侧栏的 DeepSeek 会话密钥和选中模型，不再要求 OpenAI 环境变量。依次填写研究问题、生成假设、运行本地受控实验、让 AI 审阅实验。结构化回复遵循 [DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/) 并在本地验证字段与策略参数；示例代码不执行，报告记录实际模型。未配置时仍可使用固定策略运行实验、下载本地审计报告。
+
+候选目录包含 2026-10-14 接收的 6,181 条 A 股、3,033 条五位港股资料（含 H 股、非 H 股与红筹股）；巨潮资讯 A 股目录和东方财富港股证券资料只提供代码与名称。常见股票排在前面，输入代码或中文名称可搜索，选中后填入代码框，仍需加载日线。目录不是买入推荐，也不验证证券当前上市或可交易状态。“更新股票候选目录”联网更新，失败保留旧目录和获取时间；运行时更新写入用户目录，安装目录只读。
+
+名称改用东方财富证券基础资料接口，避免原 A 股报价接口断连导致名称缺失。“重新获取证券名称”可绕过成功缓存与失败冷却，成功后当前已加载行情的名称也会更新；失败保留已知名称并显示警告。
+
+统计页面的操作和指标含义见 [LEARNING.md](LEARNING.md#统计与机器学习页面的操作顺序)，页面内也有“这个页面怎么用”。

@@ -33,4 +33,4 @@
 
 ## AI 研究助手
 
-未配置用户自己的 API Key 时，平台仍可运行固定模板的受控实验。配置后，模型可以草拟有界的内置策略参数、说明文字和仅供阅读的示例代码。模型**不能执行任意代码、下单或修改文件**。报告旁的数值与实验指纹由本地函数计算，AI 文字可能出错，必须与原始数据、参数、计算公式和样本外结果交叉核对。OpenAI 集成使用 [Responses API 结构化输出](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses)。
+未配置用户自己的 API Key 时，平台仍可运行固定模板的受控实验。配置后，模型可以草拟有界的内置策略参数、说明文字和仅供阅读的示例代码。模型**不能执行任意代码、下单或修改文件**。报告旁的数值与实验指纹由本地函数计算，AI 文字可能出错，必须与原始数据、参数、计算公式和样本外结果交叉核对。研究页共用侧栏 DeepSeek 连接，按 [DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/) 取 JSON 后验证字段类型、策略类别与周期边界；JSON 格式正确不代表研究判断正确。

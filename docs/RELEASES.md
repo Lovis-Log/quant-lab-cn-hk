@@ -18,3 +18,4 @@
 | --- | --- | --- |
 | [v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1) | 已发布，预发布 | [发布说明与过程](releases/v1.1.0-rc.1.md) |
 | 1.2.0-rc.1 | 本地验收完成，按本轮要求未发布 | [构建与验收](UPGRADE_1.2.0.md) |
+| 1.2.1-rc.1 | 本地修复，构建验收状态见记录；未发布 | [构建与验收](releases/v1.2.1-rc.1.md) |

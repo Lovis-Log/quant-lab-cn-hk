@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--mock-ai", action="store_true")
+    parser.add_argument("--research-fixes", action="store_true")
     args = parser.parse_args()
     directory = (args.data_dir or ROOT / ".tools" / ("desktop-validation-" + uuid4().hex)).resolve()
     directory.relative_to((ROOT / ".tools").resolve())
@@ -40,7 +41,7 @@ def main():
     # belong to this launch, not the previous window's now-closed CDP endpoint.
     probe_file = directory / ("probe-" + uuid4().hex + ".json")
     env = {**os.environ, "QUANT_LAB_DATA_DIR": str(directory),
-           "QUANT_LAB_GUI_TEST_SECONDS": "120", "QUANT_LAB_GUI_PROBE": "1",
+           "QUANT_LAB_GUI_TEST_SECONDS": "180", "QUANT_LAB_GUI_PROBE": "1",
            "QUANT_LAB_SMOKE_RESULT": str(probe_file)}
     command = [str(args.exe.resolve())] if args.exe else [str(ROOT/".venv/Scripts/python.exe"), str(ROOT/"desktop_launcher.py")]
     child = None
@@ -80,6 +81,26 @@ def main():
                 if pause.count():
                     pause.click()
                     page.get_by_role("button", name="恢复自动刷新", exact=True).wait_for(timeout=10000)
+                if args.research_fixes:
+                    picker = page.get_by_role("combobox", name="搜索股票候选（代码 / 名称）", exact=True)
+                    picker.click()
+                    picker.fill("平安银行")
+                    page.get_by_role("option", name="000001 · 平安银行", exact=True).click()
+                    expect(page.get_by_label("A 股股票代码（非指数）", exact=True)).to_have_value("000001", timeout=15000)
+                    market = page.get_by_role("combobox", name="市场", exact=True)
+                    market.click()
+                    page.get_by_role("option", name="港股", exact=True).click()
+                    picker = page.get_by_role("combobox", name="搜索股票候选（代码 / 名称）", exact=True)
+                    picker.click()
+                    picker.fill("中国移动")
+                    page.get_by_role("option", name="00941 · 中国移动", exact=True).click()
+                    expect(page.get_by_label("港股股票代码（非指数）", exact=True)).to_have_value("00941", timeout=15000)
+                    page.get_by_text("统计与机器学习", exact=True).click()
+                    page.get_by_text("这个页面怎么用", exact=True).wait_for(timeout=10000)
+                    assert "训练比例先保留 70%" in page.inner_text("body")
+                    summary.update({"a_candidate_name_search": True, "hk_red_chip_search": True,
+                                    "candidate_populates_code": True, "statistics_usage_help": True})
+                    page.get_by_text("市场数据", exact=True).click()
                 page.get_by_text("DeepSeek AI 助手", exact=True).click()
                 key = page.get_by_label("DeepSeek API Key", exact=True)
                 assert key.get_attribute("type") == "password"
@@ -105,6 +126,19 @@ def main():
                     page.get_by_role("button", name="保存选定回答到学习笔记", exact=True).click()
                     page.get_by_text("学习笔记 #", exact=False).wait_for(timeout=10000)
                     summary.update({"model_switch": True, "streamed_answer": True, "answer_saved": True})
+                    if args.research_fixes:
+                        page.get_by_role("button", name="加载真实历史日线", exact=True).click()
+                        page.get_by_text("AI 研究助手", exact=True).click()
+                        page.get_by_text("DeepSeek 量化研究助手", exact=True).wait_for(timeout=10000)
+                        assert "OPENAI_API_KEY" not in page.inner_text("body")
+                        page.get_by_role("button", name="生成 AI 假设", exact=True).click()
+                        page.get_by_text("假设实际模型：mock-b-actual", exact=True).wait_for(timeout=15000)
+                        page.get_by_role("button", name="运行受控实验（内置策略）", exact=True).click()
+                        page.get_by_role("button", name="让 AI 审阅实验", exact=True).click()
+                        page.get_by_text("审阅实际模型：mock-b-actual", exact=True).wait_for(timeout=15000)
+                        page.get_by_role("button", name="下载可复核研究报告", exact=True).wait_for(timeout=10000)
+                        summary.update({"research_shared_connection": True, "research_json_hypothesis": True,
+                                        "local_controlled_experiment": True, "research_json_report": True})
                     page.get_by_role("button", name="清除密钥", exact=True).click()
                     expect(page.get_by_label("DeepSeek API Key", exact=True)).to_have_value("", timeout=10000)
                     summary["key_cleared"] = True

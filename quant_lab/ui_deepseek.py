@@ -87,12 +87,20 @@ def render_deepseek(context: dict):
             refresh = st.button("刷新模型列表", key="deepseek_models_refresh", disabled=not key)
             if test or refresh:
                 try:
-                    st.session_state["deepseek_models"] = DeepSeekClient(key).list_models()
+                    available = DeepSeekClient(key).list_models()
+                    st.session_state["deepseek_models"] = available
+                    ids = [item["id"] for item in available]
+                    preference = st.session_state.get("deepseek_model", "")
+                    if st.session_state.get("ds_model_select") not in ids:
+                        st.session_state["ds_model_select"] = preference if preference in ids else ids[0]
                     st.session_state["deepseek_model_error"] = None
-                    st.success("连接成功；已取得官方可用模型列表。")
+                    st.session_state["deepseek_connection_notice"] = "连接成功；已取得官方可用模型列表。"
+                    st.rerun()
                 except AIRequestError as exc:
                     st.session_state["deepseek_models"] = []
                     st.session_state["deepseek_model_error"] = str(exc)
+            if st.session_state.get("deepseek_connection_notice"):
+                st.success(st.session_state.pop("deepseek_connection_notice"))
             if st.session_state.get("deepseek_model_error"):
                 st.warning(st.session_state["deepseek_model_error"])
             models = st.session_state.get("deepseek_models", [])

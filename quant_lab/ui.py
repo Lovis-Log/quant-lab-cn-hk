@@ -34,6 +34,7 @@ from quant_lab.ui_updates import initialize_settings, persist_setting, toggle_re
 from quant_lab.ui_knowledge import render_knowledge
 from quant_lab.ui_deepseek import render_deepseek
 from quant_lab.ai_context import bundle_context, experiment_context
+from quant_lab.securities import security_directory
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
@@ -61,9 +62,9 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         page = st.radio("功能导航", PAGES, label_visibility="collapsed")
         st.html('<div class="ql-sidebar-label ql-sidebar-gap">RESEARCH SETUP / 研究参数</div>')
         market = st.selectbox("市场", ("A 股", "港股"), key="market_selection")
+        st.session_state.setdefault(f"symbol_{market}", "600519" if market == "A 股" else "00700")
         symbol = st.text_input(
             "A 股股票代码（非指数）" if market == "A 股" else "港股股票代码（非指数）",
-            value="600519" if market == "A 股" else "00700",
             key=f"symbol_{market}",
         ).strip()
         today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
@@ -87,9 +88,43 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             valid_symbol and dates is not None and dates[0] <= dates[1]
         )
         clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
+        def choose_candidate():
+            chosen = st.session_state.get(f"candidate_{market}")
+            if chosen:
+                st.session_state[f"symbol_{market}"] = normalize_symbol(market, chosen)
+        try:
+            directory = security_directory(market)
+            labels = dict(directory.rows)
+            st.selectbox("搜索股票候选（代码 / 名称）", list(labels), index=None,
+                key=f"candidate_{market}", placeholder="输入代码或名称搜索；选中后填入上方代码",
+                format_func=lambda code: f"{code} · {labels[code]}",
+                on_change=choose_candidate,
+                help="常见大盘股票优先展示；这是证券目录，不是买入推荐。仍可手动输入未收录代码。")
+            st.caption(f"目录快照：{len(labels)} 只 · {directory.source} · 获取于 {beijing(directory.received_at)}；不含行情，不验证当前上市状态。")
+            if directory.error:
+                st.warning(directory.error)
+            if st.button("更新股票候选目录", key="refresh_security_directory"):
+                directory = security_directory(market, force=True)
+                if directory.error:
+                    st.warning(directory.error)
+                else:
+                    st.rerun()
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            st.warning(str(exc))
         st.toggle("学习模式（显示知识入口）", key="learning_mode", on_change=persist_setting, args=("learning_mode",))
         if valid_symbol:
+            if st.button("重新获取证券名称", key="refresh_security_name"):
+                names.security_name(market, symbol, force=True)
             st.caption("当前选择：" + names.security_label(market, symbol))
+            try:
+                name_record = names.storage.cached_security_name(market, symbol)
+                if name_record:
+                    st.caption(f"名称资料缓存：{name_record['source']} · 成功获取于 {beijing(name_record['fetched_at'])}")
+            except (OSError, ValueError, sqlite3.Error):
+                pass
+            name_error = names.NAME_CACHE.error(market, symbol)
+            if name_error:
+                st.warning(name_error)
         try:
             watch_items = list_watchlist()
         except (OSError, ValueError, sqlite3.Error):
@@ -416,6 +451,11 @@ def render_app() -> None:
         if st.session_state.get("loaded_query") == query:
             bundle = st.session_state.get("loaded_bundle")
             error = st.session_state.get("load_error")
+            if bundle is not None:
+                current_name = names.security_name(market, symbol)
+                if current_name and current_name != bundle.company_name:
+                    bundle = replace(bundle, company_name=current_name)
+                    st.session_state["loaded_bundle"] = bundle
 
     latest_date = (
         bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")

@@ -117,6 +117,15 @@ def render_risk(bundle: HistoryBundle | None) -> None:
 def render_statistics(bundle: HistoryBundle | None) -> None:
     st.subheader("统计学与机器学习")
     st.caption("先描述样本，再做假设检验与时间序列预测；这些结果不构成投资建议。")
+    with st.expander("这个页面怎么用", expanded=bundle is None):
+        st.markdown(
+            "1. 左侧选股票，历史区间建议至少一年，再点“加载真实历史日线”。所有统计使用当前价格口径；跨除权时先核对复权影响。\n"
+            "2. 先看日收益率样本量、日均收益、年化波动和 p 值。p < 0.05 只表示在检验假设下对零均值的反证较强，不能理解成未来上涨概率。\n"
+            "3. 训练比例先保留 70%，点击“运行时间序列线性回归”：较早 70% 用来学习，较晚样本用来检验，中间留一日间隔。至少需要 60 行有效特征，通常要 80 个以上交易日。\n"
+            "4. 比较模型 MAE 和零收益基线 MAE：越小越好，模型必须先胜过每天预测 0 的简单方法。再看 R²、方向一致率与两条曲线，别只看命中方向。\n"
+            "5. 系数对应标准化后的特征，表示训练期关联。换股票或区间后需要重新运行；反复根据测试结果调参会过拟合。"
+        )
+        st.caption("输入特征：1 日收益、5 日收益、5/20 日均线比值减 1、成交量变化率、10 日收益波动。预测目标：下一交易日收盘相对当日收盘的收益率。")
     if not require_history(bundle):
         return
     try:
@@ -159,6 +168,11 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     cols[1].metric("零收益基线 MAE", f"{result.baseline_mae:.4%}")
     cols[2].metric("样本外 R²", f"{result.r_squared:.3f}")
     cols[3].metric("方向一致率", f"{result.directional_accuracy:.1%}")
+    if result.mae < result.baseline_mae:
+        st.info("本次样本外 MAE 小于零收益基线，说明该历史测试区间的平均误差更低；仍需在其他未使用区间复核。")
+    else:
+        st.warning("本次模型 MAE 未低于零收益基线，预测误差尚未优于每天预测 0。")
+    st.caption("例如 MAE 1% 表示预测与实际日收益平均相差 1 个百分点。R² 为负时，模型误差比测试样本均值参考更大；方向一致率不计涨跌幅、费用或可成交性。")
     if st.session_state.get("learning_mode", True):
         render_knowledge("mae", result.mae, key="statistics", observations=result.test_rows)
         render_knowledge("r_squared", result.r_squared, key="statistics", observations=result.test_rows)

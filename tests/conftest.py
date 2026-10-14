@@ -6,4 +6,4 @@ import pytest
 @pytest.fixture(autouse=True)
 def offline_ui_names(monkeypatch):
     from quant_lab import names
-    monkeypatch.setattr(names, "security_name", lambda market, symbol: "测试证券")
+    monkeypatch.setattr(names, "security_name", lambda market, symbol, **kwargs: "测试证券")

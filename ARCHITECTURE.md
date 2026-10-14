@@ -4,13 +4,13 @@
 
 | 边界 | 当前模块 | 责任 |
 | --- | --- | --- |
-| Market Data | `market_data.py`, `data.py`, `refresh.py`, `names.py`, `processing.py` | 代码与名称、日线、查询隔离缓存、并发合并、失败保留及来源元数据 |
+| Market Data | `market_data.py`, `data.py`, `refresh.py`, `names.py`, `securities.py`, `processing.py` | 代码与名称、可搜索目录、日线、查询隔离缓存、并发合并、失败保留及来源元数据 |
 | Strategy | `strategy.py` | 用已知收盘价生成目标持仓信号 |
 | Backtest | `backtest.py` | 下一开盘模拟成交、费用、滑点、交易限制与订单记录 |
 | Analytics | `metrics.py`, `statistics.py`, `portfolio.py`, `research.py` | 风险收益、统计、组合、样本内外实验与指纹 |
 | Learning | `learning.py`, `knowledge.py` | 八节参数实验、集中解释、当前数值模板 |
 | Storage | `storage.py`, `migrations.py`, `paths.py` | SQLite 版本迁移、备份、自选股、设置、实验和学习笔记 |
-| AI | `deepseek.py`, `ai_context.py`, `credentials.py`, `security.py` | 动态模型、限定事实摘要、流式请求、安全凭据和脱敏；原 OpenAI 研究模块仍保留 |
+| AI | `deepseek.py`, `ai_research.py`, `ai_context.py`, `credentials.py`, `security.py` | 共用 DeepSeek 连接、动态模型、流式问答与 JSON 假设/审阅、限定摘要、安全凭据和脱敏 |
 | UI | `ui*.py`, `charts.py`, `app.py` | Streamlit 页面与 Plotly 展示；不实现核心金融公式 |
 | Desktop | `desktop_launcher.py`, `QuantLab.spec`, `installer/` | 本地服务、pywebview、PyInstaller 与 Inno Setup |
 
@@ -49,6 +49,8 @@ flowchart LR
 
 `PRAGMA user_version=2` 包含旧实验与自选股、新增名称列、证券资料缓存、非敏感设置及学习笔记。无版本号的旧库先一致性备份，再在 `BEGIN IMMEDIATE` 事务中升级；失败回滚，快照 BLOB 与指纹不重写。
 
-AI 用原生 `st.sidebar`、expander、滚动容器和表单；不会修改 DOM 来实现侧栏。只有表单提交调用对话接口。上下文按白名单从当前 bundle/实验构造，数据指纹或实验变化时不复用旧研究历史；私人笔记与整表不在白名单。模型参数取官方列表能力，未知模型采用必要字段及输出上限。
+AI 用原生 `st.sidebar`、expander、滚动容器和表单；不会修改 DOM 来实现侧栏。侧栏表单提交、研究页显式生成假设/审阅按钮才调用对话接口；后两者使用 JSON 模式和严格本地字段验证，策略仍由本地内置函数执行。上下文按白名单从当前 bundle/实验构造，数据指纹或实验变化时不复用旧研究历史；私人笔记与整表不在白名单。研究页无对话历史传输，共用同一会话密钥和模型选择，记录实际模型。模型参数取官方列表能力，未知模型采用必要字段及输出上限。
+
+`securities.py` 提供市场隔离的目录：内置基础资料快照保证离线候选可用，显式更新取得新目录后原子写入 `user_data_dir()/securities/`。每份目录校验市场、规范代码、名称冲突、来源和带时区接收时间；失败保留原值。目录没有价格、币种换算或买入意见，名称字段不用于证明上市/可交易。`names.py` 独立查询东方财富基础资料，24 小时成功缓存、5 分钟失败冷却，手动名称更新绕过缓存且合并同查询并发，失败保留名称与原成功时间；不改写存档实验。
 
 Key 只存在会话或 Win32 `CredWriteW/CredReadW/CredDeleteW` 管理的本应用凭据中，安全存储故障不会退回文件。异常信息不显示原始响应或带 Key 的传输异常；输出与学习笔记经过脱敏。测试用虚拟凭据和模拟 API；真实 API 最小验证由用户在软件内完成。

@@ -1,21 +1,16 @@
-"""Optional OpenAI drafting around auditable, locally executed experiments.
+"""Optional DeepSeek drafting around auditable, locally executed experiments.
 
 Generated Python is displayed as text only. The model can suggest parameters,
 but it never receives a tool for file writes, shell commands, or code execution.
 """
 
 from dataclasses import dataclass
-import json
-import os
 from typing import Any
 
-from openai import OpenAI
+from quant_lab.deepseek import AIRequestError, safe_context
 
 from quant_lab.research import ExperimentResult
 from quant_lab.strategy import StrategySpec
-
-
-DEFAULT_MODEL = "gpt-6-luna"
 
 
 class AIUnavailableError(RuntimeError):
@@ -70,55 +65,42 @@ REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
-def api_configured() -> bool:
-    return bool(os.environ.get("OPENAI_API_KEY"))
-
-
 def _structured_response(
-    payload: dict[str, Any], schema: dict[str, Any], name: str,
-    instructions: str, client: Any | None = None,
+    payload: dict[str, Any], schema: dict[str, Any],
+    instructions: str, client: Any | None = None, *, model: str = "", metadata=None,
 ) -> dict[str, Any]:
     if client is None:
-        if not api_configured():
-            raise AIUnavailableError("尚未配置 OPENAI_API_KEY，AI 草拟功能不可用。")
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], timeout=30)
+        raise AIUnavailableError("请在 DeepSeek 侧栏配置密钥并选择模型。")
     try:
-        response = client.responses.create(
-            model=os.environ.get("OPENAI_MODEL", DEFAULT_MODEL),
-            instructions=instructions,
-            input=json.dumps(payload, ensure_ascii=False),
-            text={"format": {"type": "json_schema", "name": name,
-                             "schema": schema, "strict": True}},
-            max_output_tokens=2500,
-        )
-        if getattr(response, "status", "completed") != "completed":
-            raise AIUnavailableError("模型没有完成输出，请重试。")
-        result = json.loads(response.output_text)
+        result = client.structured(model, payload, schema, instructions, metadata=metadata)
         if not isinstance(result, dict):
             raise AIUnavailableError("模型没有返回结构化对象。")
         return result
     except AIUnavailableError:
         raise
+    except AIRequestError as exc:
+        raise AIUnavailableError(str(exc)) from None
     except Exception as exc:
         raise AIUnavailableError(f"AI 服务调用失败：{type(exc).__name__}") from exc
 
 
 def draft_hypothesis(
-    question: str, market: str, symbol: str, client: Any | None = None
+    question: str, market: str, symbol: str, client: Any | None = None,
+    *, model: str = "", metadata=None, context=None,
 ) -> ResearchHypothesis:
     """Turn a question into bounded built-in strategy parameters, plus text code."""
     if not question.strip() or len(question) > 600:
         raise ValueError("研究问题须为 1 到 600 个字符。")
     payload = {"question": question.strip(), "market": market, "symbol": symbol,
                "allowed_strategies": ["single_ma", "dual_ma", "trend"],
-               "bounds": "2 <= short_window < long_window <= 250"}
+               "bounds": "2 <= short_window < long_window <= 250", "context": safe_context(context)}
     result = _structured_response(
-        payload, HYPOTHESIS_SCHEMA, "research_hypothesis",
+        payload, HYPOTHESIS_SCHEMA,
         "You are a cautious quant research assistant. Propose one testable hypothesis "
         "using only the listed built-in strategies and valid periods. State assumptions "
         "and statistical pitfalls. example_code is illustrative pandas code only; "
         "it will never be executed. Do not claim future profits or real tradeability.",
-        client,
+        client, model=model, metadata=metadata,
     )
     try:
         spec = StrategySpec(
@@ -152,18 +134,19 @@ def audit_snapshot(experiment: ExperimentResult) -> dict[str, Any]:
 
 
 def draft_report(
-    experiment: ExperimentResult, context: dict[str, str], client: Any | None = None
+    experiment: ExperimentResult, context: dict[str, str], client: Any | None = None,
+    *, model: str = "", metadata=None,
 ) -> ResearchReport:
     """Interpret a fixed evidence snapshot without granting execution tools."""
-    payload = {"context": context, "verified_metrics": audit_snapshot(experiment)}
+    payload = {"context": safe_context(context), "verified_metrics": audit_snapshot(experiment)}
     result = _structured_response(
-        payload, REPORT_SCHEMA, "research_report",
+        payload, REPORT_SCHEMA,
         "You are a cautious quantitative research reviewer. Interpret only the "
         "provided verified_metrics. Discuss sample size, costs, slippage, price "
         "adjustment, survivorship bias, parameter sensitivity and out-of-sample "
         "uncertainty where relevant. Never invent numerical results, promise returns, "
         "or present this backtest as live trading evidence.",
-        client,
+        client, model=model, metadata=metadata,
     )
     try:
         return ResearchReport(

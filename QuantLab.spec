@@ -12,6 +12,7 @@ datas = [
     (str(ROOT / "app.py"), "."),
     (str(ROOT / ".streamlit" / "config.toml"), ".streamlit"),
     (str(ROOT / "quant_lab" / "terminal.css"), "quant_lab"),
+    (str(ROOT / "quant_lab" / "resources"), "quant_lab/resources"),
     (str(ROOT / "assets" / "quantlab.ico"), "assets"),
 ]
 binaries = []

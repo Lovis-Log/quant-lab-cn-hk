@@ -1,7 +1,6 @@
 """AI suggestions remain bounded; numerical evidence comes from local code."""
 
 import json
-from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -33,11 +32,11 @@ class FakeClient:
     def __init__(self, body: dict):
         self.body = body
         self.calls: list[dict] = []
-        self.responses = self
+        self.model_used = "test-model-actual"
 
-    def create(self, **kwargs):
-        self.calls.append(kwargs)
-        return SimpleNamespace(status="completed", output_text=json.dumps(self.body))
+    def structured(self, model, payload, schema, instructions, **kwargs):
+        self.calls.append({"model": model, "payload": payload, "schema": schema})
+        return self.body
 
 
 def test_experiment_is_reproducible_and_grid_is_training_only() -> None:
@@ -62,11 +61,11 @@ def test_ai_hypothesis_is_validated_before_experiment() -> None:
         "example_code": "# Display only",
     }
     fake = FakeClient(body)
-    hypothesis = draft_hypothesis("Does a trend filter help?", "A 股", "600519", fake)
+    hypothesis = draft_hypothesis("Does a trend filter help?", "A 股", "600519", fake, model="chosen-model")
 
     assert hypothesis.strategy == StrategySpec("dual_ma", 5, 20)
-    assert fake.calls[0]["text"]["format"]["type"] == "json_schema"
-    assert fake.calls[0]["model"]
+    assert fake.calls[0]["schema"]["type"] == "object"
+    assert fake.calls[0]["model"] == "chosen-model"
 
     invalid = FakeClient({**body, "short_window": 30, "long_window": 5})
     with pytest.raises(AIUnavailableError, match="本地验证"):
@@ -80,7 +79,7 @@ def test_ai_report_receives_only_verified_snapshot() -> None:
          "limitations": ["Single asset"], "next_tests": ["Use another period"]}
     )
     report = draft_report(experiment, {"market": "A 股", "symbol": "600519"}, fake)
-    request_payload = json.loads(fake.calls[0]["input"])
+    request_payload = fake.calls[0]["payload"]
 
     assert report.summary == "Uncertain result"
     assert request_payload["verified_metrics"]["audit_id"] == experiment.audit_id
