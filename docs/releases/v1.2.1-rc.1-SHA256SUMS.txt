@@ -1,0 +1,2 @@
+a21dc1a7404f4a47ac7ec4ef42399d9602b8995d0035dd0f555fc9fa63d74217  QuantLab.exe
+cbb0596e1826236d6e7832c0cd62d16c739f7c9ddb909b35ecdd891d246de354  QuantLab-CN-HK-1.2.1-rc.1-Setup.exe
