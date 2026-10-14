@@ -35,10 +35,13 @@ from quant_lab.ui_knowledge import render_knowledge
 from quant_lab.ui_deepseek import render_deepseek
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
+from quant_lab.guidance import GUIDES
+from quant_lab.ui_guidance import (render_learning_center, render_page_help, render_welcome,
+    protect_research_widgets, complete_task, history_evidence)
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "AI 研究助手", "Quant Academy", "研究笔记")
+PAGES = tuple(GUIDES)
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 
@@ -59,13 +62,16 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             '<span><strong>QUANT LAB</strong><small>CN / HK RESEARCH</small></span></div>'
         )
         st.html('<div class="ql-sidebar-label">WORKSPACE / 导航</div>')
-        page = st.radio("功能导航", PAGES, label_visibility="collapsed")
+        page = st.radio("功能导航", PAGES, label_visibility="collapsed", key="nav_page")
         st.html('<div class="ql-sidebar-label ql-sidebar-gap">RESEARCH SETUP / 研究参数</div>')
         market = st.selectbox("市场", ("A 股", "港股"), key="market_selection")
         st.session_state.setdefault(f"symbol_{market}", "600519" if market == "A 股" else "00700")
+        def code_changed():
+            st.session_state["_security_selection_event"] = {"market": market, "symbol": st.session_state[f"symbol_{market}"]}
         symbol = st.text_input(
             "A 股股票代码（非指数）" if market == "A 股" else "港股股票代码（非指数）",
             key=f"symbol_{market}",
+            on_change=code_changed,
         ).strip()
         today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
         selected_dates = st.date_input(
@@ -92,6 +98,8 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             chosen = st.session_state.get(f"candidate_{market}")
             if chosen:
                 st.session_state[f"symbol_{market}"] = normalize_symbol(market, chosen)
+                st.session_state["_security_selection_event"] = {"market": market, "symbol": chosen}
+        labels = {}
         try:
             directory = security_directory(market)
             labels = dict(directory.rows)
@@ -111,7 +119,9 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
                     st.rerun()
         except (OSError, ValueError, KeyError, TypeError) as exc:
             st.warning(str(exc))
-        st.toggle("学习模式（显示知识入口）", key="learning_mode", on_change=persist_setting, args=("learning_mode",))
+        st.toggle("新手模式（关闭为专业模式）", key="learning_mode", on_change=persist_setting,
+                  args=("learning_mode",), help="只改变教学提示和知识入口，不改变金融计算。")
+        st.caption("当前使用：" + ("新手模式" if st.session_state["learning_mode"] else "专业模式"))
         if valid_symbol:
             if st.button("重新获取证券名称", key="refresh_security_name"):
                 names.security_name(market, symbol, force=True)
@@ -125,6 +135,10 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             name_error = names.NAME_CACHE.error(market, symbol)
             if name_error:
                 st.warning(name_error)
+            selection = st.session_state.pop("_security_selection_event", None)
+            if selection and selection["market"] == market and normalize_symbol(market, selection["symbol"]) == symbol:
+                complete_task("select_security", {"selected": True, "identity_known": bool(labels.get(symbol) or names.security_name(market, symbol)),
+                    "market": market, "symbol": symbol, "identity_basis": "基础资料目录快照或个股资料；不证明当前可交易"})
         try:
             watch_items = list_watchlist()
         except (OSError, ValueError, sqlite3.Error):
@@ -425,11 +439,14 @@ def render_app() -> None:
     )
     st.html(CSS_PATH)
     initialize_settings()
+    protect_research_widgets()
     page, market, symbol, dates, adjustment, clicked = _sidebar()
     bundle: HistoryBundle | None = None
     error: str | None = None
     query = None
     st.session_state["active_backtest_context"] = None
+    st.session_state["active_analysis_context"] = None
+    st.session_state["active_learning_context"] = None
     record = None
     if dates is not None:
         query = (market, symbol, dates[0], dates[1], adjustment)
@@ -440,6 +457,10 @@ def render_app() -> None:
                         market, symbol, *dates, adjustment
                     )
                     st.session_state["loaded_bundle"] = replace(fetched, company_name=names.security_name(market, symbol))
+                    evidence = history_evidence(st.session_state["loaded_bundle"])
+                    complete_task("select_security", {"selected": True, "identity_known": bool(evidence.get("company_name")),
+                        "market": market, "symbol": symbol})
+                    complete_task("load_history", evidence)
                     st.session_state["_history_loaded_this_run"] = True
                 st.session_state["load_error"] = fetched.update_error
             except (DataUnavailableError, DataValidationError, ValueError) as exc:
@@ -461,12 +482,18 @@ def render_app() -> None:
         bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
         if bundle is not None and not bundle.frame.empty else None
     )
+    st.session_state["active_data_fingerprint"] = None if page in {"Quant Academy", "新手使用指引"} else bundle_context(page, bundle).get("data_fingerprint")
+    render_welcome()
+    render_page_help(page)
     if page == "市场数据":
         _market_workspace(query, market, symbol, adjustment)
         bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
     elif page == "Quant Academy":
         _header(page, market, symbol, latest_date)
         render_academy()
+    elif page == "新手使用指引":
+        _header(page, market, symbol, latest_date)
+        render_learning_center()
     elif page == "研究笔记":
         _header(page, market, symbol, latest_date)
         record = render_research_notes()
@@ -488,7 +515,13 @@ def render_app() -> None:
     context["page"] = page
     if st.session_state.get("active_backtest_context"):
         context.update(st.session_state["active_backtest_context"])
+    if st.session_state.get("active_analysis_context"):
+        context["statistics"] = st.session_state["active_analysis_context"]
     if page == "Quant Academy":
         context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
                    "data_status": "离线教学实验，不是股票行情。"}
+    if page == "新手使用指引":
+        context = {"page": page, "data_status": "学习指南与固定教学样本，不是股票行情。"}
+    if st.session_state.get("active_learning_context"):
+        context["learning_context"] = st.session_state["active_learning_context"]
     render_deepseek(context)

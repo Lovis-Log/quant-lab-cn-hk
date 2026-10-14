@@ -15,6 +15,7 @@ from quant_lab.storage import save_experiment
 from quant_lab import names
 from quant_lab.ui_knowledge import render_knowledge
 from dataclasses import asdict
+from quant_lab.ui_guidance import complete_task, history_evidence
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -49,6 +50,10 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
     if spec is None:
         return
     signals = build_signals(bundle.frame, spec)
+    evidence = history_evidence(bundle)
+    evidence["signals_valid"] = bool(signals["ma_long"].notna().any())
+    evidence["strategy"] = asdict(spec)
+    complete_task("choose_strategy", evidence)
     st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     chart = go.Figure()
     chart.add_trace(go.Scatter(
@@ -90,30 +95,30 @@ def _backtest_config(market: str) -> BacktestConfig:
     defaults = illustrative_config(market)
     with st.expander("成交与费用假设（均可调整）", expanded=False):
         st.caption("以下是研究用示例参数，不代表当前交易所、券商或个股的实际费率与成交概率。")
-        cash = float(st.number_input("初始资金", min_value=1_000.0, value=1_000_000.0, step=10_000.0))
+        cash = float(st.number_input("初始资金", min_value=1_000.0, value=1_000_000.0, step=10_000.0, key=f"cost_{market}_cash"))
         lot = int(st.number_input(
             "买入交易单位（股，请核对标的与板块）", min_value=1,
-            value=defaults.lot_size, step=1,
+            value=defaults.lot_size, step=1, key=f"cost_{market}_lot",
         ))
         commission = float(st.number_input(
-            "佣金（基点）", min_value=0.0, value=defaults.commission_bps, step=1.0
+            "佣金（基点）", min_value=0.0, value=defaults.commission_bps, step=1.0, key=f"cost_{market}_commission"
         ))
         min_commission = float(st.number_input(
-            "单笔最低佣金", min_value=0.0, value=defaults.min_commission, step=1.0
+            "单笔最低佣金", min_value=0.0, value=defaults.min_commission, step=1.0, key=f"cost_{market}_minimum"
         ))
         buy_tax = float(st.number_input(
-            "买入附加费用（基点）", min_value=0.0, value=defaults.buy_tax_bps, step=1.0
+            "买入附加费用（基点）", min_value=0.0, value=defaults.buy_tax_bps, step=1.0, key=f"cost_{market}_buy_tax"
         ))
         sell_tax = float(st.number_input(
-            "卖出附加费用（基点）", min_value=0.0, value=defaults.sell_tax_bps, step=1.0
+            "卖出附加费用（基点）", min_value=0.0, value=defaults.sell_tax_bps, step=1.0, key=f"cost_{market}_sell_tax"
         ))
         slippage = float(st.number_input(
             "单边滑点（基点）", min_value=0.0, max_value=9999.0,
-            value=defaults.slippage_bps, step=1.0,
+            value=defaults.slippage_bps, step=1.0, key=f"cost_{market}_slippage",
         ))
         limit = None
         if market == "A 股":
-            choice = st.selectbox("简化涨跌停假设", ("10%", "5%", "20%", "30%", "不模拟"))
+            choice = st.selectbox("简化涨跌停假设", ("10%", "5%", "20%", "30%", "不模拟"), key="cost_A_limit")
             limit = None if choice == "不模拟" else float(choice.rstrip("%")) / 100
     return BacktestConfig(
         market=market, initial_cash=cash, lot_size=lot,
@@ -141,7 +146,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
         return
     spec = _strategy_controls("backtest")
     config = _backtest_config(bundle.market)
-    train_fraction = st.slider("样本内比例", 0.50, 0.85, 0.70, 0.05)
+    train_fraction = st.slider("样本内比例", 0.50, 0.85, 0.70, 0.05, key="backtest_fraction")
     if spec is None:
         return
     key = (bundle_key(bundle), spec, config, train_fraction)
@@ -154,6 +159,9 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
             st.session_state["backtest_result"] = result
             st.session_state["backtest_raw"] = raw
             st.session_state["backtest_error"] = None
+            evidence = history_evidence(bundle)
+            evidence.update({"backtest_success": True, "audit_id": result.audit_id})
+            complete_task("run_backtest", evidence)
         except (ValueError, DataUnavailableError, DataValidationError) as exc:
             st.session_state["backtest_key"] = key
             st.session_state["backtest_result"] = None
@@ -233,9 +241,9 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     st.dataframe(grid, width="stretch", hide_index=True)
     st.caption("A 股模拟 T+1、用户设定的买入单位、零成交量和简化涨跌停；港股交易单位也由用户输入。停牌、涨跌停队列、公司行动、幸存者偏差和真实费用无法由日线完整重建。")
     with st.expander("保存本次实验与研究笔记"):
-        title = st.text_input("研究标题", value=f"{names.security_label(bundle.market, bundle.symbol, bundle.company_name)} {STRATEGY_NAMES[spec.kind]}实验")
-        hypothesis = st.text_area("研究假设", value="该均线规则在样本外仍具有可观察的风险收益特征。")
-        notes = st.text_area("学习笔记", value="")
+        title = st.text_input("研究标题", value=f"{names.security_label(bundle.market, bundle.symbol, bundle.company_name)} {STRATEGY_NAMES[spec.kind]}实验", key=f"research_title_{bundle.market}_{bundle.symbol}")
+        hypothesis = st.text_area("研究假设", value="该均线规则在样本外仍具有可观察的风险收益特征。", key=f"research_hypothesis_{bundle.market}_{bundle.symbol}")
+        notes = st.text_area("学习笔记", value="", key=f"research_notes_{bundle.market}_{bundle.symbol}")
         if st.button("保存实验", key="save_experiment"):
             try:
                 record_id = save_experiment(
@@ -249,5 +257,8 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
                     company_name=bundle.company_name,
                 )
                 st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
+                evidence = history_evidence(bundle)
+                evidence.update({"experiment_id": record_id, "audit_id": result.audit_id, "has_judgment": bool(notes.strip())})
+                complete_task("save_research", evidence)
             except (OSError, ValueError, sqlite3.Error) as exc:
                 st.error(f"保存失败：{exc}")

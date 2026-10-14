@@ -21,10 +21,12 @@ def initialize_settings():
         preferences = {}
         st.session_state["settings_error"] = "无法读取用户设置；使用会话默认值。"
     defaults = {"refresh_enabled": True, "refresh_interval_seconds": 300, "learning_mode": True,
-                "deepseek_model": ""}
+                "deepseek_model": "", "deepseek_answer_mode": "研究解释模式"}
     for key, default in defaults.items():
         value = preferences.get(key, default)
         if key == "refresh_interval_seconds" and value not in INTERVALS:
+            value = default
+        if key == "deepseek_answer_mode" and value not in {"研究解释模式", "教学辅导模式"}:
             value = default
         st.session_state.setdefault(key, value)
     st.session_state["settings_initialized"] = True

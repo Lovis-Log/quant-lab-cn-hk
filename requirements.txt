@@ -1,4 +1,4 @@
-# Quant Lab CN/HK research platform; OpenAI calls require a user-supplied API key.
+# Quant Lab CN/HK; the optional DeepSeek assistant uses session/vault credentials.
 streamlit>=1.54,<2
 plotly>=6.3,<7
 numpy>=1.26,<3

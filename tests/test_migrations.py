@@ -45,15 +45,15 @@ def test_populated_legacy_migration_and_replay(tmp_path):
     with ZipFile(BytesIO(storage.export_experiment_zip(record))) as archive:
         assert archive.read("raw_history.csv") == record["raw_csv_bytes"]
     with sqlite3.connect(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         assert db.execute("SELECT raw_csv,signal_csv,notes FROM experiments").fetchone() == prior
-    backups = list((tmp_path / "backups").glob("research.pre-v2.*.sqlite3"))
+    backups = list((tmp_path / "backups").glob("research.pre-v3.*.sqlite3"))
     assert len(backups) == 1
     with sqlite3.connect(backups[0]) as backup:
         assert backup.execute("PRAGMA user_version").fetchone()[0] == 0
         assert backup.execute("SELECT raw_csv,signal_csv,notes FROM experiments").fetchone() == prior
     storage.list_experiments(old)
-    assert len(list((tmp_path / "backups").glob("research.pre-v2.*.sqlite3"))) == 1
+    assert len(list((tmp_path / "backups").glob("research.pre-v3.*.sqlite3"))) == 1
 
 
 def test_migration_failure_rolls_back_schema_and_rows(tmp_path, monkeypatch):

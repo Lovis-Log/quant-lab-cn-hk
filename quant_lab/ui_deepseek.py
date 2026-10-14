@@ -56,13 +56,32 @@ def _save_model(widget_key):
         st.session_state["deepseek_notice"] = "模型已切换；当前设置仅保留在会话中。"
 
 
+def _save_answer_mode():
+    try:
+        save_setting("deepseek_answer_mode", st.session_state["deepseek_answer_mode"])
+    except (OSError, sqlite3.Error, ValueError):
+        st.session_state["deepseek_notice"] = "回答模式仅保留在会话中。"
+
+
 def render_deepseek(context: dict):
     context = safe_context(context)
-    if st.session_state.get("ai_knowledge"):
-        context["knowledge"] = st.session_state["ai_knowledge"]
-    scope = context_scope(context)
+    topic = st.session_state.get("ai_knowledge")
+    if topic:
+        matching_page = topic.get("origin_page") == context.get("page")
+        matching_data = topic.get("data_fingerprint") == context.get("data_fingerprint")
+        matching_lesson = topic.get("lesson") == context.get("lesson")
+        learning = context.get("learning_context") or {}
+        matching_learning = topic.get("learning_id") == (learning.get("course_id") or learning.get("guide")) if context.get("page") == "新手使用指引" else True
+        if matching_page and matching_data and matching_lesson and matching_learning:
+            context["knowledge"] = {"topic": topic["topic"]}
+        else:
+            st.session_state.pop("ai_knowledge", None)
     with st.sidebar:
         with st.expander("DeepSeek AI 助手", expanded=st.session_state.get("ai_open", False)):
+            st.radio("回答模式", ("研究解释模式", "教学辅导模式"), key="deepseek_answer_mode",
+                     on_change=_save_answer_mode)
+            context["answer_mode"] = st.session_state["deepseek_answer_mode"]
+            scope = context_scope(context)
             st.caption("使用你自己的 DeepSeek API 账户。只有点击发送才产生模型请求；模型解释需核对程序事实。")
             st.caption("官方地址：https://api.deepseek.com")
             key = st.text_input("DeepSeek API Key", type="password", key="deepseek_api_key",

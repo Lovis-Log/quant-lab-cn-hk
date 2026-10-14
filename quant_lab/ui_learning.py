@@ -24,6 +24,9 @@ def render_academy() -> None:
                   int(lesson.default), int(lesson.step))
     value = st.slider(lesson.parameter, *bounds)
     frame, conclusion = lesson_experiment(choice, value)
+    st.session_state["active_learning_context"] = {"course_id": LESSON_TOPICS[choice][0],
+        "topic": lesson.title, "parameter": value, "experiment_conclusion": conclusion,
+        "status": "固定教学样本，不是股票行情"}
     st.dataframe(frame, width="stretch", hide_index=True)
     st.info(conclusion)
     readings = {}
@@ -46,3 +49,6 @@ def render_academy() -> None:
         render_knowledge(topic, readings.get(topic), key="academy", period="当前固定教学样本（不是行情）", expanded=True)
     st.markdown("#### 思考问题")
     st.write(lesson.question)
+    from quant_lab.ui_guidance import navigate
+    st.button("到学习中心保存实验与测验", key="academy_to_center", on_click=navigate,
+        args=("新手使用指引",), kwargs={"section": "课程与练习", "course": LESSON_TOPICS[choice][0]})

@@ -44,8 +44,9 @@ def render_risk(bundle: HistoryBundle | None) -> None:
     code_text = st.text_input(
         "组合股票代码（逗号分隔，2–4 只）", value=f"{bundle.symbol},{other}",
         help="只允许当前市场的股票；A 股六位，港股五位。不会混合 CNY 与 HKD。",
+        key=f"portfolio_codes_{bundle.market}_{bundle.symbol}",
     )
-    fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05)
+    fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05, key="portfolio_fraction")
     codes = [part.strip() for part in code_text.split(",") if part.strip()]
     pattern = r"\d{6}" if bundle.market == "A 股" else r"\d{5}"
     valid = 2 <= len(codes) <= 4 and len(set(codes)) == len(codes) and all(
@@ -138,11 +139,15 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     cols[1].metric("日均收益率", percent(test.mean_daily))
     cols[2].metric("年化波动率估计", percent(test.annualized_volatility))
     cols[3].metric("均值为零检验 p 值", "—" if test.p_value is None else f"{test.p_value:.3f}")
+    st.session_state["active_analysis_context"] = {
+        "observations": test.observations, "mean_daily": test.mean_daily,
+        "annualized_volatility": test.annualized_volatility, "p_value": test.p_value,
+        "test_definition": "单样本 t 检验：平均日收益为 0；非盈利概率"}
     st.caption("单样本 t 检验的零假设是“平均日收益率为 0”。其 p 值依赖样本近似独立等条件；时间序列自相关、厚尾和反复试参数会削弱解释力。p 值不是策略获利概率。")
     if st.session_state.get("learning_mode", True):
         render_knowledge("p_value", test.p_value, key="statistics", observations=test.observations)
 
-    fraction = st.slider("机器学习训练比例", 0.55, 0.85, 0.70, 0.05)
+    fraction = st.slider("机器学习训练比例", 0.55, 0.85, 0.70, 0.05, key="model_fraction")
     key = (bundle_key(bundle), fraction)
     if st.button("运行时间序列线性回归"):
         try:
@@ -163,6 +168,13 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     result = st.session_state.get("model_result")
     if result is None:
         return
+    st.session_state["active_analysis_context"]["linear_model"] = {
+        "train_fraction": fraction, "train_rows": result.train_rows, "test_rows": result.test_rows,
+        "train_label_end": str(result.train_end.date()), "test_feature_start": str(result.test_start.date()),
+        "mae": result.mae, "zero_return_baseline_mae": result.baseline_mae, "r_squared": result.r_squared,
+        "directional_accuracy": result.directional_accuracy, "cv_mae": result.cv_mae,
+        "features": ["1/5 日收益", "5/20 均线比值-1", "成交量变化", "10 日收益标准差"],
+        "target": "下一交易日收盘相对当日收盘的收益率；不是交易收益"}
     cols = st.columns(4)
     cols[0].metric("样本外 MAE", f"{result.mae:.4%}")
     cols[1].metric("零收益基线 MAE", f"{result.baseline_mae:.4%}")

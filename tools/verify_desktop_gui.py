@@ -23,6 +23,8 @@ def main():
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--mock-ai", action="store_true")
     parser.add_argument("--research-fixes", action="store_true")
+    parser.add_argument("--learning-center", action="store_true")
+    parser.add_argument("--resume-learning", action="store_true")
     args = parser.parse_args()
     directory = (args.data_dir or ROOT / ".tools" / ("desktop-validation-" + uuid4().hex)).resolve()
     directory.relative_to((ROOT / ".tools").resolve())
@@ -41,7 +43,7 @@ def main():
     # belong to this launch, not the previous window's now-closed CDP endpoint.
     probe_file = directory / ("probe-" + uuid4().hex + ".json")
     env = {**os.environ, "QUANT_LAB_DATA_DIR": str(directory),
-           "QUANT_LAB_GUI_TEST_SECONDS": "180", "QUANT_LAB_GUI_PROBE": "1",
+           "QUANT_LAB_GUI_TEST_SECONDS": "240", "QUANT_LAB_GUI_PROBE": "1",
            "QUANT_LAB_SMOKE_RESULT": str(probe_file)}
     command = [str(args.exe.resolve())] if args.exe else [str(ROOT/".venv/Scripts/python.exe"), str(ROOT/"desktop_launcher.py")]
     child = None
@@ -77,6 +79,9 @@ def main():
                 page = browser.contexts[0].pages[0]
                 page.get_by_text("市场数据实验室", exact=True).wait_for(timeout=30000)
                 summary["actual_webview_dom_loaded"] = True
+                welcome = page.get_by_role("button", name="跳过首次引导", exact=True)
+                if welcome.count():
+                    welcome.click()
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()
@@ -101,7 +106,55 @@ def main():
                     summary.update({"a_candidate_name_search": True, "hk_red_chip_search": True,
                                     "candidate_populates_code": True, "statistics_usage_help": True})
                     page.get_by_text("市场数据", exact=True).click()
-                page.get_by_text("DeepSeek AI 助手", exact=True).click()
+                if args.learning_center:
+                    sidebar = page.get_by_test_id("stSidebar")
+                    sidebar.get_by_text("新手使用指引", exact=True).click()
+                    page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("课程与练习", exact=True).click()
+                    course = page.get_by_role("combobox", name="选择交互课程", exact=True)
+                    course.click()
+                    course.fill("最大回撤")
+                    page.get_by_role("option", name="最大回撤", exact=True).click()
+                    page.get_by_text("最大回撤 · 七层学习", exact=True).wait_for(timeout=10000)
+                    slider = page.get_by_test_id("stSlider").filter(has_text="低点净值").get_by_role("slider")
+                    slider.press("ArrowLeft")
+                    page.get_by_role("button", name="保存交互实验记录", exact=True).click()
+                    page.get_by_label("你的数值答案", exact=True).fill("-20")
+                    page.get_by_role("button", name="提交课程测验", exact=True).click()
+                    page.get_by_text("答对了。", exact=False).wait_for(timeout=10000)
+                    page.get_by_role("button", name="使用 DeepSeek 辅导这节课", exact=True).click()
+                    expect(page.get_by_role("radio", name="教学辅导模式", exact=True)).to_be_checked(timeout=10000)
+                    assert "不要直接给出" in page.get_by_label("问题（确认后发送）", exact=True).input_value()
+                    page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
+                    page.get_by_label("当前学习目标", exact=True).fill("桌面验收：掌握回撤后理解样本外")
+                    page.get_by_role("button", name="保存学习目标", exact=True).click()
+                    page.get_by_text("学习目标已保存；不会自动发送给 AI。", exact=True).wait_for(timeout=10000)
+                    page.get_by_label("学习笔记标题", exact=True).fill("桌面学习验收")
+                    page.get_by_label("学习笔记内容", exact=True).fill("峰值只能使用当前及更早数据；教学样本不是行情。")
+                    page.get_by_role("button", name="保存学习笔记", exact=True).click()
+                    page.get_by_text("学习笔记已保存。", exact=True).wait_for(timeout=10000)
+                    sidebar.get_by_text("统计与机器学习", exact=True).click()
+                    page.get_by_role("button", name="查看本页使用指南", exact=True).click()
+                    page.get_by_text("统计与机器学习 · 使用指南", exact=True).wait_for(timeout=10000)
+                    page.get_by_role("button", name="返回研究任务 · 统计与机器学习", exact=True).click()
+                    page.get_by_text("统计学与机器学习", exact=True).wait_for(timeout=10000)
+                    sidebar.get_by_text("市场数据", exact=True).click()
+                    summary.update({"learning_center_dom":True,"interactive_lesson":True,"quiz_submission":True,
+                        "learning_goal_and_note":True,"help_return_navigation":True,"teaching_draft_without_send":True})
+                if args.resume_learning:
+                    sidebar = page.get_by_test_id("stSidebar")
+                    sidebar.get_by_text("新手使用指引", exact=True).click()
+                    page.get_by_text("最大回撤 · 七层学习", exact=True).wait_for(timeout=15000)
+                    page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
+                    expect(page.get_by_label("当前学习目标", exact=True)).to_have_value("桌面验收：掌握回撤后理解样本外", timeout=15000)
+                    sidebar.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
+                    page.get_by_text("当前使用：专业模式", exact=True).wait_for(timeout=10000)
+                    sidebar.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
+                    page.get_by_text("当前使用：新手模式", exact=True).wait_for(timeout=10000)
+                    sidebar.get_by_text("市场数据", exact=True).click()
+                    summary.update({"learning_resumed_in_actual_dom":True,"goal_restored_in_actual_dom":True,
+                                    "professional_mode_control":True})
+                if not page.get_by_label("DeepSeek API Key", exact=True).is_visible():
+                    page.get_by_text("DeepSeek AI 助手", exact=True).click()
                 key = page.get_by_label("DeepSeek API Key", exact=True)
                 assert key.get_attribute("type") == "password"
                 assert key.input_value() == ""  # Session-only keys must not return after restart.

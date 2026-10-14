@@ -226,7 +226,7 @@ def _beijing(value: str | None) -> str:
     return dt.astimezone(ZoneInfo("Asia/Shanghai")).isoformat(sep=" ")
 
 
-SETTING_KEYS = {"refresh_enabled", "refresh_interval_seconds", "learning_mode", "deepseek_model"}
+SETTING_KEYS = {"refresh_enabled", "refresh_interval_seconds", "learning_mode", "deepseek_model", "deepseek_answer_mode"}
 
 
 def load_settings(path: Path | None = None) -> dict:

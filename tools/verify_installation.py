@@ -156,7 +156,8 @@ def main():
     assert storage.load_settings(database)["refresh_enabled"] is False
     assert storage.load_settings(database)["deepseek_model"] == "manual-model-validation"
     with sqlite3.connect(database) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        from quant_lab.migrations import SCHEMA_VERSION
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         current_notes = list(db.execute("SELECT id,title,content,model FROM learning_notes"))
         assert all(row in current_notes for row in previous_notes)
         assert hashlib.sha256(db.execute("SELECT raw_csv FROM experiments").fetchone()[0]).hexdigest() == state["raw_blob_sha256"]

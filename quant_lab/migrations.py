@@ -7,7 +7,7 @@ from threading import RLock
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 _LOCK = RLock()
 BASE_SCHEMA = (
     """CREATE TABLE IF NOT EXISTS watchlist (
@@ -43,6 +43,13 @@ def _upgrade(db: sqlite3.Connection) -> None:
         origin TEXT NOT NULL, model TEXT NOT NULL DEFAULT '', market TEXT,
         symbol TEXT, experiment_id INTEGER, created_at TEXT NOT NULL,
         FOREIGN KEY(experiment_id) REFERENCES experiments(id))""")
+    db.execute("""CREATE TABLE IF NOT EXISTS learning_progress (
+        kind TEXT NOT NULL, item_id TEXT NOT NULL, status TEXT NOT NULL,
+        details_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL,
+        PRIMARY KEY(kind,item_id))""")
+    db.execute("""CREATE TABLE IF NOT EXISTS learning_quiz_attempts (
+        id INTEGER PRIMARY KEY, course_id TEXT NOT NULL, answer REAL NOT NULL,
+        correct INTEGER NOT NULL CHECK(correct IN (0,1)), created_at TEXT NOT NULL)""")
 
 
 def migrate(db: sqlite3.Connection, target: Path) -> None:

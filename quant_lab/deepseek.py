@@ -37,9 +37,11 @@ class AIRequestError(RuntimeError):
 def safe_context(context: dict | None) -> dict:
     allowed = {"page", "security", "market", "symbol", "company_name", "data_period", "source",
                "adjustment", "received_at", "data_status", "price_metrics", "strategy", "costs",
-               "performance", "experiment_id", "audit_id", "data_fingerprint", "knowledge", "lesson"}
+               "performance", "experiment_id", "audit_id", "data_fingerprint", "knowledge", "lesson",
+               "answer_mode", "learning_context", "statistics"}
     result = {k: v for k, v in (context or {}).items() if k in allowed}
-    forbidden = {"notes", "private_notes", "api_key", "token", "key", "database", "raw_history", "signal_history"}
+    forbidden = {"notes", "private_notes", "api_key", "token", "key", "database", "raw_history", "signal_history",
+                 "quiz_answer", "expected_answer", "quiz_attempts", "learning_goal", "goal", "progress"}
     def strip_private(value):
         if isinstance(value, dict):
             return {k: strip_private(v) for k,v in value.items() if k not in forbidden}
@@ -151,6 +153,10 @@ class DeepSeekClient:
         facts = safe_context(context)
         meta = metadata or {}
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        if facts.get("answer_mode") == "教学辅导模式":
+            messages[0]["content"] += "教学辅导：每次先问一个可手算的小问题，等学生尝试后再分步解释。不要直接提供当前测验的完整答案；不声称替软件判定课程完成。"
+        else:
+            messages[0]["content"] += "研究解释：先列明摘要中可核验事实，再解释含义、假设与局限，最后提出下一步独立检验。缺少模型或实验摘要时不能猜测结果。"
         # Do not reuse messages from another stock/experiment in the UI; this
         # helper also bounds all text and excludes metadata/secrets/notes.
         remaining = min(16000, max(500, int(meta.get("context_window", 40000)) // 2))

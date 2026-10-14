@@ -48,6 +48,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     question = st.text_area(
         "研究问题", value="双均线过滤能否改善这只股票的历史回撤？",
         max_chars=600, height=95,
+        key="ai_question",
     )
     if st.button("生成 AI 假设", disabled=not configured):
         try:
@@ -108,6 +109,8 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     if experiment is None:
         return
     evidence = audit_snapshot(experiment)
+    st.session_state["active_backtest_context"] = {"strategy": asdict(spec), "costs": asdict(config),
+        "audit_id": experiment.audit_id, "performance": evidence}
     st.markdown("#### 可独立复核的实验数据")
     st.json(evidence)
     st.caption(f"实验指纹 `{experiment.audit_id}` 由行情、信号、参数和成本假设计算。数值来自本地回测代码，不由 AI 生成。")

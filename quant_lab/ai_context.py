@@ -60,5 +60,5 @@ def experiment_context(record: dict) -> dict:
 
 
 def context_scope(context: dict) -> str:
-    fields = {k: context.get(k) for k in ("page", "market", "symbol", "data_period", "data_fingerprint", "experiment_id", "audit_id", "lesson")}
+    fields = {k: context.get(k) for k in ("page", "market", "symbol", "data_period", "data_fingerprint", "experiment_id", "audit_id", "lesson", "answer_mode", "learning_context", "statistics", "knowledge")}
     return hashlib.sha256(json.dumps(fields, sort_keys=True, default=str).encode()).hexdigest()[:16]

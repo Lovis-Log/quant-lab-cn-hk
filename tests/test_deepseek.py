@@ -81,6 +81,21 @@ def test_stream_secret_redaction_and_private_context_limits():
 def test_context_identity_changes_with_stock_or_experiment():
     assert context_scope({"market":"A 股","symbol":"000001"}) != context_scope({"market":"港股","symbol":"00001"})
     assert context_scope({"experiment_id":1,"audit_id":"one"}) != context_scope({"experiment_id":2,"audit_id":"two"})
+    assert context_scope({"answer_mode":"研究解释模式"}) != context_scope({"answer_mode":"教学辅导模式"})
+    assert context_scope({"learning_context":{"course_id":"drawdown"}}) != context_scope({"learning_context":{"course_id":"sharpe"}})
+
+
+def test_tutor_mode_uses_system_guidance_and_excludes_private_answers():
+    session = Session([streamed("model")])
+    client = DeepSeekClient(SECRET, session)
+    _, chunks = client.stream("model", "帮我理解回撤", [],
+        {"answer_mode":"教学辅导模式","learning_context":{"topic":"最大回撤",
+         "expected_answer":-20,"goal":"private","notes":"private"}})
+    list(chunks)
+    messages = session.calls[0][2]["json"]["messages"]
+    assert "先问一个" in messages[0]["content"]
+    assert "expected_answer" not in messages[-1]["content"]
+    assert "private" not in messages[-1]["content"]
 
 
 def test_timeout_and_malformed_models_are_safe(caplog):

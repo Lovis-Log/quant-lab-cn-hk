@@ -1,6 +1,6 @@
 # Quant Lab CN/HK
 
-面向中国 A 股与香港股票市场的个人量化研究与学习平台。当前提供市场数据、策略、回测、风险组合、统计机器学习、可选 AI 助手、Quant Academy 和研究笔记八个工作区。代码同步在 [私有 GitHub 仓库](https://github.com/Lovis-Log/quant-lab-cn-hk)。
+面向中国 A 股与香港股票市场的个人量化研究与学习平台。V2 Learning Center MVP 提供市场数据、策略、回测、风险组合、统计机器学习、DeepSeek、Quant Academy、研究笔记和新手使用指引九个工作区。代码同步在 [私有 GitHub 仓库](https://github.com/Lovis-Log/quant-lab-cn-hk)。
 
 > 这是学习与模拟研究平台，不提供实时行情、投资建议或真实资金交易。自选股快照是**最近历史日线收盘参考**，行情日期只有交易日，确切延迟未知；5 分钟轮询并非实时流式行情。未取得真实历史数据时，市场页只显示明确标记的模拟版式图，金融指标和表格保持空白。
 
@@ -13,6 +13,9 @@ quant_lab/market_data.py Provider 合同与代码规范化
 quant_lab/paths.py       用户可写目录
 quant_lab/storage.py     SQLite 自选股与实验档案
 quant_lab/learning.py    八节金融数学课程
+quant_lab/guidance.py    九页指南、四条路径、八步任务与课程引用
+quant_lab/learning_store.py SQLite 学习进度、测验、目标与恢复位置
+quant_lab/ui_guidance.py 新手学习中心与统一帮助导航
 quant_lab/processing.py  数据清洗与字段验证
 quant_lab/metrics.py     价格收益与风险指标
 quant_lab/strategy.py    均线与趋势信号
@@ -83,9 +86,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 每次可交付安装包通过 [GitHub Releases](https://github.com/Lovis-Log/quant-lab-cn-hk/releases) 发布。发布过程及每版验证结果见 [docs/RELEASES.md](docs/RELEASES.md)。验证未完整的版本标记预发布，并在说明中记录限制。
 
-上一已发布安装包：[v1.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v1.1.0-rc.1)。本轮 `1.2.1-rc.1` 延续名称和 DeepSeek 升级，仅在本地提交和打包，不推送或发布 Release。
+`1.2.1-rc.1` 名称和 DeepSeek 修复曾仅在本地交付，记录保留。当前 V2 独立升级遵循项目通用同步与预发布流程；实际发布状态见 [发布记录](docs/RELEASES.md)。
 
-本地交付路径为 `dist\QuantLab\QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-1.2.1-rc.1-Setup.exe`。本次名称、股票候选及研究助手修复的实际验证范围与校验值见 [1.2.1 本地构建记录](docs/releases/v1.2.1-rc.1.md)；上一版的升级/卸载记录保留在 [1.2.0 验收记录](docs/UPGRADE_1.2.0.md)。
+V2 本地构建路径为 `dist\QuantLab\QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.0.0-rc.1-Setup.exe`，实际验证与构建状态见 [V2 验收报告](docs/V2_ACCEPTANCE.md)。[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为 V2 新验收证据。
 
 ### 常见问题
 
@@ -113,6 +116,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 8. **自选股**：股票以“市场 代码（公司简称）”显示，最多 10 只；名称接口失败保留代码。市场页显示最近日线收盘参考、行情日期、成功获取时间、来源、缓存年龄、更新结果及下次尝试时间。
 9. **Quant Academy**：八节课程按“直觉、公式、手算例子、Python、调参实验、思考问题”学习；侧栏可切换学习/专业模式。
 10. **研究笔记**：在历史回测页保存标题、假设、笔记和完整输入快照；在研究笔记页复算并导出 Markdown 报告或可复现 ZIP。
+11. **新手使用指引**：阅读对应页面的真实控件说明，按八步任务实践；四条学习路径关联八节七层交互课程，保存实验并通过本地测验后标记课程完成。学习目标、笔记、课程位置与进度可重启恢复。
+
+首次欢迎可开始或跳过，学习进度页可以重新启动。每个主要页面的“查看本页使用指南”打开对应教程，“返回研究任务”保留当前会话中的窗口、成本、训练比例和未保存笔记；研究数据跨重启恢复须使用存档。新手/专业模式只减少教学提示，金融计算一致。重置需要明确确认，仅清学习进度与测验，保留研究、行情、笔记和密钥。路径中“计划中”节点没有完整课程，不会伪造完成。
 
 CSV 使用 UTF-8 with BOM，便于 Windows Excel 识别中文列名。已验证历史查询在进程内缓存 15 分钟，最多 64 个查询；自选股与已保存实验持久化到 SQLite。行情缓存不等于上游新数据。
 
@@ -136,7 +142,7 @@ CSV 使用 UTF-8 with BOM，便于 Windows Excel 识别中文列名。已验证�
 
 ## 数据库升级与知识解释
 
-SQLite schema 版本为 2；首次打开旧库时在用户数据目录 `backups/` 创建一致性备份，用事务增加名称、设置、证券资料缓存和学习笔记表。失败回滚原库，重复执行不会重复迁移；旧实验仍可打开、复算和导出。
+SQLite schema 版本为 3；首次打开旧库时在用户数据目录 `backups/` 创建一致性备份，用事务补足名称、设置、证券资料、学习笔记以及新增进度/测验表。失败回滚原库，重复执行不会重复迁移；旧实验和行情 BLOB 不重写，旧指纹仍可复算与导出。
 
 知识内容集中在 `knowledge.py`，离线提供定义、刻画特征、研究意义、公式与符号、手算例子、当前值模板解读、局限和思考题。覆盖八节课程及费用、滑点、年化收益、基准、p 值、MAE、R²、协方差。知识入口的“向 AI 追问”只填写草稿，仍需确认发送。
 
@@ -157,3 +163,7 @@ SQLite schema 版本为 2；首次打开旧库时在用户数据目录 `backups/
 名称改用东方财富证券基础资料接口，避免原 A 股报价接口断连导致名称缺失。“重新获取证券名称”可绕过成功缓存与失败冷却，成功后当前已加载行情的名称也会更新；失败保留已知名称并显示警告。
 
 统计页面的操作和指标含义见 [LEARNING.md](LEARNING.md#统计与机器学习页面的操作顺序)，页面内也有“这个页面怎么用”。
+
+DeepSeek 复用原侧栏和密钥，新增“研究解释模式 / 教学辅导模式”。统计模型运行后摘要包含实际检验结果、训练/测试数量、MAE、基线、R² 与方向；课程摘要包含定义、参数和教学结论，不含测验答案、私人笔记或学习目标。切换数据、实验、课程、指南或模式会隔离发送的历史。点击知识追问/课程辅导只准备草稿，确认发送才请求模型。AI 不可用时全部操作教程、教学实验、测验与进度仍正常。
+
+项目审查和后续 P2/P3 计划见 [V2_PLAN.md](docs/V2_PLAN.md)，本次金融、统计、Python、数据库和架构学习报告见 [V2_LEARNING_REPORT.md](docs/V2_LEARNING_REPORT.md)。本版没有新增大型机器学习框架、因子研究、优化器或实时行情。
