@@ -82,7 +82,7 @@ def test_offline_candidate_can_complete_selection_but_not_history(monkeypatch):
     monkeypatch.setattr("quant_lab.names.security_name", lambda *args, **kwargs: "")
     app = app_start()
     assert ("task","select_security") not in learning_store.load_progress()
-    app.sidebar.selectbox(key="candidate_A 股").set_value("600519").run()
+    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
     assert not app.exception
     assert learning_store.load_progress()[("task","select_security")]["details"]["identity_known"]
     assert ("task","load_history") not in learning_store.load_progress()

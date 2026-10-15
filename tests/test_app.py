@@ -16,7 +16,7 @@ def test_terminal_boots_with_clear_data_status() -> None:
     assert app.sidebar.radio[0].value == "市场数据"
     assert len(app.get("plotly_chart")) == 2
     assert any("固定随机种子" in item.value for item in app.get("caption"))
-    assert app.sidebar.selectbox[1].value == "不复权"
+    assert next(w for w in app.sidebar.selectbox if w.label == "价格口径").value == "不复权"
     assert any("腾讯证券" in item.value for item in app.get("caption"))
 
     app.sidebar.selectbox[0].select("港股").run()
@@ -47,7 +47,7 @@ def test_loaded_history_replaces_demo_metrics(monkeypatch) -> None:
     assert any("来源：腾讯证券" in item.value for item in app.get("caption"))
     assert len(app.get("plotly_chart")) == 2
 
-    app.sidebar.text_input[0].input("000001").run()
+    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
     assert not app.exception
     assert not any("+10.00%" in item.value for item in app.get("html"))
 

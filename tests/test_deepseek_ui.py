@@ -31,6 +31,9 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", Client)
     monkeypatch.setattr("quant_lab.credentials.clear_key", lambda: None)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    assert not any(w.label == "DeepSeek API Key" for w in app.text_input)
+    app.sidebar.radio(key="nav_page").set_value("AI 研究助手").run()
+    widget(app,"radio","AI 工作区").set_value("对话与辅导").run()
     widget(app,"text_input","DeepSeek API Key").input("sk-only-ui-mock-secret").run()
     widget(app,"button","测试连接").click().run()
     widget(app,"text_area","问题（确认后发送）").input("解释当前指标").run()
@@ -40,6 +43,8 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     app.run()
     app.sidebar.radio[0].set_value("Quant Academy").run()
     assert len(calls) == 1
+    widget(app,"button","向 AI 追问").click().run()
+    assert widget(app,"text_input","DeepSeek API Key").value == "sk-only-ui-mock-secret"
     widget(app,"selectbox","DeepSeek 模型").set_value("beta").run()
     widget(app,"button","发送到 DeepSeek").click().run()
     assert not app.exception and len(calls) == 2 and calls[-1]["model"] == "beta"

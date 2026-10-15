@@ -20,14 +20,8 @@ def render_knowledge(topic: str, value=None, *, key="", observations=None, perio
         st.markdown(f"**局限和常见误读**：{item.limitation}")
         st.markdown(f"**小实验或思考题**：{item.question}")
         if st.button("向 AI 追问", key=f"knowledge_ai_{key}_{topic}"):
-            st.session_state["deepseek_prompt"] = f"请进一步解释{item.title}，先讲直觉再给一个手算例子。"
-            st.session_state["ai_knowledge"] = {"topic": item.title}
-            st.session_state["ai_knowledge"].update({"origin_page": st.session_state.get("nav_page"),
-                "data_fingerprint": st.session_state.get("active_data_fingerprint"),
-                "lesson": st.session_state.get("academy_lesson") if st.session_state.get("nav_page") == "Quant Academy" else None})
-            if st.session_state.get("nav_page") == "新手使用指引":
-                st.session_state["ai_knowledge"]["learning_id"] = st.session_state.get("center_course") if st.session_state.get("center_section") == "课程与练习" else st.session_state.get("center_guide")
-            st.session_state["ai_open"] = True
+            from quant_lab.ui_deepseek import open_ai_followup
+            open_ai_followup(f"请进一步解释{item.title}，先讲直觉再给一个手算例子。", item.title)
             st.rerun()
         from quant_lab.guidance import COURSES
         if topic in COURSES:

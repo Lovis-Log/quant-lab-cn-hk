@@ -69,8 +69,13 @@ def history_evidence(bundle):
 def protect_research_widgets():
     # Explicit self-assignment interrupts Streamlit widget cleanup. Values stay
     # in the current session, not in ordinary settings or the research database.
+    value_keys = {"academy_lesson", "deepseek_api_key", "deepseek_remember",
+                  "deepseek_prompt", "deepseek_answer_mode", "deepseek_attach",
+                  "ds_model_select", "ds_model_manual", "ai_workspace"}
+    prefixes = ("strategy_", "backtest_", "portfolio_", "model_", "research_",
+                "ai_question", "cost_", "symbol_", "ds_effort_")
     for key in list(st.session_state):
-        if key.startswith(("strategy_", "backtest_", "portfolio_", "model_", "research_", "ai_question", "cost_")) or key == "academy_lesson":
+        if key.startswith(prefixes) or key in value_keys:
             st.session_state[key] = st.session_state[key]
 
 
@@ -120,11 +125,12 @@ def render_page_help(page):
 
 
 def teaching_draft(topic, *, guide=None, course=None):
-    st.session_state["deepseek_prompt"] = f"请辅导我理解{KNOWLEDGE[topic].title}，先问一个小问题，让我尝试后再解释；不要直接给出当前测验答案。"
-    st.session_state["ai_knowledge"] = {"topic": KNOWLEDGE[topic].title, "origin_page": CENTER,
-        "learning_id": course or guide}
+    from quant_lab.ui_deepseek import open_ai_followup
+    open_ai_followup(
+        f"请辅导我理解{KNOWLEDGE[topic].title}，先问一个小问题，让我尝试后再解释；不要直接给出当前测验答案。",
+        KNOWLEDGE[topic].title,
+    )
     st.session_state["deepseek_answer_mode"] = "教学辅导模式"
-    st.session_state["ai_open"] = True
 
 
 def _guide():
@@ -290,7 +296,7 @@ def _course():
             st.error("测验保存失败，未记录为完成。")
     st.button("使用 DeepSeek 辅导这节课", key="course_ai", on_click=teaching_draft,
               args=(course.topic,), kwargs={"course": course_id})
-    st.caption("这只准备问题；在原有 DeepSeek 侧栏核对摘要并明确发送，才会请求模型。")
+    st.caption("这只准备问题；在 AI 研究助手页核对摘要并明确发送，才会请求模型。")
     st.session_state["active_learning_context"] = {"course_id": course_id, "topic": item.title,
         "definition": item.definition, "formula": item.formula, "parameter": parameter,
         "experiment_conclusion": conclusion, "status": "固定教学实验，不是股票行情；不含测验答案"}

@@ -21,7 +21,6 @@ from quant_lab.data import (
 )
 from quant_lab.metrics import summarize_prices
 from quant_lab.processing import DataValidationError
-from quant_lab.ui_ai import render_ai
 from quant_lab.ui_analysis import render_risk, render_statistics
 from quant_lab.ui_strategy import render_backtest, render_strategy
 from quant_lab.ui_learning import render_academy
@@ -66,13 +65,26 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         st.html('<div class="ql-sidebar-label ql-sidebar-gap">RESEARCH SETUP / 研究参数</div>')
         market = st.selectbox("市场", ("A 股", "港股"), key="market_selection")
         st.session_state.setdefault(f"symbol_{market}", "600519" if market == "A 股" else "00700")
+        labels = {}
+        directory = None
+        try:
+            directory = security_directory(market)
+            labels = dict(directory.rows)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            st.warning(str(exc))
         def code_changed():
             st.session_state["_security_selection_event"] = {"market": market, "symbol": st.session_state[f"symbol_{market}"]}
-        symbol = st.text_input(
-            "A 股股票代码（非指数）" if market == "A 股" else "港股股票代码（非指数）",
-            key=f"symbol_{market}",
-            on_change=code_changed,
-        ).strip()
+        current = st.session_state[f"symbol_{market}"]
+        options = list(labels)
+        if current and current not in options:
+            options.append(current)
+        symbol = (st.selectbox(
+            "股票（代码 / 名称）", options, key=f"symbol_{market}",
+            accept_new_options=True, on_change=code_changed,
+            format_func=lambda code: f"{code} · {labels[code]}" if code in labels else code,
+            placeholder="输入代码或名称搜索，也可直接输入新代码",
+            help="常见大盘股票优先展示；候选是证券目录，不是买入推荐。未收录的代码可输入后选择新增项确认。",
+        ) or "").strip()
         today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
         selected_dates = st.date_input(
             "历史区间",
@@ -94,31 +106,19 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             valid_symbol and dates is not None and dates[0] <= dates[1]
         )
         clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
-        def choose_candidate():
-            chosen = st.session_state.get(f"candidate_{market}")
-            if chosen:
-                st.session_state[f"symbol_{market}"] = normalize_symbol(market, chosen)
-                st.session_state["_security_selection_event"] = {"market": market, "symbol": chosen}
-        labels = {}
-        try:
-            directory = security_directory(market)
-            labels = dict(directory.rows)
-            st.selectbox("搜索股票候选（代码 / 名称）", list(labels), index=None,
-                key=f"candidate_{market}", placeholder="输入代码或名称搜索；选中后填入上方代码",
-                format_func=lambda code: f"{code} · {labels[code]}",
-                on_change=choose_candidate,
-                help="常见大盘股票优先展示；这是证券目录，不是买入推荐。仍可手动输入未收录代码。")
+        if directory is not None:
             st.caption(f"目录快照：{len(labels)} 只 · {directory.source} · 获取于 {beijing(directory.received_at)}；不含行情，不验证当前上市状态。")
             if directory.error:
                 st.warning(directory.error)
-            if st.button("更新股票候选目录", key="refresh_security_directory"):
-                directory = security_directory(market, force=True)
-                if directory.error:
-                    st.warning(directory.error)
+        if st.button("更新股票候选目录", key="refresh_security_directory"):
+            try:
+                refreshed = security_directory(market, force=True)
+                if refreshed.error:
+                    st.warning(refreshed.error)
                 else:
                     st.rerun()
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            st.warning(str(exc))
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                st.warning(str(exc))
         st.toggle("新手模式（关闭为专业模式）", key="learning_mode", on_change=persist_setting,
                   args=("learning_mode",), help="只改变教学提示和知识入口，不改变金融计算。")
         st.caption("当前使用：" + ("新手模式" if st.session_state["learning_mode"] else "专业模式"))
@@ -440,6 +440,10 @@ def render_app() -> None:
     st.html(CSS_PATH)
     initialize_settings()
     protect_research_widgets()
+    if st.session_state.pop("_open_ai_page", False):
+        st.session_state["nav_page"] = "AI 研究助手"
+    elif st.session_state.get("nav_page") != "AI 研究助手":
+        st.session_state.pop("ai_followup_context", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
     bundle: HistoryBundle | None = None
     error: str | None = None
@@ -478,6 +482,10 @@ def render_app() -> None:
                     bundle = replace(bundle, company_name=current_name)
                     st.session_state["loaded_bundle"] = bundle
 
+    st.session_state["_current_query"] = query
+    if st.session_state.get("ai_followup_context") and st.session_state.get("ai_followup_query") != query:
+        st.session_state.pop("ai_followup_context", None)
+
     latest_date = (
         bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
         if bundle is not None and not bundle.frame.empty else None
@@ -509,8 +517,6 @@ def render_app() -> None:
             render_risk(bundle)
         elif page == "统计与机器学习":
             render_statistics(bundle)
-        else:
-            render_ai(bundle)
     context = experiment_context(record) if record else bundle_context(page, bundle)
     context["page"] = page
     if st.session_state.get("active_backtest_context"):
@@ -524,4 +530,6 @@ def render_app() -> None:
         context = {"page": page, "data_status": "学习指南与固定教学样本，不是股票行情。"}
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]
-    render_deepseek(context)
+    st.session_state["_current_ai_context"] = context
+    if page == "AI 研究助手":
+        render_deepseek(context, bundle)

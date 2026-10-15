@@ -60,7 +60,7 @@ def test_research_ui_shares_key_model_and_isolates_current_data(monkeypatch, tmp
     app.sidebar.radio[0].set_value("AI 研究助手").run()
     assert not any("OPENAI" in item.value for item in app.info)
     assert next(w for w in app.button if w.label == "生成 AI 假设").disabled
-    app.sidebar.text_input(key="deepseek_api_key").input(SECRET).run()
+    app.text_input(key="deepseek_api_key").input(SECRET).run()
     next(w for w in app.button if w.label == "测试连接").click().run()
     assert not next(w for w in app.button if w.label == "生成 AI 假设").disabled
     assert calls == []
@@ -76,6 +76,10 @@ def test_research_ui_shares_key_model_and_isolates_current_data(monkeypatch, tmp
     assert calls[-1]["payload"]["context"]["audit_id"]
     assert "raw_history" not in calls[-1]["payload"]["context"]
     assert any("实际模型：actual-model" in w.value for w in app.caption)
-    app.sidebar.text_input(key="symbol_A 股").input("000001").run()
+    next(w for w in app.radio if w.label == "AI 工作区").set_value("对话与辅导").run()
+    assert any('"audit_id"' in item.value for item in app.json)
+    assert len(calls) == 2
+    next(w for w in app.radio if w.label == "AI 工作区").set_value("研究实验").run()
+    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
     assert len(calls) == 2 and "ai_experiment" in app.session_state
     assert not any(w.label == "让 AI 审阅实验" for w in app.button)

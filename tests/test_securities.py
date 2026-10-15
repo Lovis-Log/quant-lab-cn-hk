@@ -58,10 +58,27 @@ def test_corrupt_user_directory_is_visible_and_not_reused(monkeypatch, tmp_path)
 def test_candidate_fills_code_and_market_switch_is_isolated(monkeypatch, tmp_path):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
-    app.sidebar.selectbox(key="candidate_A 股").select("000001").run()
-    assert not app.exception and app.sidebar.text_input(key="symbol_A 股").value == "000001"
+    app.sidebar.selectbox(key="symbol_A 股").select("000001").run()
+    assert not app.exception and app.sidebar.selectbox(key="symbol_A 股").value == "000001"
     app.sidebar.selectbox(key="market_selection").select("港股").run()
-    app.sidebar.selectbox(key="candidate_港股").select("00941").run()
-    assert not app.exception and app.sidebar.text_input(key="symbol_港股").value == "00941"
-    app.sidebar.text_input(key="symbol_港股").input("HK09988").run()
+    app.sidebar.selectbox(key="symbol_港股").select("00941").run()
+    assert not app.exception and app.sidebar.selectbox(key="symbol_港股").value == "00941"
+    app.sidebar.selectbox(key="market_selection").select("A 股").run()
+    assert app.sidebar.selectbox(key="symbol_A 股").value == "000001"
+    assert not app.sidebar.text_input
     assert not app.exception
+
+
+@pytest.mark.parametrize("code,can_load", [("HK09988", True), ("不是代码", False)])
+def test_custom_code_validation_without_directory(monkeypatch, code, can_load):
+    def unavailable(*args):
+        raise OSError("目录暂不可用")
+    monkeypatch.setattr("quant_lab.ui.security_directory", unavailable)
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30)
+    # Seed a fresh widget state; real typing is covered by WebView acceptance.
+    app.session_state["market_selection"] = "港股"
+    app.session_state["symbol_港股"] = code
+    app.run()
+    assert not app.exception
+    assert any("目录暂不可用" in item.value for item in app.warning)
+    assert next(w for w in app.button if w.label == "加载真实历史日线").disabled != can_load
