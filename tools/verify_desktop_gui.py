@@ -251,7 +251,7 @@ def main():
                     if args.research_fixes:
                         page.get_by_role("button", name="加载真实历史日线", exact=True).click()
                         settle(page)
-                        page.get_by_text("AI 研究助手", exact=True).click()
+                        page.get_by_test_id("stSidebar").get_by_text("AI 研究助手", exact=True).click()
                         settle(page)
                         page.get_by_role("radiogroup", name="AI 工作区", exact=True).get_by_text("研究实验", exact=True).click()
                         settle(page)
