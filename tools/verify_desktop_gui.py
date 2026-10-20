@@ -104,8 +104,15 @@ def main():
                 topbar_box = topbar.bounding_box()
                 assert topbar_box and topbar_box["x"] <= 1
                 assert abs((topbar_box["x"] + topbar_box["width"]) - viewport_width) <= 3
+                sidebar = page.get_by_test_id("stSidebar")
+                assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0
+                assert sidebar.get_by_text("新手使用指引", exact=True).count() == 0
                 main = page.get_by_test_id("stMain")
                 main_before = main.bounding_box()
+                page.get_by_role("button", name="新手使用指引", exact=True).click()
+                settle(page)
+                guide_panel = page.locator(".st-key-guide_side_panel")
+                expect(guide_panel).to_be_visible(timeout=10000)
                 page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
@@ -114,29 +121,84 @@ def main():
                 panel.get_by_text("DeepSeek 连接设置", exact=True).click()
                 settle(page)
                 expect(panel.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                guide_box = guide_panel.bounding_box()
                 box = panel.bounding_box()
                 main_after = main.bounding_box()
                 workspace_after = page.get_by_test_id("stMainBlockContainer").bounding_box()
-                page.screenshot(path=str(directory/"deepseek-side-panel.png"), full_page=False)
+                page.screenshot(path=str(directory/"dual-side-panels.png"), full_page=False)
                 assert box and abs((box["x"] + box["width"]) - viewport_width) <= 3, {
                     "panel_box": box, "viewport_width": viewport_width,
                 }
+                assert guide_box and guide_box["x"] < box["x"]
                 padding_right = main.evaluate("element => getComputedStyle(element).paddingRight")
                 assert main_before and main_after and workspace_after
-                assert float(padding_right.removesuffix("px")) >= box["width"] - 2, {
+                assert float(padding_right.removesuffix("px")) >= box["width"] + guide_box["width"] - 3, {
                     "main_before": main_before, "main_after": main_after,
-                    "workspace_after": workspace_after, "panel_box": box,
+                    "workspace_after": workspace_after, "panel_box": box, "guide_box": guide_box,
                     "padding_right": padding_right,
                 }
-                help_button = page.get_by_role("button", name="查看本页使用指南", exact=True)
-                if help_button.count():
-                    assert help_button.locator("p").evaluate(
-                        "element => element.scrollWidth <= element.clientWidth"
-                    )
-                    summary["workspace_controls_not_clipped"] = True
-                summary.update({"global_topbar_dom": True, "deepseek_global_launcher": True,
-                                "deepseek_right_panel_dom": True, "workspace_resized_for_panel": True,
+                resize = panel.locator('.ql-resize-handle[data-panel="deepseek"]')
+                assert resize.get_attribute("data-bound") == "1"
+                resize_box = resize.bounding_box()
+                assert resize_box
+                hit_target = page.evaluate(
+                    "([x,y]) => { const e=document.elementFromPoint(x,y); return {tag:e?.tagName, cls:e?.className, panel:e?.getAttribute('data-panel')}; }",
+                    [resize_box["x"] + 3, resize_box["y"] + 100],
+                )
+                page.mouse.move(resize_box["x"] + 3, resize_box["y"] + 100)
+                page.mouse.down()
+                page.mouse.move(resize_box["x"] - 45, resize_box["y"] + 100, steps=5)
+                page.mouse.up()
+                page.wait_for_timeout(300)
+                resized_box = panel.bounding_box()
+                resize_state = page.evaluate(
+                    "() => ({css:getComputedStyle(document.documentElement).getPropertyValue('--ql-deepseek-width'), stored:localStorage.getItem('quantlab.deepseek.panelWidth')})"
+                )
+                assert hit_target.get("panel") == "deepseek"
+                assert resize_state.get("stored") == str(round(resized_box["width"]))
+                assert resized_box and resized_box["width"] >= box["width"] + 35
+                guide_button = page.get_by_role("button", name="新手使用指引", exact=True)
+                deepseek_button = page.get_by_role("button", name="DeepSeek 助手", exact=True)
+                guide_button_box = guide_button.bounding_box()
+                deepseek_button_box = deepseek_button.bounding_box()
+                assert guide_button_box and deepseek_button_box
+                assert guide_button.get_attribute("data-reorder-bound") == "1"
+                assert deepseek_button.get_attribute("data-reorder-bound") == "1"
+                assert guide_button_box["x"] < deepseek_button_box["x"]
+                page.mouse.move(
+                    deepseek_button_box["x"] + deepseek_button_box["width"] / 2,
+                    deepseek_button_box["y"] + deepseek_button_box["height"] / 2,
+                )
+                page.mouse.down()
+                page.mouse.move(
+                    guide_button_box["x"] + guide_button_box["width"] / 3,
+                    guide_button_box["y"] + guide_button_box["height"] / 2,
+                    steps=8,
+                )
+                page.mouse.up()
+                page.wait_for_timeout(350)
+                assert page.evaluate("localStorage.getItem('quantlab.dock.panelOrder')") == "deepseek-guide"
+                guide_panel = page.locator(".st-key-guide_side_panel")
+                panel = page.locator(".st-key-deepseek_side_panel")
+                reordered_guide_button_box = guide_button.bounding_box()
+                reordered_deepseek_button_box = deepseek_button.bounding_box()
+                swapped_guide_box = guide_panel.bounding_box()
+                swapped_deepseek_box = panel.bounding_box()
+                assert reordered_guide_button_box and reordered_deepseek_button_box
+                assert reordered_deepseek_button_box["x"] < reordered_guide_button_box["x"]
+                assert swapped_guide_box and swapped_deepseek_box
+                assert swapped_deepseek_box["x"] < swapped_guide_box["x"]
+                page.screenshot(path=str(directory/"dual-side-panels-swapped.png"), full_page=False)
+                summary.update({"global_topbar_dom": True, "topbar_pages_removed_from_sidebar": True,
+                                "deepseek_global_launcher": True, "learning_global_launcher": True,
+                                "dual_panels_open": True, "panels_reordered_by_drag": True,
+                                "panel_drag_resize": True, "workspace_resized_for_panel": True,
+                                "panel_width_before": box["width"],
+                                "panel_width_after": resized_box["width"],
                                 "remembered_key_restored_on_start": True})
+                guide_panel.get_by_role("button", name="×", exact=True).click()
+                settle(page)
+                panel = page.locator(".st-key-deepseek_side_panel")
                 panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 expect(panel).not_to_be_visible(timeout=10000)
@@ -203,7 +265,7 @@ def main():
                     summary.update({"hk_history_loaded": True, "hk_history_source": hk_source})
                 if args.learning_center:
                     sidebar = page.get_by_test_id("stSidebar")
-                    sidebar.get_by_text("新手使用指引", exact=True).click()
+                    page.get_by_role("button", name="新手使用指引", exact=True).click()
                     settle(page)
                     page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("课程与练习", exact=True).click()
                     settle(page)
@@ -227,7 +289,9 @@ def main():
                     settle(page)
                     expect(page.get_by_role("radio", name="教学辅导模式", exact=True)).to_be_checked(timeout=10000)
                     assert "不要直接给出" in page.get_by_label("问题（确认后发送）", exact=True).input_value()
-                    sidebar.get_by_text("新手使用指引", exact=True).click()
+                    page.locator(".st-key-deepseek_side_panel").get_by_role(
+                        "button", name="×", exact=True
+                    ).click()
                     settle(page)
                     page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
                     settle(page)
@@ -254,7 +318,7 @@ def main():
                         "learning_goal_and_note":True,"help_return_navigation":True,"teaching_draft_without_send":True})
                 if args.resume_learning:
                     sidebar = page.get_by_test_id("stSidebar")
-                    sidebar.get_by_text("新手使用指引", exact=True).click()
+                    page.get_by_role("button", name="新手使用指引", exact=True).click()
                     settle(page)
                     page.get_by_text("最大回撤 · 七层学习", exact=True).wait_for(timeout=15000)
                     page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
@@ -272,13 +336,18 @@ def main():
                                     "professional_mode_control":True})
                 sidebar = page.get_by_test_id("stSidebar")
                 assert sidebar.get_by_text("DeepSeek AI 助手", exact=True).count() == 0
-                sidebar.get_by_text("AI 研究助手", exact=True).click()
+                assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0
+                assert sidebar.get_by_text("新手使用指引", exact=True).count() == 0
+                page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
                 settle(page)
                 page.get_by_role("radiogroup", name="AI 工作区", exact=True).get_by_text("对话与辅导", exact=True).click()
                 settle(page)
                 assert sidebar.get_by_label("DeepSeek API Key", exact=True).count() == 0
-                summary["deepseek_in_main_workspace"] = True
-                key = page.get_by_label("DeepSeek API Key", exact=True)
+                summary["deepseek_in_right_panel"] = True
+                deepseek_panel = page.locator(".st-key-deepseek_side_panel")
+                deepseek_panel.get_by_text("DeepSeek 连接设置", exact=True).click()
+                settle(page)
+                key = deepseek_panel.get_by_label("DeepSeek API Key", exact=True)
                 assert key.get_attribute("type") == "password"
                 assert key.input_value() == dummy_key
                 if args.mock_ai:
@@ -307,8 +376,6 @@ def main():
                     summary.update({"model_switch": True, "streamed_answer": True, "answer_saved": True})
                     if args.research_fixes:
                         page.get_by_role("button", name="加载真实历史日线", exact=True).click()
-                        settle(page)
-                        page.get_by_test_id("stSidebar").get_by_text("AI 研究助手", exact=True).click()
                         settle(page)
                         page.get_by_role("radiogroup", name="AI 工作区", exact=True).get_by_text("研究实验", exact=True).click()
                         settle(page)

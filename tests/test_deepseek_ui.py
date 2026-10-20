@@ -26,6 +26,20 @@ def test_remembered_key_is_loaded_on_start_and_panel_is_global(tmp_path, monkeyp
     assert app.session_state["deepseek_panel_open"] is False
 
 
+def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    navigation = app.sidebar.radio(key="nav_page")
+    assert "AI 研究助手" not in navigation.options
+    assert "新手使用指引" not in navigation.options
+    widget(app, "button", "新手使用指引").click().run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    assert app.session_state["guide_panel_open"] is True
+    assert app.session_state["deepseek_panel_open"] is True
+    assert not app.exception
+    assert not any(button.label == "左右调换" for button in app.button)
+
+
 def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     calls = []
@@ -46,7 +60,8 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setattr("quant_lab.credentials.clear_key", lambda: None)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     assert not any(w.label == "DeepSeek API Key" for w in app.text_input)
-    app.sidebar.radio(key="nav_page").set_value("AI 研究助手").run()
+    assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
+    widget(app,"button","DeepSeek 助手").click().run()
     widget(app,"radio","AI 工作区").set_value("对话与辅导").run()
     widget(app,"text_input","DeepSeek API Key").input("sk-only-ui-mock-secret").run()
     widget(app,"button","测试连接").click().run()

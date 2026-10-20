@@ -268,7 +268,10 @@ def _close_deepseek_panel() -> None:
 
 def render_deepseek_panel(context: dict, bundle=None):
     with st.container(key="deepseek_side_panel"):
-        st.html('<span class="ql-ai-panel-marker"></span>')
+        st.html(
+            '<div class="ql-resize-handle" data-panel="deepseek" role="separator" '
+            'aria-label="调整 DeepSeek 助手宽度" tabindex="0"></div>'
+        )
         title, close = st.columns([5, 1], vertical_alignment="center", gap="small")
         with title:
             st.html(
@@ -280,5 +283,5 @@ def render_deepseek_panel(context: dict, bundle=None):
                       on_click=_close_deepseek_panel, help="关闭 DeepSeek 侧栏")
         st.caption("右侧停靠面板 · 仅在你明确点击发送后调用 DeepSeek")
         render_deepseek(
-            context, bundle, chat_only=True, connection_expanded=False, compact=True
+            context, bundle, chat_only=False, connection_expanded=False, compact=True
         )

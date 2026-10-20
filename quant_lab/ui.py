@@ -31,17 +31,140 @@ from quant_lab.market_data import normalize_symbol
 from quant_lab.storage import list_watchlist
 from quant_lab.ui_updates import initialize_settings, persist_setting, toggle_refresh, beijing, show_history_status, INTERVALS
 from quant_lab.ui_knowledge import render_knowledge
-from quant_lab.ui_deepseek import initialize_credentials, render_deepseek, render_deepseek_panel
+from quant_lab.ui_deepseek import initialize_credentials, render_deepseek_panel
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
 from quant_lab.guidance import GUIDES
-from quant_lab.ui_guidance import (render_learning_center, render_page_help, render_welcome,
-    protect_research_widgets, complete_task, history_evidence)
+from quant_lab.ui_guidance import (render_learning_panel, render_page_help,
+    render_welcome, protect_research_widgets, complete_task, history_evidence)
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = tuple(GUIDES)
+TOPBAR_PAGES = {"AI 研究助手", "新手使用指引"}
+PAGES = tuple(page for page in GUIDES if page not in TOPBAR_PAGES)
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
+
+DOCK_RESIZE_JS = """
+<script>
+(() => {
+  const root = document.documentElement;
+  const setup = (kind, minimum) => {
+    const panel = document.querySelector(`.st-key-${kind}_side_panel`);
+    const handle = panel?.querySelector(`.ql-resize-handle[data-panel="${kind}"]`);
+    if (!panel || !handle || handle.dataset.bound === "1") return;
+    handle.dataset.bound = "1";
+    const property = `--ql-${kind}-width`;
+    const storageKey = `quantlab.${kind}.panelWidth`;
+    const stored = Number.parseFloat(localStorage.getItem(storageKey));
+
+    const applyWidth = (requested) => {
+      const otherKind = kind === "guide" ? "deepseek" : "guide";
+      const other = document.querySelector(`.st-key-${otherKind}_side_panel`);
+      const otherWidth = other ? other.getBoundingClientRect().width : 0;
+      const sidebar = document.querySelector('[data-testid="stSidebar"]');
+      const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 0;
+      const maximum = Math.max(minimum, window.innerWidth - sidebarWidth - otherWidth - 360);
+      const width = Math.round(Math.min(maximum, Math.max(minimum, requested)));
+      root.style.setProperty(property, `${width}px`);
+      localStorage.setItem(storageKey, String(width));
+    };
+    if (Number.isFinite(stored)) applyWidth(stored);
+
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = panel.getBoundingClientRect().width;
+      handle.classList.add("is-dragging");
+      const move = (next) => applyWidth(startWidth - (next.clientX - startX));
+      const stop = () => {
+        handle.classList.remove("is-dragging");
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", stop);
+        window.removeEventListener("pointercancel", stop);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", stop);
+      window.addEventListener("pointercancel", stop);
+    });
+    handle.addEventListener("keydown", (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const delta = event.key === 'ArrowLeft' ? 24 : -24;
+      applyWidth(panel.getBoundingClientRect().width + delta);
+    });
+  };
+  setup("guide", 320);
+  setup("deepseek", 340);
+})();
+</script>
+"""
+
+TOPBAR_REORDER_JS = """
+<script>
+(() => {
+  const root = document.documentElement;
+  const storageKey = "quantlab.dock.panelOrder";
+  const setOrder = (order) => {
+    if (!['guide-deepseek', 'deepseek-guide'].includes(order)) return;
+    root.dataset.qlDockOrder = order;
+    localStorage.setItem(storageKey, order);
+  };
+  setOrder(localStorage.getItem(storageKey) || 'guide-deepseek');
+
+  const bind = (button, kind, other) => {
+    if (button.dataset.reorderBound === '1') return;
+    button.dataset.reorderBound = '1';
+    button.setAttribute('aria-description', '按住并左右拖动可与另一个面板交换位置');
+    button.addEventListener('click', (event) => {
+      if (button.dataset.suppressClick !== '1') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      button.dataset.suppressClick = '';
+    }, true);
+    button.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      const startX = event.clientX;
+      let dragged = false;
+      const move = (next) => {
+        if (Math.abs(next.clientX - startX) < 8 && !dragged) return;
+        dragged = true;
+        button.classList.add('is-reordering');
+        const midpoint = other.getBoundingClientRect().left + other.getBoundingClientRect().width / 2;
+        if (kind === 'guide') {
+          setOrder(next.clientX < midpoint ? 'guide-deepseek' : 'deepseek-guide');
+        } else {
+          setOrder(next.clientX < midpoint ? 'deepseek-guide' : 'guide-deepseek');
+        }
+      };
+      const stop = () => {
+        button.classList.remove('is-reordering');
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', stop);
+        window.removeEventListener('pointercancel', stop);
+        if (dragged) {
+          button.dataset.suppressClick = '1';
+          window.setTimeout(() => { button.dataset.suppressClick = ''; }, 250);
+        }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop);
+      window.addEventListener('pointercancel', stop);
+    });
+  };
+  const initialize = () => {
+    const guide = document.querySelector('.st-key-guide_panel_toggle button');
+    const deepseek = document.querySelector('.st-key-deepseek_panel_toggle button');
+    if (!guide || !deepseek) return;
+    bind(guide, 'guide', deepseek);
+    bind(deepseek, 'deepseek', guide);
+  };
+  initialize();
+  window.__quantLabTopbarObserver?.disconnect();
+  window.__quantLabTopbarObserver = new MutationObserver(initialize);
+  window.__quantLabTopbarObserver.observe(document.body, {childList:true, subtree:true});
+})();
+</script>
+"""
 
 
 def _metric(label: str, value: str, note: str, accent: str = "") -> None:
@@ -61,6 +184,8 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             '<span><strong>QUANT LAB</strong><small>CN / HK RESEARCH</small></span></div>'
         )
         st.html('<div class="ql-sidebar-label">WORKSPACE / 导航</div>')
+        if st.session_state.get("nav_page") not in PAGES:
+            st.session_state["nav_page"] = PAGES[0]
         page = st.radio("功能导航", PAGES, label_visibility="collapsed", key="nav_page")
         st.html('<div class="ql-sidebar-label ql-sidebar-gap">RESEARCH SETUP / 研究参数</div>')
         market = st.selectbox("市场", ("A 股", "港股"), key="market_selection")
@@ -190,16 +315,24 @@ def _header(page: str, market: str, symbol: str, latest_date: str | None) -> Non
 
 
 def _toggle_deepseek_panel() -> None:
-    st.session_state["deepseek_panel_open"] = not st.session_state.get(
-        "deepseek_panel_open", False
+    opening = not st.session_state.get("deepseek_panel_open", False)
+    st.session_state["deepseek_panel_open"] = opening
+    if opening:
+        st.session_state.setdefault("ai_workspace", "对话与辅导")
+
+
+def _toggle_guide_panel() -> None:
+    st.session_state["guide_panel_open"] = not st.session_state.get(
+        "guide_panel_open", False
     )
 
 
 def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
+    st.session_state.setdefault("guide_panel_open", False)
     with st.container(key="global_topbar"):
-        brand, workspace, assistant = st.columns(
-            [2.2, 5, 1.35], vertical_alignment="center", gap="small"
+        brand, workspace, guide, assistant = st.columns(
+            [2.2, 4.25, 1.65, 1.55], vertical_alignment="center", gap="small"
         )
         with brand:
             st.html(
@@ -208,12 +341,34 @@ def _global_topbar() -> None:
             )
         with workspace:
             st.html('<div class="ql-topbar-workspace">研究工作台</div>')
+        with guide:
+            st.button(
+                "新手使用指引", key="guide_panel_toggle", width="stretch",
+                on_click=_toggle_guide_panel,
+                help="打开或关闭右侧新手使用指引；按住并左右拖动可与 DeepSeek 调换顺序。",
+            )
         with assistant:
             st.button(
                 "DeepSeek 助手", key="deepseek_panel_toggle", width="stretch",
                 on_click=_toggle_deepseek_panel,
-                help="打开或关闭右侧 DeepSeek 助手；只有点击发送才调用付费 API。",
+                help="打开或关闭右侧 DeepSeek 助手；按住并左右拖动可与使用指引调换顺序。只有点击发送才调用付费 API。",
             )
+        st.html(TOPBAR_REORDER_JS, unsafe_allow_javascript=True)
+
+
+def _render_right_dock(context: dict, bundle) -> None:
+    guide_open = st.session_state.get("guide_panel_open", False)
+    deepseek_open = st.session_state.get("deepseek_panel_open", False)
+    if not (guide_open or deepseek_open):
+        return
+    with st.container(key="right_dock"):
+        if guide_open:
+            render_learning_panel()
+            if st.session_state.get("active_learning_context"):
+                context["learning_context"] = st.session_state["active_learning_context"]
+        if deepseek_open:
+            render_deepseek_panel(context, bundle)
+        st.html(DOCK_RESIZE_JS, unsafe_allow_javascript=True)
 
 
 def _empty_candlestick() -> go.Figure:
@@ -469,12 +624,8 @@ def render_app() -> None:
     initialize_credentials()
     protect_research_widgets()
     _global_topbar()
-    if st.session_state.pop("_open_ai_page", False):
-        st.session_state["nav_page"] = "AI 研究助手"
-    elif st.session_state.get("nav_page") != "AI 研究助手":
-        st.session_state.pop("ai_followup_context", None)
+    st.session_state.pop("_open_ai_page", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
-    deepseek_panel_open = st.session_state.get("deepseek_panel_open", False)
     bundle: HistoryBundle | None = None
     error: str | None = None
     query = None
@@ -520,7 +671,7 @@ def render_app() -> None:
         bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
         if bundle is not None and not bundle.frame.empty else None
     )
-    st.session_state["active_data_fingerprint"] = None if page in {"Quant Academy", "新手使用指引"} else bundle_context(page, bundle).get("data_fingerprint")
+    st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else bundle_context(page, bundle).get("data_fingerprint")
     render_welcome()
     render_page_help(page)
     if page == "市场数据":
@@ -529,9 +680,6 @@ def render_app() -> None:
     elif page == "Quant Academy":
         _header(page, market, symbol, latest_date)
         render_academy()
-    elif page == "新手使用指引":
-        _header(page, market, symbol, latest_date)
-        render_learning_center()
     elif page == "研究笔记":
         _header(page, market, symbol, latest_date)
         record = render_research_notes()
@@ -556,12 +704,7 @@ def render_app() -> None:
     if page == "Quant Academy":
         context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
                    "data_status": "离线教学实验，不是股票行情。"}
-    if page == "新手使用指引":
-        context = {"page": page, "data_status": "学习指南与固定教学样本，不是股票行情。"}
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]
     st.session_state["_current_ai_context"] = context
-    if page == "AI 研究助手" and not deepseek_panel_open:
-        render_deepseek(context, bundle)
-    if deepseek_panel_open:
-        render_deepseek_panel(context, bundle)
+    _render_right_dock(context, bundle)

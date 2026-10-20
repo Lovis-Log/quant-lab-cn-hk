@@ -17,6 +17,12 @@ def app_start():
     return AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
 
 
+def open_learning(app):
+    if not app.session_state.get("guide_panel_open", False):
+        widget(app, "button", "新手使用指引").click().run()
+    return app
+
+
 def test_welcome_skip_restart_help_maps_every_page_without_api(monkeypatch):
     def no_network(*args, **kwargs):
         raise AssertionError("implicit network call")
@@ -28,16 +34,16 @@ def test_welcome_skip_restart_help_maps_every_page_without_api(monkeypatch):
     widget(app,"button","跳过首次引导").click().run()
     assert learning_store.load_progress()[("onboarding","welcome")]["status"] == "skipped"
     from quant_lab.guidance import GUIDES
-    for page in GUIDES:
-        if page == "新手使用指引":
-            continue
+    assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
+    assert "新手使用指引" not in app.sidebar.radio(key="nav_page").options
+    for page in (item for item in GUIDES if item not in {"AI 研究助手", "新手使用指引"}):
         app.sidebar.radio(key="nav_page").set_value(page).run()
         widget(app,"button","查看本页使用指南").click().run()
-        assert not app.exception and app.sidebar.radio(key="nav_page").value == "新手使用指引"
+        assert not app.exception and app.session_state["guide_panel_open"] is True
         assert widget(app,"selectbox","选择页面指南").value == page
         widget(app,"button","返回研究任务 · " + page).click().run()
         assert not app.exception and app.sidebar.radio(key="nav_page").value == page
-    app.sidebar.radio(key="nav_page").set_value("新手使用指引").run()
+    open_learning(app)
     widget(app,"radio","学习中心分区").set_value("学习进度").run()
     widget(app,"button","重新启动首次引导").click().run()
     assert widget(app,"button","开始入门任务")
@@ -63,7 +69,7 @@ def test_course_experiment_quiz_goal_notes_restore_after_restart(monkeypatch):
     widget(app,"text_area","学习笔记内容").input("峰值必须只看过去。")
     widget(app,"button","保存学习笔记").click().run()
     second = app_start()
-    second.sidebar.radio(key="nav_page").set_value("新手使用指引").run()
+    open_learning(second)
     widget(second,"radio","学习中心分区").set_value("学习进度").run()
     assert not second.exception
     assert widget(second,"text_input","当前学习目标").value == "先掌握回撤再看夏普"
@@ -129,7 +135,7 @@ def test_professional_mode_and_teaching_draft_never_send_or_change_math(monkeypa
     app.toggle(key="learning_mode").set_value(False).run()
     assert not app.exception and app.session_state["model_result"].mae == result.mae
     assert app.session_state["active_analysis_context"]["linear_model"]["mae"] == result.mae
-    app.sidebar.radio(key="nav_page").set_value("新手使用指引").run()
+    open_learning(app)
     widget(app,"radio","学习中心分区").set_value("课程与练习").run()
     widget(app,"button","使用 DeepSeek 辅导这节课").click().run()
     assert not app.exception

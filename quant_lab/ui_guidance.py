@@ -82,9 +82,12 @@ def protect_research_widgets():
 def navigate(page, *, section=None, guide=None, course=None):
     if page not in GUIDES:
         raise ValueError("未知功能页面。")
-    if page != CENTER:
+    if page == CENTER:
+        st.session_state["guide_panel_open"] = True
+    else:
         st.session_state["learning_return_page"] = page
-    st.session_state["nav_page"] = page
+        st.session_state["nav_page"] = page
+        st.session_state["guide_panel_open"] = False
     if section:
         st.session_state["center_section"] = section
     if guide:
@@ -296,7 +299,7 @@ def _course():
             st.error("测验保存失败，未记录为完成。")
     st.button("使用 DeepSeek 辅导这节课", key="course_ai", on_click=teaching_draft,
               args=(course.topic,), kwargs={"course": course_id})
-    st.caption("这只准备问题；在 AI 研究助手页核对摘要并明确发送，才会请求模型。")
+    st.caption("这只准备问题；在右侧 DeepSeek 面板核对摘要并明确发送，才会请求模型。")
     st.session_state["active_learning_context"] = {"course_id": course_id, "topic": item.title,
         "definition": item.definition, "formula": item.formula, "parameter": parameter,
         "experiment_conclusion": conclusion, "status": "固定教学实验，不是股票行情；不含测验答案"}
@@ -347,8 +350,9 @@ def _progress_page():
                 st.rerun()
 
 
-def render_learning_center():
-    st.subheader("新手使用指引 · Learning Center")
+def render_learning_center(*, panel: bool = False):
+    if not panel:
+        st.subheader("新手使用指引 · Learning Center")
     resume = progress().get(("onboarding", "resume"), {}).get("details", {})
     if resume.get("course_id") in COURSES:
         st.session_state.setdefault("center_course", resume["course_id"])
@@ -361,3 +365,25 @@ def render_learning_center():
          "课程与练习": _course, "学习进度": _progress_page}[section]()
     except (ValueError, OSError, sqlite3.Error):
         st.error("学习中心记录读取或保存失败；请检查用户数据目录。没有将失败步骤标为已完成。")
+
+
+def _close_learning_panel() -> None:
+    st.session_state["guide_panel_open"] = False
+
+
+def render_learning_panel() -> None:
+    with st.container(key="guide_side_panel"):
+        st.html(
+            '<div class="ql-resize-handle" data-panel="guide" role="separator" '
+            'aria-label="调整新手使用指引宽度" tabindex="0"></div>'
+        )
+        title, close = st.columns([5, 1], vertical_alignment="center", gap="small")
+        with title:
+            st.html(
+                '<div class="ql-ai-panel-title"><strong>新手使用指引</strong>'
+                '<span>LEARNING CENTER</span></div>'
+            )
+        with close:
+            st.button("×", key="guide_panel_close", width="stretch",
+                      on_click=_close_learning_panel, help="关闭新手使用指引")
+        render_learning_center(panel=True)

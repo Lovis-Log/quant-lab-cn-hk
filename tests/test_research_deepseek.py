@@ -57,7 +57,8 @@ def test_research_ui_shares_key_model_and_isolates_current_data(monkeypatch, tmp
     monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", Client)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
-    app.sidebar.radio[0].set_value("AI 研究助手").run()
+    next(w for w in app.button if w.label == "DeepSeek 助手").click().run()
+    next(w for w in app.radio if w.label == "AI 工作区").set_value("研究实验").run()
     assert not any("OPENAI" in item.value for item in app.info)
     assert next(w for w in app.button if w.label == "生成 AI 假设").disabled
     app.text_input(key="deepseek_api_key").input(SECRET).run()

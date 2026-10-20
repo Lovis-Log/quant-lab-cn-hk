@@ -4,12 +4,12 @@ import math
 import pytest
 
 from quant_lab.guidance import GUIDES, COURSES, PATHS, TASKS, validate_catalog, check_answer, course_experiment, task_evidence_valid
-from quant_lab.ui import PAGES
+from quant_lab.ui import PAGES, TOPBAR_PAGES
 
 
 def test_catalog_maps_all_pages_and_prerequisites_without_cycles():
     validate_catalog()
-    assert set(GUIDES) == set(PAGES) and len(PATHS) == 4
+    assert set(GUIDES) == set(PAGES) | TOPBAR_PAGES and len(PATHS) == 4
     for guide in GUIDES.values():
         assert all((guide.purpose, guide.controls, guide.steps, guide.example, guide.errors, guide.topics))
     def walk(node, stack):

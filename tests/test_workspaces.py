@@ -29,9 +29,11 @@ def test_all_workspaces_boot_without_extra_network_calls() -> None:
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
         assert not app.exception
-        for page in ("策略实验室", "历史回测", "风险与组合", "统计与机器学习", "AI 研究助手"):
+        for page in ("策略实验室", "历史回测", "风险与组合", "统计与机器学习"):
             app.sidebar.radio[0].set_value(page).run()
             assert not app.exception, page
+        next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
+        assert not app.exception
 
 
 def test_research_actions_run_from_loaded_history() -> None:
@@ -46,13 +48,17 @@ def test_research_actions_run_from_loaded_history() -> None:
             ("历史回测", "运行历史回测"),
             ("风险与组合", "分析同市场组合"),
             ("统计与机器学习", "运行时间序列线性回归"),
-            ("AI 研究助手", "运行受控实验（内置策略）"),
         ):
             app.sidebar.radio[0].set_value(page).run()
             button = next(item for item in app.get("button") if item.label == button_label)
             button.click().run()
             assert not app.exception, page
             assert not app.get("error"), page
+        next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
+        next(item for item in app.get("radio") if item.label == "AI 工作区").set_value("研究实验").run()
+        next(item for item in app.get("button") if item.label == "运行受控实验（内置策略）").click().run()
+        assert not app.exception
+        assert not app.get("error")
 
 
 def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch) -> None:
