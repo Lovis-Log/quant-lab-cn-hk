@@ -31,7 +31,7 @@ from quant_lab.market_data import normalize_symbol
 from quant_lab.storage import list_watchlist
 from quant_lab.ui_updates import initialize_settings, persist_setting, toggle_refresh, beijing, show_history_status, INTERVALS
 from quant_lab.ui_knowledge import render_knowledge
-from quant_lab.ui_deepseek import initialize_credentials, render_deepseek, render_deepseek_drawer
+from quant_lab.ui_deepseek import initialize_credentials, render_deepseek, render_deepseek_panel
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
 from quant_lab.guidance import GUIDES
@@ -189,13 +189,31 @@ def _header(page: str, market: str, symbol: str, latest_date: str | None) -> Non
     )
 
 
-def _deepseek_launcher() -> bool:
-    spacer, launcher = st.columns([5, 1])
-    with launcher:
-        return st.button(
-            "DeepSeek 助手", key="deepseek_drawer_open", width="stretch",
-            help="从右侧打开对话栏；只有点击发送才会调用付费 API。",
+def _toggle_deepseek_panel() -> None:
+    st.session_state["deepseek_panel_open"] = not st.session_state.get(
+        "deepseek_panel_open", False
+    )
+
+
+def _global_topbar() -> None:
+    st.session_state.setdefault("deepseek_panel_open", False)
+    with st.container(key="global_topbar"):
+        brand, workspace, assistant = st.columns(
+            [2.2, 5, 1.35], vertical_alignment="center", gap="small"
         )
+        with brand:
+            st.html(
+                '<div class="ql-topbar-brand"><span>Q/</span>'
+                '<strong>Quant Lab CN/HK</strong></div>'
+            )
+        with workspace:
+            st.html('<div class="ql-topbar-workspace">研究工作台</div>')
+        with assistant:
+            st.button(
+                "DeepSeek 助手", key="deepseek_panel_toggle", width="stretch",
+                on_click=_toggle_deepseek_panel,
+                help="打开或关闭右侧 DeepSeek 助手；只有点击发送才调用付费 API。",
+            )
 
 
 def _empty_candlestick() -> go.Figure:
@@ -450,12 +468,13 @@ def render_app() -> None:
     initialize_settings()
     initialize_credentials()
     protect_research_widgets()
+    _global_topbar()
     if st.session_state.pop("_open_ai_page", False):
         st.session_state["nav_page"] = "AI 研究助手"
     elif st.session_state.get("nav_page") != "AI 研究助手":
         st.session_state.pop("ai_followup_context", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
-    open_deepseek_drawer = _deepseek_launcher()
+    deepseek_panel_open = st.session_state.get("deepseek_panel_open", False)
     bundle: HistoryBundle | None = None
     error: str | None = None
     query = None
@@ -542,7 +561,7 @@ def render_app() -> None:
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]
     st.session_state["_current_ai_context"] = context
-    if page == "AI 研究助手" and not open_deepseek_drawer:
+    if page == "AI 研究助手" and not deepseek_panel_open:
         render_deepseek(context, bundle)
-    if open_deepseek_drawer:
-        render_deepseek_drawer(context, bundle)
+    if deepseek_panel_open:
+        render_deepseek_panel(context, bundle)

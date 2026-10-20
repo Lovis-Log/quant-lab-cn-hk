@@ -118,7 +118,7 @@ def render_welcome():
 def render_page_help(page):
     if page == CENTER:
         return
-    left, right = st.columns([4, 1])
+    left, right = st.columns([2, 1])
     if st.session_state.get("learning_mode", True):
         left.caption(GUIDES[page].purpose)
     right.button("查看本页使用指南", key=f"page_help_{page}", on_click=open_help, args=(page,))

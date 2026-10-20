@@ -98,25 +98,48 @@ def main():
                 if welcome.count():
                     welcome.click()
                     settle(page)
+                topbar = page.locator(".st-key-global_topbar")
+                expect(topbar).to_be_visible(timeout=10000)
+                viewport_width = page.evaluate("window.innerWidth")
+                topbar_box = topbar.bounding_box()
+                assert topbar_box and topbar_box["x"] <= 1
+                assert abs((topbar_box["x"] + topbar_box["width"]) - viewport_width) <= 3
+                main = page.get_by_test_id("stMain")
+                main_before = main.bounding_box()
                 page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
                 settle(page)
-                drawer = page.get_by_role("dialog", name="DeepSeek 助手", exact=True)
-                expect(drawer).to_be_visible(timeout=10000)
-                drawer.get_by_text("DeepSeek 连接设置", exact=True).click()
+                panel = page.locator(".st-key-deepseek_side_panel")
+                expect(panel).to_be_visible(timeout=10000)
+                assert page.get_by_role("dialog").count() == 0
+                panel.get_by_text("DeepSeek 连接设置", exact=True).click()
                 settle(page)
-                expect(drawer.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
-                box = drawer.bounding_box()
-                viewport_width = page.evaluate("window.innerWidth")
-                page.screenshot(path=str(directory/"deepseek-drawer.png"), full_page=False)
+                expect(panel.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                box = panel.bounding_box()
+                main_after = main.bounding_box()
+                workspace_after = page.get_by_test_id("stMainBlockContainer").bounding_box()
+                page.screenshot(path=str(directory/"deepseek-side-panel.png"), full_page=False)
                 assert box and abs((box["x"] + box["width"]) - viewport_width) <= 3, {
-                    "drawer_box": box, "viewport_width": viewport_width,
-                    "computed": drawer.evaluate("element => ({tag: element.tagName, attrs: [...element.attributes].map(a => [a.name, a.value]), position: getComputedStyle(element).position, right: getComputedStyle(element).right})"),
+                    "panel_box": box, "viewport_width": viewport_width,
                 }
-                summary.update({"deepseek_global_launcher": True, "deepseek_right_drawer_dom": True,
+                padding_right = main.evaluate("element => getComputedStyle(element).paddingRight")
+                assert main_before and main_after and workspace_after
+                assert float(padding_right.removesuffix("px")) >= box["width"] - 2, {
+                    "main_before": main_before, "main_after": main_after,
+                    "workspace_after": workspace_after, "panel_box": box,
+                    "padding_right": padding_right,
+                }
+                help_button = page.get_by_role("button", name="查看本页使用指南", exact=True)
+                if help_button.count():
+                    assert help_button.locator("p").evaluate(
+                        "element => element.scrollWidth <= element.clientWidth"
+                    )
+                    summary["workspace_controls_not_clipped"] = True
+                summary.update({"global_topbar_dom": True, "deepseek_global_launcher": True,
+                                "deepseek_right_panel_dom": True, "workspace_resized_for_panel": True,
                                 "remembered_key_restored_on_start": True})
-                page.keyboard.press("Escape")
+                panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
-                expect(drawer).not_to_be_visible(timeout=10000)
+                expect(panel).not_to_be_visible(timeout=10000)
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()

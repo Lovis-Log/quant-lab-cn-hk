@@ -83,17 +83,19 @@ def open_ai_followup(prompt, topic):
     st.session_state["ai_followup_query"] = st.session_state.get("_current_query")
     st.session_state["deepseek_prompt"] = prompt
     st.session_state["ai_workspace"] = "对话与辅导"
-    st.session_state["_open_ai_page"] = True
+    st.session_state["deepseek_panel_open"] = True
 
 
 def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
-                    connection_expanded: bool = True):
+                    connection_expanded: bool = True, compact: bool = False):
     from quant_lab.ui_ai import render_ai, current_experiment_context
 
     with st.expander("DeepSeek 连接设置", expanded=connection_expanded):
         st.caption("使用你自己的 DeepSeek API 账户。只有点击发送才产生模型请求；模型解释需核对程序事实。")
         st.caption("官方地址：https://api.deepseek.com")
-        credentials_column, model_column = st.columns(2)
+        credentials_column, model_column = (
+            (st.container(), st.container()) if compact else st.columns(2)
+        )
         with credentials_column:
             key = st.text_input("DeepSeek API Key", type="password", key="deepseek_api_key",
                                 on_change=_key_changed,
@@ -187,13 +189,20 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
     with st.expander("发送前查看上下文摘要"):
         st.json(context if attach else {"说明": "本次不附带当前研究摘要。"})
         st.caption("不附带私人笔记、完整历史行情或数据库；发送前请核对标的与实验。")
-    for question in QUICK_QUESTIONS:
-        st.button(question, key=f"ds_quick_{question}", on_click=_draft, args=(question,))
+    if compact:
+        quick_columns = st.columns(2, gap="small")
+        for index, question in enumerate(QUICK_QUESTIONS):
+            with quick_columns[index % 2]:
+                st.button(question, key=f"ds_quick_{question}", width="stretch",
+                          on_click=_draft, args=(question,))
+    else:
+        for question in QUICK_QUESTIONS:
+            st.button(question, key=f"ds_quick_{question}", on_click=_draft, args=(question,))
     records = st.session_state.setdefault("deepseek_chat", [])
     if st.button("清空当前对话", key="ds_clear_chat"):
         st.session_state["deepseek_chat"] = []
         records = []
-    with st.container(height=320, border=True):
+    with st.container(height=260 if compact else 320, border=True):
         if not records:
             st.caption("没有 Key 时仍可使用离线课程和知识解释。")
         for message in records[-20:]:
@@ -253,8 +262,23 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                 st.error("学习笔记保存失败；请检查用户数据目录。")
 
 
-@st.dialog("DeepSeek 助手", width="large")
-def render_deepseek_drawer(context: dict, bundle=None):
-    st.html('<span class="ql-ai-drawer-marker"></span>')
-    st.caption("右侧对话栏 · 仅在你明确点击发送后调用 DeepSeek")
-    render_deepseek(context, bundle, chat_only=True, connection_expanded=False)
+def _close_deepseek_panel() -> None:
+    st.session_state["deepseek_panel_open"] = False
+
+
+def render_deepseek_panel(context: dict, bundle=None):
+    with st.container(key="deepseek_side_panel"):
+        st.html('<span class="ql-ai-panel-marker"></span>')
+        title, close = st.columns([5, 1], vertical_alignment="center", gap="small")
+        with title:
+            st.html(
+                '<div class="ql-ai-panel-title"><strong>DeepSeek 助手</strong>'
+                '<span>AI RESEARCH ASSISTANT</span></div>'
+            )
+        with close:
+            st.button("×", key="deepseek_panel_close", width="stretch",
+                      on_click=_close_deepseek_panel, help="关闭 DeepSeek 侧栏")
+        st.caption("右侧停靠面板 · 仅在你明确点击发送后调用 DeepSeek")
+        render_deepseek(
+            context, bundle, chat_only=True, connection_expanded=False, compact=True
+        )

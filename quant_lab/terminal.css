@@ -1,4 +1,15 @@
-:root { --ql-bg:#090D16; --ql-panel:#151E2D; --ql-line:#273244; --ql-text:#F1F5F9; --ql-muted:#94A3B8; --ql-green:#24D6A0; --ql-blue:#4F8CFF; }
+:root { --ql-bg:#090D16; --ql-panel:#151E2D; --ql-line:#273244; --ql-text:#F1F5F9; --ql-muted:#94A3B8; --ql-green:#24D6A0; --ql-blue:#4F8CFF; --ql-topbar:52px; --ql-assistant:460px; }
+header[data-testid="stHeader"] { display:none; }
+.st-key-global_topbar { position:fixed; inset:0 0 auto 0; z-index:1000; height:var(--ql-topbar); padding:6px 14px; background:#0C111B; border-bottom:1px solid #2A3444; box-shadow:0 3px 14px rgba(0,0,0,.2); overflow:hidden; }
+.st-key-global_topbar [data-testid="stVerticalBlock"] { height:100%; gap:0; }
+.st-key-global_topbar button { min-height:36px; border-color:#34435A; background:#172133; color:#DCE6F3; font-size:13px; font-weight:600; }
+[data-testid="stAppViewContainer"]:has(.st-key-deepseek_side_panel) .st-key-global_topbar button { border-color:#2F8B72; background:#16312D; color:#A7F3D0; }
+.ql-topbar-brand { display:flex; align-items:center; gap:10px; height:36px; color:var(--ql-text); }
+.ql-topbar-brand span { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:7px; background:#17362F; color:var(--ql-green); font-weight:800; letter-spacing:-2px; padding-right:2px; }
+.ql-topbar-brand strong { font-size:13px; letter-spacing:.035em; white-space:nowrap; }
+.ql-topbar-workspace { color:#718096; font-size:11px; letter-spacing:.12em; text-align:center; }
+[data-testid="stSidebar"] { top:var(--ql-topbar) !important; height:calc(100dvh - var(--ql-topbar)) !important; }
+[data-testid="stMainBlockContainer"] { padding-top:calc(var(--ql-topbar) + 28px); }
 .ql-brand { display:flex; align-items:center; gap:12px; padding:14px 0 22px; border-bottom:1px solid var(--ql-line); margin-bottom:22px; }
 .ql-brand-mark { width:39px; height:39px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:#17362f; color:var(--ql-green); font-size:22px; font-weight:800; letter-spacing:-3px; padding-right:3px; }
 .ql-brand-mark span { color:#d9fff1; }
@@ -49,14 +60,18 @@
 @media (max-width:1100px) { .ql-header h1 {font-size:25px;} .ql-header-context {min-width:150px;} .ql-metric {padding:12px; min-height:108px;} }
 @media (max-width:760px) { .ql-header {align-items:flex-start; flex-direction:column;} .ql-header-context {text-align:left;} .ql-section-head,.ql-panel-header {align-items:flex-start; flex-wrap:wrap;} .ql-metric {min-height:95px;} }
 
-/* Streamlit's native dialog is presented as a non-destructive right drawer. */
-[role="dialog"]:has(.ql-ai-drawer-marker) {
-  position:fixed !important; inset:0 0 0 auto !important; margin:0 !important;
-  width:min(580px,100vw) !important; max-width:min(580px,100vw) !important;
-  height:100dvh !important; max-height:100dvh !important;
-  border-radius:12px 0 0 12px !important; transform:none !important;
-}
-[role="dialog"]:has(.ql-ai-drawer-marker) > div { overflow-y:auto; }
+/* VS Code-style non-modal assistant rail: it docks beside, rather than over, the workspace. */
+.st-key-deepseek_side_panel { position:fixed; top:var(--ql-topbar); right:0; bottom:0; z-index:900; width:var(--ql-assistant); padding:16px 18px 28px; overflow-y:auto; background:#111927; border-left:1px solid #2B3749; box-shadow:-12px 0 28px rgba(0,0,0,.18); }
+.st-key-deepseek_side_panel [data-testid="stVerticalBlock"] { gap:.65rem; }
+.st-key-deepseek_side_panel button { font-size:12px; }
+.ql-ai-panel-marker { display:none; }
+.ql-ai-panel-title { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
+.ql-ai-panel-title strong { color:var(--ql-text); font-size:18px; letter-spacing:-.01em; }
+.ql-ai-panel-title span { color:#63728A; font-size:9px; letter-spacing:.16em; }
+[data-testid="stAppViewContainer"]:has(.st-key-deepseek_side_panel) [data-testid="stMain"] { padding-right:var(--ql-assistant); box-sizing:border-box; transition:padding-right .18s ease; }
+@media (max-width:1100px) { :root { --ql-assistant:390px; } }
 @media (max-width:760px) {
-  [role="dialog"]:has(.ql-ai-drawer-marker) { width:100vw !important; max-width:100vw !important; border-radius:0 !important; }
+  :root { --ql-assistant:100vw; }
+  .ql-topbar-workspace { display:none; }
+  [data-testid="stAppViewContainer"]:has(.st-key-deepseek_side_panel) [data-testid="stMain"] { padding-right:0; }
 }
