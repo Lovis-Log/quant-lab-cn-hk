@@ -12,6 +12,17 @@ def widget(app, kind, label):
     return next(w for w in app.get(kind) if w.label == label)
 
 
+def test_remembered_key_is_loaded_on_start_and_drawer_is_global(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr("quant_lab.credentials.load_key", lambda: "sk-restored-from-vault")
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    assert widget(app, "button", "DeepSeek 助手")
+    widget(app, "button", "DeepSeek 助手").click().run()
+    assert not app.exception
+    assert widget(app, "text_input", "DeepSeek API Key").value == "sk-restored-from-vault"
+    assert widget(app, "checkbox", "记住密钥（Windows 凭据管理器）").value is True
+
+
 def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     calls = []

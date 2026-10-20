@@ -14,6 +14,20 @@ from quant_lab.storage import save_learning_note, save_setting
 QUICK_QUESTIONS = ("解释当前指标", "分析本次回测", "给一个手算例子", "下一步学什么")
 
 
+def initialize_credentials():
+    """Restore a remembered key before any credential widget is created."""
+    if st.session_state.get("deepseek_credentials_initialized"):
+        return
+    try:
+        remembered = credentials.load_key() or ""
+    except credentials.SecureStorageUnavailable as exc:
+        remembered = ""
+        st.session_state["deepseek_credential_error"] = str(exc)
+    st.session_state.setdefault("deepseek_api_key", remembered)
+    st.session_state.setdefault("deepseek_remember", bool(remembered))
+    st.session_state["deepseek_credentials_initialized"] = True
+
+
 def _clear_key():
     previous = st.session_state.get("deepseek_api_key", "")
     st.session_state["deepseek_prompt"] = redact(st.session_state.get("deepseek_prompt", ""), (previous,))
@@ -72,10 +86,11 @@ def open_ai_followup(prompt, topic):
     st.session_state["_open_ai_page"] = True
 
 
-def render_deepseek(context: dict, bundle=None):
+def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
+                    connection_expanded: bool = True):
     from quant_lab.ui_ai import render_ai, current_experiment_context
 
-    with st.expander("DeepSeek 连接设置", expanded=True):
+    with st.expander("DeepSeek 连接设置", expanded=connection_expanded):
         st.caption("使用你自己的 DeepSeek API 账户。只有点击发送才产生模型请求；模型解释需核对程序事实。")
         st.caption("官方地址：https://api.deepseek.com")
         credentials_column, model_column = st.columns(2)
@@ -86,9 +101,11 @@ def render_deepseek(context: dict, bundle=None):
             remember = st.checkbox("记住密钥（Windows 凭据管理器）", key="deepseek_remember")
             if st.button("应用密钥设置", key="deepseek_apply_key"):
                 try:
-                    if remember:
+                    if remember and key.strip():
                         credentials.remember_key(key)
                         st.success("已写入 Windows 凭据管理器。")
+                    elif remember:
+                        st.warning("请先填写 API Key，再启用记住密钥。")
                     else:
                         credentials.clear_key()
                         st.info("仅在当前会话保留密钥。")
@@ -98,6 +115,8 @@ def render_deepseek(context: dict, bundle=None):
             st.button("清除密钥", on_click=_clear_key, key="deepseek_clear_key")
             if st.session_state.get("deepseek_notice"):
                 st.info(st.session_state.pop("deepseek_notice"))
+            if st.session_state.get("deepseek_credential_error"):
+                st.warning(st.session_state.pop("deepseek_credential_error"))
         with model_column:
             test = st.button("测试连接", key="deepseek_test", disabled=not key)
             refresh = st.button("刷新模型列表", key="deepseek_models_refresh", disabled=not key)
@@ -144,13 +163,14 @@ def render_deepseek(context: dict, bundle=None):
                 effort = None if choice == "模型默认" else choice
             st.caption("请求使用模型默认采样与思考设置；只对模型列表声明支持的参数提供选项。")
 
-    workspace = st.radio("AI 工作区", ("研究实验", "对话与辅导"), key="ai_workspace", horizontal=True)
-    if workspace == "研究实验":
-        render_ai(bundle)
-        if st.session_state.get("active_backtest_context"):
-            context.update(st.session_state["active_backtest_context"])
-            st.session_state["_current_ai_context"] = context
-        return
+    if not chat_only:
+        workspace = st.radio("AI 工作区", ("研究实验", "对话与辅导"), key="ai_workspace", horizontal=True)
+        if workspace == "研究实验":
+            render_ai(bundle)
+            if st.session_state.get("active_backtest_context"):
+                context.update(st.session_state["active_backtest_context"])
+                st.session_state["_current_ai_context"] = context
+            return
     st.subheader("DeepSeek 对话与辅导")
     followup = st.session_state.get("ai_followup_context")
     if followup:
@@ -231,3 +251,10 @@ def render_deepseek(context: dict, bundle=None):
                 st.success(f"学习笔记 #{note_id} 已保存。")
             except (ValueError, OSError, sqlite3.Error):
                 st.error("学习笔记保存失败；请检查用户数据目录。")
+
+
+@st.dialog("DeepSeek 助手", width="large")
+def render_deepseek_drawer(context: dict, bundle=None):
+    st.html('<span class="ql-ai-drawer-marker"></span>')
+    st.caption("右侧对话栏 · 仅在你明确点击发送后调用 DeepSeek")
+    render_deepseek(context, bundle, chat_only=True, connection_expanded=False)

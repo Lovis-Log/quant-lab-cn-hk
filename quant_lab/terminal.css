@@ -48,3 +48,15 @@
 .ql-future p { color:var(--ql-muted); font-size:13px; }
 @media (max-width:1100px) { .ql-header h1 {font-size:25px;} .ql-header-context {min-width:150px;} .ql-metric {padding:12px; min-height:108px;} }
 @media (max-width:760px) { .ql-header {align-items:flex-start; flex-direction:column;} .ql-header-context {text-align:left;} .ql-section-head,.ql-panel-header {align-items:flex-start; flex-wrap:wrap;} .ql-metric {min-height:95px;} }
+
+/* Streamlit's native dialog is presented as a non-destructive right drawer. */
+[role="dialog"]:has(.ql-ai-drawer-marker) {
+  position:fixed !important; inset:0 0 0 auto !important; margin:0 !important;
+  width:min(580px,100vw) !important; max-width:min(580px,100vw) !important;
+  height:100dvh !important; max-height:100dvh !important;
+  border-radius:12px 0 0 12px !important; transform:none !important;
+}
+[role="dialog"]:has(.ql-ai-drawer-marker) > div { overflow-y:auto; }
+@media (max-width:760px) {
+  [role="dialog"]:has(.ql-ai-drawer-marker) { width:100vw !important; max-width:100vw !important; border-radius:0 !important; }
+}

@@ -83,8 +83,22 @@ class AKShareProvider:
                 )
                 source, currency = "腾讯证券 · AKShare", "CNY"
             else:
-                raw = ak.stock_hk_daily(symbol=symbol, adjust=adjustment)
-                source, currency = "新浪财经 · AKShare", "HKD"
+                try:
+                    raw = ak.stock_hk_hist(
+                        symbol=symbol, period="daily",
+                        start_date=start.strftime("%Y%m%d"),
+                        end_date=end.strftime("%Y%m%d"), adjust=adjustment,
+                    ).rename(columns={
+                        "日期": "date", "开盘": "open", "最高": "high",
+                        "最低": "low", "收盘": "close", "成交量": "volume",
+                        "成交额": "amount",
+                    })
+                    source, currency = "东方财富 · AKShare", "HKD"
+                except Exception as primary_exc:
+                    _record_failure(symbol, primary_exc)
+                    raw = ak.stock_hk_daily(symbol=symbol, adjust=adjustment)
+                    source = "新浪财经 · AKShare（东方财富请求失败后回退）"
+                    currency = "HKD"
         except Exception as exc:
             _record_failure(symbol, exc)
             raise DataUnavailableError(f"{market}历史行情暂时无法获取，请稍后重试。") from exc

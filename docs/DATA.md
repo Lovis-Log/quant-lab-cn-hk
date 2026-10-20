@@ -5,9 +5,10 @@ Quant Lab CN/HK 目前只读取**股票历史日线**。自选股快照由最近
 | 市场 | AKShare 接口 | 原始来源 | 代码示例 | 价格/成交额币种 | 成交量 |
 | --- | --- | --- | --- | --- | --- |
 | A 股 | `stock_zh_a_hist_tx` | 腾讯证券 | `600519` | CNY | 股 |
-| 港股 | `stock_hk_daily` | 新浪财经 | `00700` | HKD | 股 |
+| 港股（主） | `stock_hk_hist` | 东方财富 | `00700` | HKD | 股 |
+| 港股（回退） | `stock_hk_daily` | 新浪财经 | `00700` | HKD | 股 |
 
-统一后的内部字段为 `date`, `open`, `high`, `low`, `close`, `volume`, `amount`。`date` 是实际交易日；开、高、低、收是每股价格；`volume` 是股票股数；`amount` 是交易金额。港股接口返回全历史后，应用再按用户所选日期过滤。字段原始定义见 [AKShare 股票数据文档](https://github.com/akfamily/akshare/blob/main/docs/data/stock/stock.md)。
+统一后的内部字段为 `date`, `open`, `high`, `low`, `close`, `volume`, `amount`。`date` 是实际交易日；开、高、低、收是每股价格；`volume` 是股票股数；`amount` 是交易金额。港股主接口直接接收用户所选日期，返回的中文列名在进入验证器前映射到统一字段；仅当主接口请求失败时使用新浪全历史接口，页面来源会明确显示“东方财富请求失败后回退”。字段原始定义见 [AKShare 股票数据文档](https://github.com/akfamily/akshare/blob/main/docs/data/stock/stock.md)。
 
 ## 价格口径
 

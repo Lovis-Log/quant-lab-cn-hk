@@ -9,11 +9,13 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def settle(page):
@@ -35,6 +37,10 @@ def main():
     directory.relative_to((ROOT / ".tools").resolve())
     directory.mkdir(parents=True, exist_ok=True)
     app_file, original = None, None
+    vault_target = "QuantLabCNHK/Validation/" + uuid4().hex
+    dummy_key = "sk-validation-" + uuid4().hex
+    from quant_lab.credentials import remember_key, clear_key
+    remember_key(dummy_key, target=vault_target)
     if args.mock_ai:
         if not args.exe:
             raise ValueError("Mock GUI mode requires an isolated installed EXE.")
@@ -49,6 +55,7 @@ def main():
     probe_file = directory / ("probe-" + uuid4().hex + ".json")
     env = {**os.environ, "QUANT_LAB_DATA_DIR": str(directory),
            "QUANT_LAB_GUI_TEST_SECONDS": "240", "QUANT_LAB_GUI_PROBE": "1",
+           "QUANT_LAB_CREDENTIAL_TARGET": vault_target,
            "QUANT_LAB_SMOKE_RESULT": str(probe_file)}
     command = [str(args.exe.resolve())] if args.exe else [str(ROOT/".venv/Scripts/python.exe"), str(ROOT/"desktop_launcher.py")]
     child = None
@@ -82,12 +89,34 @@ def main():
                             raise
                         time.sleep(.3)
                 page = browser.contexts[0].pages[0]
+                console_errors = []
+                page.on("console", lambda message: console_errors.append(message.text)
+                        if message.type == "error" else None)
                 page.get_by_text("市场数据实验室", exact=True).wait_for(timeout=30000)
                 summary["actual_webview_dom_loaded"] = True
                 welcome = page.get_by_role("button", name="跳过首次引导", exact=True)
                 if welcome.count():
                     welcome.click()
                     settle(page)
+                page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
+                settle(page)
+                drawer = page.get_by_role("dialog", name="DeepSeek 助手", exact=True)
+                expect(drawer).to_be_visible(timeout=10000)
+                drawer.get_by_text("DeepSeek 连接设置", exact=True).click()
+                settle(page)
+                expect(drawer.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                box = drawer.bounding_box()
+                viewport_width = page.evaluate("window.innerWidth")
+                page.screenshot(path=str(directory/"deepseek-drawer.png"), full_page=False)
+                assert box and abs((box["x"] + box["width"]) - viewport_width) <= 3, {
+                    "drawer_box": box, "viewport_width": viewport_width,
+                    "computed": drawer.evaluate("element => ({tag: element.tagName, attrs: [...element.attributes].map(a => [a.name, a.value]), position: getComputedStyle(element).position, right: getComputedStyle(element).right})"),
+                }
+                summary.update({"deepseek_global_launcher": True, "deepseek_right_drawer_dom": True,
+                                "remembered_key_restored_on_start": True})
+                page.keyboard.press("Escape")
+                settle(page)
+                expect(drawer).not_to_be_visible(timeout=10000)
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()
@@ -141,6 +170,14 @@ def main():
                                     "candidate_populates_code": True, "statistics_usage_help": True})
                     page.get_by_text("市场数据", exact=True).click()
                     settle(page)
+                    page.get_by_role("button", name="加载真实历史日线", exact=True).click()
+                    settle(page)
+                    body_text = page.inner_text("body")
+                    hk_source = next((source for source in (
+                        "东方财富 · AKShare", "新浪财经 · AKShare（东方财富请求失败后回退）"
+                    ) if source in body_text), None)
+                    assert hk_source and "港股 00941" in body_text and "真实历史数据" in body_text
+                    summary.update({"hk_history_loaded": True, "hk_history_source": hk_source})
                 if args.learning_center:
                     sidebar = page.get_by_test_id("stSidebar")
                     sidebar.get_by_text("新手使用指引", exact=True).click()
@@ -220,10 +257,7 @@ def main():
                 summary["deepseek_in_main_workspace"] = True
                 key = page.get_by_label("DeepSeek API Key", exact=True)
                 assert key.get_attribute("type") == "password"
-                assert key.input_value() == ""  # Session-only keys must not return after restart.
-                key.fill("sk-isolated-ui-dummy-key")
-                key.press("Enter")
-                settle(page)
+                assert key.input_value() == dummy_key
                 if args.mock_ai:
                     expect(page.get_by_role("button", name="测试连接", exact=True)).to_be_enabled(timeout=10000)
                     page.get_by_role("button", name="测试连接", exact=True).click()
@@ -288,6 +322,8 @@ def main():
                     summary["password_and_model_controls"] = True
                 page.screenshot(path=str(directory/"webview.png"), full_page=True)
                 assert not page.locator('[data-testid="stException"]').count()
+                assert not console_errors, console_errors
+                summary["console_errors"] = []
                 try:
                     page.evaluate("() => { window.pywebview.api.close(); return true; }")
                 except Error as exc:
@@ -314,6 +350,7 @@ def main():
             child.wait(timeout=10)
         if app_file is not None and original is not None:
             app_file.write_bytes(original)
+        clear_key(target=vault_target)
 
 
 if __name__ == "__main__":

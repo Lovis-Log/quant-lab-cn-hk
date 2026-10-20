@@ -8,6 +8,11 @@ import os
 TARGET = "QuantLabCNHK/DeepSeek"
 
 
+def credential_target() -> str:
+    """Allow isolated GUI acceptance to use a disposable vault target."""
+    return os.environ.get("QUANT_LAB_CREDENTIAL_TARGET", TARGET)
+
+
 class SecureStorageUnavailable(RuntimeError):
     pass
 
@@ -42,7 +47,8 @@ def _api():
     return api
 
 
-def remember_key(key: str, *, target: str = TARGET) -> None:
+def remember_key(key: str, *, target: str | None = None) -> None:
+    target = target or credential_target()
     raw = key.encode("utf-16-le")
     if not raw or len(raw) > 512:
         raise SecureStorageUnavailable("密钥长度不适合系统安全存储；已保留会话模式。")
@@ -60,7 +66,8 @@ def remember_key(key: str, *, target: str = TARGET) -> None:
         ctypes.memset(buffer, 0, len(raw))
 
 
-def load_key(*, target: str = TARGET) -> str | None:
+def load_key(*, target: str | None = None) -> str | None:
+    target = target or credential_target()
     api = _api()
     pointer = ctypes.POINTER(CREDENTIALW)()
     if not api.CredReadW(target, 1, 0, ctypes.byref(pointer)):
@@ -74,7 +81,8 @@ def load_key(*, target: str = TARGET) -> str | None:
         api.CredFree(pointer)
 
 
-def clear_key(*, target: str = TARGET) -> None:
+def clear_key(*, target: str | None = None) -> None:
+    target = target or credential_target()
     api = _api()
     if not api.CredDeleteW(target, 1, 0) and ctypes.get_last_error() != 1168:
         raise SecureStorageUnavailable("会话密钥已清除；系统凭据删除失败，请在 Windows 凭据管理器中检查。")

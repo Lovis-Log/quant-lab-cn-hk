@@ -31,14 +31,31 @@ def test_provider_keeps_source_adjustment_and_receive_time(monkeypatch) -> None:
 
     def fake_hk(**kwargs):
         called.update(kwargs)
-        return rows()
+        return rows().rename(columns={
+            "date": "日期", "open": "开盘", "high": "最高", "low": "最低",
+            "close": "收盘", "volume": "成交量", "amount": "成交额",
+        })
 
-    monkeypatch.setattr("quant_lab.data.ak.stock_hk_daily", fake_hk)
+    monkeypatch.setattr("quant_lab.data.ak.stock_hk_hist", fake_hk)
     bundle = AKShareProvider().history("港股", "700", date(2026, 10, 1), date(2026, 10, 11), "qfq")
-    assert called == {"symbol": "00700", "adjust": "qfq"}
+    assert called == {"symbol": "00700", "period": "daily", "start_date": "20261001",
+                      "end_date": "20261011", "adjust": "qfq"}
     assert bundle.symbol == "00700" and bundle.currency == "HKD"
-    assert bundle.source == "新浪财经 · AKShare" and bundle.adjustment == "qfq"
+    assert bundle.source == "东方财富 · AKShare" and bundle.adjustment == "qfq"
     assert bundle.received_at is not None and bundle.received_at.tzinfo is not None
+    assert bundle.frame["close"].tolist() == [10, 11]
+
+
+def test_hk_provider_marks_sina_fallback(monkeypatch) -> None:
+    def primary_failure(**_):
+        raise ConnectionError("primary unavailable")
+
+    monkeypatch.setattr("quant_lab.data.ak.stock_hk_hist", primary_failure)
+    monkeypatch.setattr("quant_lab.data.ak.stock_hk_daily", lambda **_: rows())
+    bundle = AKShareProvider().history(
+        "港股", "00700", date(2026, 10, 1), date(2026, 10, 11)
+    )
+    assert bundle.source == "新浪财经 · AKShare（东方财富请求失败后回退）"
     assert bundle.frame["close"].tolist() == [10, 11]
 
 

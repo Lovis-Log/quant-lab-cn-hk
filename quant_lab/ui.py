@@ -31,7 +31,7 @@ from quant_lab.market_data import normalize_symbol
 from quant_lab.storage import list_watchlist
 from quant_lab.ui_updates import initialize_settings, persist_setting, toggle_refresh, beijing, show_history_status, INTERVALS
 from quant_lab.ui_knowledge import render_knowledge
-from quant_lab.ui_deepseek import render_deepseek
+from quant_lab.ui_deepseek import initialize_credentials, render_deepseek, render_deepseek_drawer
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
 from quant_lab.guidance import GUIDES
@@ -162,7 +162,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         elif dates is None:
             st.caption("请选择完整的开始和结束日期。")
         else:
-            source = "腾讯证券" if market == "A 股" else "新浪财经"
+            source = "腾讯证券" if market == "A 股" else "东方财富"
             st.caption(f"来源：{source}，经 AKShare 获取；历史日线。")
         st.html(
             '<div class="ql-side-footer"><span class="ql-live-dot"></span>'
@@ -187,6 +187,15 @@ def _header(page: str, market: str, symbol: str, latest_date: str | None) -> Non
         f'<span class="ql-context-status {status_class}">{escape(status)}</span>'
         '</div></div>'
     )
+
+
+def _deepseek_launcher() -> bool:
+    spacer, launcher = st.columns([5, 1])
+    with launcher:
+        return st.button(
+            "DeepSeek 助手", key="deepseek_drawer_open", width="stretch",
+            help="从右侧打开对话栏；只有点击发送才会调用付费 API。",
+        )
 
 
 def _empty_candlestick() -> go.Figure:
@@ -235,7 +244,7 @@ def _main_page(
     money = "¥" if currency == "CNY" else "HK$"
     unit = "元" if currency == "CNY" else "港元"
     source = bundle.source if bundle is not None else (
-        "腾讯证券 · AKShare" if market == "A 股" else "新浪财经 · AKShare"
+        "腾讯证券 · AKShare" if market == "A 股" else "东方财富 · AKShare"
     )
     adjustment_label = bundle.adjustment_label if bundle is not None else {
         "": "不复权", "qfq": "前复权", "hfq": "后复权"
@@ -439,12 +448,14 @@ def render_app() -> None:
     )
     st.html(CSS_PATH)
     initialize_settings()
+    initialize_credentials()
     protect_research_widgets()
     if st.session_state.pop("_open_ai_page", False):
         st.session_state["nav_page"] = "AI 研究助手"
     elif st.session_state.get("nav_page") != "AI 研究助手":
         st.session_state.pop("ai_followup_context", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
+    open_deepseek_drawer = _deepseek_launcher()
     bundle: HistoryBundle | None = None
     error: str | None = None
     query = None
@@ -531,5 +542,7 @@ def render_app() -> None:
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]
     st.session_state["_current_ai_context"] = context
-    if page == "AI 研究助手":
+    if page == "AI 研究助手" and not open_deepseek_drawer:
         render_deepseek(context, bundle)
+    if open_deepseek_drawer:
+        render_deepseek_drawer(context, bundle)
