@@ -45,7 +45,7 @@ def test_v2_upgrade_backup_preserves_notes_and_rolls_back_on_failure(tmp_path, m
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
         assert not db.execute("SELECT 1 FROM sqlite_master WHERE name='learning_progress'").fetchone()
         assert db.execute("SELECT content FROM learning_notes").fetchone()[0] == "正文"
-    backup = next((tmp_path / "backups").glob("research.pre-v3.*"))
+    backup = next((tmp_path / "backups").glob("research.pre-v4.*"))
     with sqlite3.connect(backup) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
     monkeypatch.setattr(migrations, "_upgrade", original)

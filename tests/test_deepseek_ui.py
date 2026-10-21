@@ -19,10 +19,13 @@ def test_remembered_key_is_loaded_on_start_and_panel_is_global(tmp_path, monkeyp
     assert widget(app, "button", "DeepSeek 助手")
     widget(app, "button", "DeepSeek 助手").click().run()
     assert not app.exception
+    assert not any(item.label == "DeepSeek API Key" for item in app.text_input)
+    widget(app, "button", "⚙").click().run()
     assert widget(app, "text_input", "DeepSeek API Key").value == "sk-restored-from-vault"
     assert widget(app, "checkbox", "记住密钥（Windows 凭据管理器）").value is True
     assert app.session_state["deepseek_panel_open"] is True
-    widget(app, "button", "×").click().run()
+    app.button(key="settings_close").click().run()
+    app.button(key="deepseek_panel_close").click().run()
     assert app.session_state["deepseek_panel_open"] is False
 
 
@@ -32,12 +35,19 @@ def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     navigation = app.sidebar.radio(key="nav_page")
     assert "AI 研究助手" not in navigation.options
     assert "新手使用指引" not in navigation.options
+    assert "研究笔记" not in navigation.options
     widget(app, "button", "新手使用指引").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
+    widget(app, "button", "研究笔记").click().run()
     assert app.session_state["guide_panel_open"] is True
     assert app.session_state["deepseek_panel_open"] is True
+    assert app.session_state["notes_panel_open"] is True
     assert not app.exception
     assert not any(button.label == "左右调换" for button in app.button)
+    app.button(key="notes_panel_maximize").click().run()
+    assert app.session_state["maximized_panel"] == "notes"
+    app.button(key="notes_panel_maximize").click().run()
+    assert app.session_state["maximized_panel"] is None
 
 
 def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
@@ -63,8 +73,10 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
     widget(app,"button","DeepSeek 助手").click().run()
     widget(app,"radio","AI 工作区").set_value("对话与辅导").run()
+    widget(app,"button","⚙").click().run()
     widget(app,"text_input","DeepSeek API Key").input("sk-only-ui-mock-secret").run()
     widget(app,"button","测试连接").click().run()
+    app.button(key="settings_close").click().run()
     widget(app,"text_area","问题（确认后发送）").input("解释当前指标").run()
     assert calls == []
     widget(app,"button","发送到 DeepSeek").click().run()
@@ -73,8 +85,10 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     app.sidebar.radio[0].set_value("Quant Academy").run()
     assert len(calls) == 1
     widget(app,"button","向 AI 追问").click().run()
-    assert widget(app,"text_input","DeepSeek API Key").value == "sk-only-ui-mock-secret"
+    assert app.session_state["deepseek_api_key"] == "sk-only-ui-mock-secret"
+    widget(app,"button","⚙").click().run()
     widget(app,"selectbox","DeepSeek 模型").set_value("beta").run()
+    app.button(key="settings_close").click().run()
     widget(app,"button","发送到 DeepSeek").click().run()
     assert not app.exception and len(calls) == 2 and calls[-1]["model"] == "beta"
     assert calls[-1]["history"] == []  # New lesson context, old stock messages retained only for display.
@@ -83,6 +97,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     widget(app,"button","保存选定回答到学习笔记").click().run()
     assert storage.list_learning_notes(tmp_path / "research.sqlite3")[0]["model"] == "beta-actual"
     assert "sk-only-ui-mock-secret" not in (tmp_path / "research.sqlite3").read_bytes().decode("utf-8", errors="ignore")
+    widget(app,"button","⚙").click().run()
     widget(app,"button","清除密钥").click().run()
     assert widget(app,"text_input","DeepSeek API Key").value == ""
     assert len(calls) == 2

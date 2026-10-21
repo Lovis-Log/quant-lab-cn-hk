@@ -16,7 +16,7 @@ import pandas as pd
 
 from quant_lab.backtest import BacktestConfig
 from quant_lab.market_data import normalize_symbol
-from quant_lab.paths import user_data_dir
+from quant_lab.paths import database_path as active_database_path
 from quant_lab.research import ExperimentResult
 from quant_lab.strategy import StrategySpec
 from quant_lab.migrations import migrate
@@ -25,7 +25,7 @@ from quant_lab.market_data import display_security
 
 
 def database_path() -> Path:
-    return user_data_dir() / "research.sqlite3"
+    return active_database_path()
 
 
 @contextmanager
@@ -269,11 +269,13 @@ def save_learning_note(title: str, content: str, *, model: str = "", origin: str
                        secrets=()) -> int:
     if not title.strip() or not content.strip():
         raise ValueError("笔记标题与内容不能为空。")
+    now = datetime.now(timezone.utc).isoformat()
     with _connect(path) as db:
         cur = db.execute("""INSERT INTO learning_notes
-            (title,content,origin,model,market,symbol,experiment_id,created_at) VALUES (?,?,?,?,?,?,?,?)""",
+            (title,content,origin,model,market,symbol,experiment_id,created_at,category_id,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,1,?)""",
             (redact(title, secrets), redact(content, secrets), redact(origin, secrets), redact(model, secrets), market, symbol,
-             experiment_id, datetime.now(timezone.utc).isoformat()))
+             experiment_id, now, now))
         return int(cur.lastrowid)
 
 
@@ -281,4 +283,6 @@ def list_learning_notes(path: Path | None = None) -> list[dict]:
     if not (path or database_path()).exists():
         return []
     with _connect(path) as db:
-        return [dict(row) for row in db.execute("SELECT * FROM learning_notes ORDER BY id DESC")]
+        return [dict(row) for row in db.execute(
+            "SELECT * FROM learning_notes WHERE deleted_at IS NULL ORDER BY id DESC"
+        )]

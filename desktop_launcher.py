@@ -265,12 +265,28 @@ def run_desktop(smoke_test: bool = False) -> int:
                 _write_probe_result({"ready": True, "port": port, "debug_port": probe_debug_port,
                                      "state": "starting", "data_dir": str(root)})
 
-            class ProbeAPI:
+            class DesktopAPI:
                 _window = None
                 def close(self):
                     if self._window:
                         threading.Thread(target=self._window.destroy, daemon=True).start()
-            probe_api = ProbeAPI() if probe_debug_port else None
+                def choose_data_folder(self):
+                    if not self._window:
+                        return None
+                    result = self._window.create_file_dialog(webview.FileDialog.FOLDER)
+                    return str(result[0]) if result else None
+                def open_managed_attachment(self, relative_path):
+                    root = user_data_dir().resolve()
+                    target = (root / str(relative_path)).resolve()
+                    try:
+                        target.relative_to(root)
+                    except ValueError:
+                        raise LaunchError("附件路径不属于当前资料库。")
+                    if not target.is_file():
+                        raise LaunchError("附件文件不存在。")
+                    os.startfile(target)
+                    return True
+            probe_api = DesktopAPI()
 
             url = f"http://{HOST}:{port}"
             window = webview.create_window(
@@ -278,8 +294,7 @@ def run_desktop(smoke_test: bool = False) -> int:
                 min_size=(1100, 700), background_color="#090D16",
                 js_api=probe_api,
             )
-            if probe_api:
-                probe_api._window = window
+            probe_api._window = window
             window.events.shown += shown.set
             window.events.before_load += before_load.set
             window.events.loaded += loaded.set

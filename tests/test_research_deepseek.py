@@ -61,8 +61,10 @@ def test_research_ui_shares_key_model_and_isolates_current_data(monkeypatch, tmp
     next(w for w in app.radio if w.label == "AI 工作区").set_value("研究实验").run()
     assert not any("OPENAI" in item.value for item in app.info)
     assert next(w for w in app.button if w.label == "生成 AI 假设").disabled
+    next(w for w in app.button if w.label == "⚙").click().run()
     app.text_input(key="deepseek_api_key").input(SECRET).run()
     next(w for w in app.button if w.label == "测试连接").click().run()
+    app.button(key="settings_close").click().run()
     assert not next(w for w in app.button if w.label == "生成 AI 假设").disabled
     assert calls == []
     next(w for w in app.button if w.label == "生成 AI 假设").click().run()

@@ -73,6 +73,6 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         next(item for item in app.get("button") if item.label == "保存实验").click().run()
         assert not app.exception
         assert len(list_experiments(tmp_path / "research.sqlite3")) == 1
-        app.sidebar.radio[0].set_value("研究笔记").run()
+        next(item for item in app.get("button") if item.label == "研究笔记").click().run()
         assert not app.exception
-        assert any("实验指纹" in item.value for item in app.get("caption"))
+        assert any(item.label == "选择内容" for item in app.selectbox)

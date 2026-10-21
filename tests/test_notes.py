@@ -1,0 +1,78 @@
+"""Categorized notes, drafts, managed attachments, trash, and library staging."""
+
+from io import BytesIO
+import json
+from pathlib import Path
+from zipfile import ZipFile
+
+import pytest
+from streamlit.testing.v1 import AppTest
+
+from quant_lab import notes, paths, storage
+
+
+def test_hierarchical_categories_drafts_and_recycle_bin(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    parent = notes.create_category("研究")
+    child = notes.create_category("港股", parent)
+    with pytest.raises(ValueError, match="子分类"):
+        notes.move_category(parent, child)
+    notes.save_draft("draft-a", title="腾讯", content="# 草稿", category_id=child)
+    assert notes.latest_draft()["content"] == "# 草稿"
+    note_id = notes.save_note(title="腾讯", content="# 正文", category_id=child, draft_id="draft-a")
+    assert notes.latest_draft() is None
+    assert notes.list_library_items(category_id=parent)[0]["id"] == note_id
+    notes.trash_item("笔记", note_id)
+    assert not notes.list_library_items()
+    assert notes.list_library_items(trashed=True)[0]["id"] == note_id
+    notes.restore_item("笔记", note_id)
+    notes.delete_category(parent)
+    assert notes.get_note(note_id)["category_id"] == child
+    assert next(row for row in notes.list_categories() if row["id"] == child)["parent_id"] is None
+
+
+def test_attachment_validation_hash_export_and_permanent_delete(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    notes.save_draft("draft-file", title="附件", content="正文")
+    png = b"\x89PNG\r\n\x1a\n" + b"sample"
+    attachment = notes.save_attachment(png, "chart.png", draft_id="draft-file")
+    with pytest.raises(ValueError, match="白名单"):
+        notes.save_attachment(b"MZ", "danger.exe", draft_id="draft-file")
+    note_id = notes.save_note(title="附件", content=f"![图](attachment://{attachment['id']})",
+                              draft_id="draft-file")
+    promoted = notes.list_attachments(note_id=note_id)[0]
+    assert promoted["stored_relpath"].startswith(f"notes/attachments/{note_id}/")
+    assert notes.attachment_bytes(promoted) == png
+    with ZipFile(BytesIO(notes.export_note_zip(note_id))) as archive:
+        assert archive.read("attachments/chart.png") == png
+        manifest = json.loads(archive.read("attachments.json"))
+        assert manifest[0]["sha256"] == attachment["sha256"]
+    managed = tmp_path / promoted["stored_relpath"]
+    notes.trash_item("笔记", note_id)
+    notes.permanent_delete_item("笔记", note_id)
+    assert not managed.exists()
+
+
+def test_stage_library_copies_database_and_writes_nonsecret_pointer(tmp_path, monkeypatch):
+    local = tmp_path / "local"
+    monkeypatch.delenv("QUANT_LAB_DATA_DIR", raising=False)
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    old_root = paths.default_data_dir()
+    storage.save_learning_note("旧笔记", "保留正文", path=old_root / "research.sqlite3")
+    target = paths.stage_library(tmp_path / "documents")
+    assert target == (tmp_path / "documents" / "QuantLabCNHK").resolve()
+    assert (target / "database" / "research.sqlite3").is_file()
+    assert paths.user_data_dir() == target
+    assert storage.list_learning_notes(target / "database" / "research.sqlite3")[0]["content"] == "保留正文"
+    pointer = json.loads(paths.bootstrap_path().read_text(encoding="utf-8"))
+    assert Path(pointer["data_root"]) == target
+    assert "sk-" not in json.dumps(pointer)
+
+
+def test_first_run_requires_library_setup(tmp_path, monkeypatch):
+    monkeypatch.delenv("QUANT_LAB_DATA_DIR", raising=False)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "fresh-local"))
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    assert not app.exception
+    assert any("创建 Quant Lab 专用资料库" in item.value for item in app.get("html"))
+    assert not app.sidebar.radio

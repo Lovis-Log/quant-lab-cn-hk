@@ -36,7 +36,7 @@ def test_welcome_skip_restart_help_maps_every_page_without_api(monkeypatch):
     from quant_lab.guidance import GUIDES
     assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
     assert "新手使用指引" not in app.sidebar.radio(key="nav_page").options
-    for page in (item for item in GUIDES if item not in {"AI 研究助手", "新手使用指引"}):
+    for page in (item for item in GUIDES if item not in {"AI 研究助手", "新手使用指引", "研究笔记"}):
         app.sidebar.radio(key="nav_page").set_value(page).run()
         widget(app,"button","查看本页使用指南").click().run()
         assert not app.exception and app.session_state["guide_panel_open"] is True
@@ -132,7 +132,9 @@ def test_professional_mode_and_teaching_draft_never_send_or_change_math(monkeypa
     app.sidebar.radio(key="nav_page").set_value("统计与机器学习").run()
     widget(app,"button","运行时间序列线性回归").click().run()
     result = app.session_state["model_result"]
+    widget(app,"button","⚙").click().run()
     app.toggle(key="learning_mode").set_value(False).run()
+    app.button(key="settings_close").click().run()
     assert not app.exception and app.session_state["model_result"].mae == result.mae
     assert app.session_state["active_analysis_context"]["linear_model"]["mae"] == result.mae
     open_learning(app)

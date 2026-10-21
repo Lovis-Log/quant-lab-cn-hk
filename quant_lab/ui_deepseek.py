@@ -86,84 +86,100 @@ def open_ai_followup(prompt, topic):
     st.session_state["deepseek_panel_open"] = True
 
 
+def connection_state() -> tuple[str, str, dict, str | None]:
+    key = st.session_state.get("deepseek_api_key", "")
+    models = st.session_state.get("deepseek_models", [])
+    model_id = (st.session_state.get("ds_model_select") if models else
+                st.session_state.get("ds_model_manual", st.session_state.get("deepseek_model", ""))) or ""
+    metadata = next((item for item in models if item.get("id") == model_id), {})
+    levels = (metadata.get("effort") or {}).get("supported_levels", [])
+    effort = None
+    if levels:
+        choice = st.session_state.get(f"ds_effort_{model_id}", "模型默认")
+        effort = None if choice == "模型默认" else choice
+    return key, model_id, metadata, effort
+
+
+def render_connection_settings() -> None:
+    st.caption("Key 只写入 Windows 凭据管理器；普通资料文件夹、SQLite、日志和导出均不保存 Key。")
+    key = st.text_input("DeepSeek API Key", type="password", key="deepseek_api_key",
+                        on_change=_key_changed, help="请不要把 Key 粘贴到笔记或聊天问题。")
+    remember = st.checkbox("记住密钥（Windows 凭据管理器）", key="deepseek_remember")
+    apply_col, load_col, clear_col = st.columns(3)
+    with apply_col:
+        apply_clicked = st.button("应用密钥", key="deepseek_apply_key", width="stretch")
+    with load_col:
+        st.button("读取密钥", on_click=_load_key, key="deepseek_load_key", width="stretch")
+    with clear_col:
+        st.button("清除密钥", on_click=_clear_key, key="deepseek_clear_key", width="stretch")
+    if apply_clicked:
+        try:
+            if remember and key.strip():
+                credentials.remember_key(key)
+                st.success("已写入 Windows 凭据管理器。")
+            elif remember:
+                st.warning("请先填写 API Key。")
+            else:
+                credentials.clear_key()
+                st.info("仅在当前会话保留密钥。")
+        except credentials.SecureStorageUnavailable as exc:
+            st.warning(str(exc))
+    test_col, refresh_col = st.columns(2)
+    test = test_col.button("测试连接", key="deepseek_test", disabled=not key, width="stretch")
+    refresh = refresh_col.button("刷新模型", key="deepseek_models_refresh", disabled=not key, width="stretch")
+    if test or refresh:
+        try:
+            available = DeepSeekClient(key).list_models()
+            st.session_state["deepseek_models"] = available
+            ids = [item["id"] for item in available]
+            preference = st.session_state.get("deepseek_model", "")
+            if st.session_state.get("ds_model_select") not in ids:
+                st.session_state["ds_model_select"] = preference if preference in ids else ids[0]
+            st.session_state["deepseek_model_error"] = None
+            st.session_state["deepseek_connection_notice"] = "连接成功；已取得官方可用模型列表。"
+            st.rerun()
+        except AIRequestError as exc:
+            st.session_state["deepseek_models"] = []
+            st.session_state["deepseek_model_error"] = str(exc)
+    models = st.session_state.get("deepseek_models", [])
+    if models:
+        ids = [item["id"] for item in models]
+        preference = st.session_state.get("deepseek_model", "")
+        if st.session_state.get("ds_model_select") not in ids:
+            st.session_state["ds_model_select"] = preference if preference in ids else ids[0]
+        model_id = st.selectbox("DeepSeek 模型", ids, key="ds_model_select",
+            format_func=lambda value: next((m.get("name", value) + f" · {value}" for m in models if m["id"] == value), value),
+            on_change=_save_model, args=("ds_model_select",))
+        metadata = next(item for item in models if item["id"] == model_id)
+    else:
+        st.caption("尚未取得模型列表；可测试连接，或手动填写官方模型 ID。")
+        model_id = st.text_input("手动模型 ID", value=st.session_state.get("deepseek_model", ""),
+                                 key="ds_model_manual", on_change=_save_model, args=("ds_model_manual",))
+        metadata = {}
+    levels = (metadata.get("effort") or {}).get("supported_levels", [])
+    if levels:
+        effort_key = f"ds_effort_{model_id}"
+        st.session_state.setdefault(effort_key, "模型默认")
+        st.selectbox("思考强度（按模型声明）", ["模型默认"] + levels, key=effort_key)
+    if st.session_state.get("deepseek_notice"):
+        st.info(st.session_state.pop("deepseek_notice"))
+    if st.session_state.get("deepseek_connection_notice"):
+        st.success(st.session_state.pop("deepseek_connection_notice"))
+    if st.session_state.get("deepseek_model_error"):
+        st.warning(st.session_state["deepseek_model_error"])
+    if st.session_state.get("deepseek_credential_error"):
+        st.warning(st.session_state.pop("deepseek_credential_error"))
+
+
 def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                     connection_expanded: bool = True, compact: bool = False):
     from quant_lab.ui_ai import render_ai, current_experiment_context
-
-    with st.expander("DeepSeek 连接设置", expanded=connection_expanded):
-        st.caption("使用你自己的 DeepSeek API 账户。只有点击发送才产生模型请求；模型解释需核对程序事实。")
-        st.caption("官方地址：https://api.deepseek.com")
-        credentials_column, model_column = (
-            (st.container(), st.container()) if compact else st.columns(2)
-        )
-        with credentials_column:
-            key = st.text_input("DeepSeek API Key", type="password", key="deepseek_api_key",
-                                on_change=_key_changed,
-                                help="默认仅当前会话保存；请不要把 Key 粘贴到聊天问题或笔记。")
-            remember = st.checkbox("记住密钥（Windows 凭据管理器）", key="deepseek_remember")
-            if st.button("应用密钥设置", key="deepseek_apply_key"):
-                try:
-                    if remember and key.strip():
-                        credentials.remember_key(key)
-                        st.success("已写入 Windows 凭据管理器。")
-                    elif remember:
-                        st.warning("请先填写 API Key，再启用记住密钥。")
-                    else:
-                        credentials.clear_key()
-                        st.info("仅在当前会话保留密钥。")
-                except credentials.SecureStorageUnavailable as exc:
-                    st.warning(str(exc))
-            st.button("读取已记住密钥", on_click=_load_key, key="deepseek_load_key")
-            st.button("清除密钥", on_click=_clear_key, key="deepseek_clear_key")
-            if st.session_state.get("deepseek_notice"):
-                st.info(st.session_state.pop("deepseek_notice"))
-            if st.session_state.get("deepseek_credential_error"):
-                st.warning(st.session_state.pop("deepseek_credential_error"))
-        with model_column:
-            test = st.button("测试连接", key="deepseek_test", disabled=not key)
-            refresh = st.button("刷新模型列表", key="deepseek_models_refresh", disabled=not key)
-            if test or refresh:
-                try:
-                    available = DeepSeekClient(key).list_models()
-                    st.session_state["deepseek_models"] = available
-                    ids = [item["id"] for item in available]
-                    preference = st.session_state.get("deepseek_model", "")
-                    if st.session_state.get("ds_model_select") not in ids:
-                        st.session_state["ds_model_select"] = preference if preference in ids else ids[0]
-                    st.session_state["deepseek_model_error"] = None
-                    st.session_state["deepseek_connection_notice"] = "连接成功；已取得官方可用模型列表。"
-                    st.rerun()
-                except AIRequestError as exc:
-                    st.session_state["deepseek_models"] = []
-                    st.session_state["deepseek_model_error"] = str(exc)
-            if st.session_state.get("deepseek_connection_notice"):
-                st.success(st.session_state.pop("deepseek_connection_notice"))
-            if st.session_state.get("deepseek_model_error"):
-                st.warning(st.session_state["deepseek_model_error"])
-            models = st.session_state.get("deepseek_models", [])
-            metadata = {}
-            if models:
-                ids = [model["id"] for model in models]
-                preference = st.session_state.get("deepseek_model", "")
-                if st.session_state.get("ds_model_select") not in ids:
-                    st.session_state["ds_model_select"] = preference if preference in ids else ids[0]
-                model_id = st.selectbox("DeepSeek 模型", ids, key="ds_model_select",
-                    format_func=lambda value: next((m.get("name", value) + f" · {value}" for m in models if m["id"] == value), value),
-                    on_change=_save_model, args=("ds_model_select",))
-                metadata = next(m for m in models if m["id"] == model_id)
-            else:
-                st.caption("尚未取得模型列表；可测试连接，或手动填写官方模型 ID。")
-                model_id = st.text_input("手动模型 ID", value=st.session_state.get("deepseek_model", ""),
-                                        key="ds_model_manual", on_change=_save_model, args=("ds_model_manual",))
-            levels = (metadata.get("effort") or {}).get("supported_levels", [])
-            effort = None
-            if levels:
-                effort_key = f"ds_effort_{model_id}"
-                if st.session_state.get(effort_key) not in ["模型默认"] + levels:
-                    st.session_state[effort_key] = "模型默认"
-                choice = st.selectbox("思考强度（按模型声明）", ["模型默认"] + levels, key=effort_key)
-                effort = None if choice == "模型默认" else choice
-            st.caption("请求使用模型默认采样与思考设置；只对模型列表声明支持的参数提供选项。")
+    key, model_id, metadata, effort = connection_state()
+    status = f"已连接 · {model_id}" if key and model_id else "尚未完成 DeepSeek 连接设置"
+    st.caption(status)
+    if st.button("前往设置", key="deepseek_open_settings"):
+        st.session_state["settings_open"] = True
+        st.rerun()
 
     if not chat_only:
         workspace = st.radio("AI 工作区", ("研究实验", "对话与辅导"), key="ai_workspace", horizontal=True)
@@ -264,6 +280,14 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
 
 def _close_deepseek_panel() -> None:
     st.session_state["deepseek_panel_open"] = False
+    if st.session_state.get("maximized_panel") == "deepseek":
+        st.session_state["maximized_panel"] = None
+
+
+def _toggle_deepseek_maximize() -> None:
+    st.session_state["maximized_panel"] = (
+        None if st.session_state.get("maximized_panel") == "deepseek" else "deepseek"
+    )
 
 
 def render_deepseek_panel(context: dict, bundle=None):
@@ -272,12 +296,15 @@ def render_deepseek_panel(context: dict, bundle=None):
             '<div class="ql-resize-handle" data-panel="deepseek" role="separator" '
             'aria-label="调整 DeepSeek 助手宽度" tabindex="0"></div>'
         )
-        title, close = st.columns([5, 1], vertical_alignment="center", gap="small")
+        title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
         with title:
             st.html(
                 '<div class="ql-ai-panel-title"><strong>DeepSeek 助手</strong>'
                 '<span>AI RESEARCH ASSISTANT</span></div>'
             )
+        with maximize:
+            st.button("⛶", key="deepseek_panel_maximize", width="stretch",
+                      on_click=_toggle_deepseek_maximize, help="最大化或恢复 DeepSeek 助手")
         with close:
             st.button("×", key="deepseek_panel_close", width="stretch",
                       on_click=_close_deepseek_panel, help="关闭 DeepSeek 侧栏")

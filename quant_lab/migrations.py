@@ -7,7 +7,7 @@ from threading import RLock
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _LOCK = RLock()
 BASE_SCHEMA = (
     """CREATE TABLE IF NOT EXISTS watchlist (
@@ -50,6 +50,41 @@ def _upgrade(db: sqlite3.Connection) -> None:
     db.execute("""CREATE TABLE IF NOT EXISTS learning_quiz_attempts (
         id INTEGER PRIMARY KEY, course_id TEXT NOT NULL, answer REAL NOT NULL,
         correct INTEGER NOT NULL CHECK(correct IN (0,1)), created_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS note_categories (
+        id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES note_categories(id),
+        name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0,
+        is_system INTEGER NOT NULL DEFAULT 0 CHECK(is_system IN (0,1)),
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+    now = datetime.now(timezone.utc).isoformat()
+    db.execute("""INSERT OR IGNORE INTO note_categories
+        (id,parent_id,name,sort_order,is_system,created_at,updated_at)
+        VALUES (1,NULL,'未分类',0,1,?,?)""", (now, now))
+    for table in ("learning_notes", "experiments"):
+        columns = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+        if "category_id" not in columns:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN category_id INTEGER REFERENCES note_categories(id)")
+        if "deleted_at" not in columns:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN deleted_at TEXT")
+        if table == "learning_notes" and "updated_at" not in columns:
+            db.execute("ALTER TABLE learning_notes ADD COLUMN updated_at TEXT")
+            db.execute("UPDATE learning_notes SET updated_at=created_at WHERE updated_at IS NULL")
+    db.execute("""CREATE TABLE IF NOT EXISTS note_drafts (
+        id TEXT PRIMARY KEY, note_id INTEGER REFERENCES learning_notes(id),
+        title TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '',
+        category_id INTEGER NOT NULL DEFAULT 1 REFERENCES note_categories(id),
+        client_updated_at TEXT, updated_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS note_attachments (
+        id TEXT PRIMARY KEY, note_id INTEGER REFERENCES learning_notes(id), draft_id TEXT,
+        original_name TEXT NOT NULL, stored_relpath TEXT NOT NULL UNIQUE,
+        mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, sha256 TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        CHECK((note_id IS NOT NULL AND draft_id IS NULL) OR
+              (note_id IS NULL AND draft_id IS NOT NULL)))""")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_notes_category ON learning_notes(category_id,deleted_at)")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_experiments_category ON experiments(category_id,deleted_at)")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_categories_parent ON note_categories(parent_id,sort_order,name)")
+    db.execute("UPDATE learning_notes SET category_id=1 WHERE category_id IS NULL")
+    db.execute("UPDATE experiments SET category_id=1 WHERE category_id IS NULL")
 
 
 def migrate(db: sqlite3.Connection, target: Path) -> None:
@@ -64,6 +99,9 @@ def migrate(db: sqlite3.Connection, target: Path) -> None:
             directory = target.parent / "backups"
             directory.mkdir(parents=True, exist_ok=True)
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            if target.parent.name == "database":
+                directory = target.parent.parent / "backups"
+                directory.mkdir(parents=True, exist_ok=True)
             backup_path = directory / f"research.pre-v{SCHEMA_VERSION}.{stamp}.{uuid4().hex[:8]}.sqlite3"
             backup = sqlite3.connect(backup_path)
             try:

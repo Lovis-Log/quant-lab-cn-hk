@@ -41,7 +41,7 @@ flowchart LR
 
 ## 桌面与未来演进
 
-桌面版沿用 `desktop_launcher.py` 启动仅监听 `127.0.0.1` 的 Streamlit 服务，pywebview 显示页面。用户数据库、日志、设置和 WebView 缓存都在 `%LOCALAPPDATA%\QuantLabCNHK` 或 `QUANT_LAB_DATA_DIR` 覆盖目录；安装目录可只读。
+桌面版沿用 `desktop_launcher.py` 启动仅监听 `127.0.0.1` 的 Streamlit 服务，pywebview 显示页面。首次启动通过原生目录选择器创建结构化资料库；默认位置只保留非敏感 `bootstrap.json` 指针。数据库、笔记附件、备份、日志、缓存和 WebView 数据进入活动资料根目录；`QUANT_LAB_DATA_DIR` 在测试中覆盖该流程。
 
 V2 构建输出到 `dist/packages/<版本>/QuantLab`，manifest 保存 `payload_dir`，安装器和验收脚本读取同一目录。新版本不会清理正在运行的旧 `dist/QuantLab`；如果相同版本目录已有运行进程，构建预检停止，避免覆盖使用中的 payload。
 
@@ -49,9 +49,11 @@ V2 构建输出到 `dist/packages/<版本>/QuantLab`，manifest 保存 `payload_
 
 ## 迁移与 AI 边界
 
-`PRAGMA user_version=3` 包含旧实验与自选股、名称、证券资料、非敏感设置、学习笔记以及 `learning_progress` / `learning_quiz_attempts`。旧库先一致性备份，再在 `BEGIN IMMEDIATE` 事务中升级；失败回滚，快照 BLOB 与指纹不重写。进度用类别＋稳定项目 ID 作主键，测验追加尝试；学习目标与继续学习位置也保存到 SQLite。重置只清学习记录和测验，保留欢迎偏好与原研究数据。
+`PRAGMA user_version=4` 保留旧实验、行情 BLOB、自选股、名称、非敏感设置和学习记录，新增 `note_categories`、`note_drafts`、`note_attachments` 以及笔记/实验的分类和回收站字段。旧库先一致性备份，再在 `BEGIN IMMEDIATE` 事务中升级；失败回滚，原快照与指纹不重写。
 
-`global_topbar` 固定横跨窗口，并取代左栏中的 AI 与新手使用指引入口。`guide_side_panel`、`deepseek_side_panel` 是两个独立、可滚动、无模态遮罩的固定停靠容器；可单开或双开。面板左缘的原生 DOM 分隔条用 Pointer Events 改写 CSS 宽度变量，按侧栏宽度、另一面板和主区最小宽度限制范围。两个顶栏按钮也使用 Pointer Events：拖过另一按钮中线后改写根节点顺序属性，使顶栏列顺序与面板 `right` 偏移同步反转，并拦截拖拽结束产生的误点击。仅把非敏感宽度与顺序写入 WebView `localStorage`，不进入 SQLite。壳层按已打开面板宽度之和为主工作区留白，左侧研究导航不受影响。DeepSeek 面板同时承载研究实验与对话，两种用途复用同一密钥、模型和历史状态。对话表单提交、显式生成假设/审阅按钮才调用对话接口；后两者使用 JSON 模式和严格本地字段验证，策略仍由本地内置函数执行。上下文按白名单从当前 bundle/实验构造，数据指纹或实验变化时不复用旧研究历史；私人笔记与整表不在白名单。模型参数取官方列表能力，未知模型采用必要字段及输出上限。
+`global_topbar` 固定横跨窗口，并取代左栏中的 AI、新手指引和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；面板顺序同步更新 `right` 偏移，最大化时只渲染目标面板并保留其余打开状态。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
+
+`notes.py` 负责分类树、草稿、统一笔记/实验检索、回收站、附件验证和 ZIP 导出。附件先写临时文件，再原子改名并记录相对路径、MIME、大小与 SHA-256；图片 `attachment://id` 标记在渲染前从 Markdown 中移除并由受控组件显示，避免浏览器请求未知协议。
 
 股票选择用一个支持 `accept_new_options` 的搜索下拉框，代码和名称候选排序保持原样；未收录代码统一经过 `normalize_symbol`，无效输入禁用加载，市场切换保留各自选择。`securities.py` 提供市场隔离的目录：内置基础资料快照保证离线候选可用，显式更新取得新目录后原子写入 `user_data_dir()/securities/`。每份目录校验市场、规范代码、名称冲突、来源和带时区接收时间；失败保留原值。目录没有价格、币种换算或买入意见，名称字段不用于证明上市/可交易。`names.py` 独立查询东方财富基础资料，24 小时成功缓存、5 分钟失败冷却，手动名称更新绕过缓存且合并同查询并发，失败保留名称与原成功时间；不改写存档实验。
 

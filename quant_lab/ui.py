@@ -24,12 +24,12 @@ from quant_lab.processing import DataValidationError
 from quant_lab.ui_analysis import render_risk, render_statistics
 from quant_lab.ui_strategy import render_backtest, render_strategy
 from quant_lab.ui_learning import render_academy
-from quant_lab.ui_research import render_research_notes
+from quant_lab.ui_research import render_research_panel
 from quant_lab.ui_terminal import render_watchlist
 from quant_lab import names
 from quant_lab.market_data import normalize_symbol
 from quant_lab.storage import list_watchlist
-from quant_lab.ui_updates import initialize_settings, persist_setting, toggle_refresh, beijing, show_history_status, INTERVALS
+from quant_lab.ui_updates import initialize_settings, toggle_refresh, beijing, show_history_status
 from quant_lab.ui_knowledge import render_knowledge
 from quant_lab.ui_deepseek import initialize_credentials, render_deepseek_panel
 from quant_lab.ai_context import bundle_context, experiment_context
@@ -37,10 +37,11 @@ from quant_lab.securities import security_directory
 from quant_lab.guidance import GUIDES
 from quant_lab.ui_guidance import (render_learning_panel, render_page_help,
     render_welcome, protect_research_widgets, complete_task, history_evidence)
+from quant_lab.ui_settings import library_configured, render_library_setup, render_settings_panel
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-TOPBAR_PAGES = {"AI 研究助手", "新手使用指引"}
+TOPBAR_PAGES = {"AI 研究助手", "新手使用指引", "研究笔记"}
 PAGES = tuple(page for page in GUIDES if page not in TOPBAR_PAGES)
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
@@ -58,15 +59,16 @@ DOCK_RESIZE_JS = """
     const stored = Number.parseFloat(localStorage.getItem(storageKey));
 
     const applyWidth = (requested) => {
-      const otherKind = kind === "guide" ? "deepseek" : "guide";
-      const other = document.querySelector(`.st-key-${otherKind}_side_panel`);
-      const otherWidth = other ? other.getBoundingClientRect().width : 0;
+      const otherWidth = ['guide','deepseek','notes'].filter(value => value !== kind)
+        .map(value => document.querySelector(`.st-key-${value}_side_panel`))
+        .reduce((total, other) => total + (other ? other.getBoundingClientRect().width : 0), 0);
       const sidebar = document.querySelector('[data-testid="stSidebar"]');
       const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 0;
       const maximum = Math.max(minimum, window.innerWidth - sidebarWidth - otherWidth - 360);
       const width = Math.round(Math.min(maximum, Math.max(minimum, requested)));
       root.style.setProperty(property, `${width}px`);
       localStorage.setItem(storageKey, String(width));
+      window.__quantLabApplyPanelOrder?.();
     };
     if (Number.isFinite(stored)) applyWidth(stored);
 
@@ -93,8 +95,9 @@ DOCK_RESIZE_JS = """
       applyWidth(panel.getBoundingClientRect().width + delta);
     });
   };
-  setup("guide", 320);
-  setup("deepseek", 340);
+  setup("guide", 220);
+  setup("deepseek", 240);
+  setup("notes", 260);
 })();
 </script>
 """
@@ -104,17 +107,51 @@ TOPBAR_REORDER_JS = """
 (() => {
   const root = document.documentElement;
   const storageKey = "quantlab.dock.panelOrder";
-  const setOrder = (order) => {
-    if (!['guide-deepseek', 'deepseek-guide'].includes(order)) return;
-    root.dataset.qlDockOrder = order;
-    localStorage.setItem(storageKey, order);
+  const kinds = ['guide', 'deepseek', 'notes'];
+  const readOrder = () => {
+    try {
+      const value = JSON.parse(localStorage.getItem(storageKey));
+      return Array.isArray(value) && kinds.every(kind => value.includes(kind)) ? value : [...kinds];
+    } catch (_) { return [...kinds]; }
   };
-  setOrder(localStorage.getItem(storageKey) || 'guide-deepseek');
+  let order = readOrder();
 
-  const bind = (button, kind, other) => {
+  const applyOrder = (animate=true) => {
+    const buttons = Object.fromEntries(kinds.map(kind => [kind,
+      document.querySelector(`.st-key-${kind}_panel_toggle button`)]));
+    const before = Object.fromEntries(kinds.map(kind => [kind, buttons[kind]?.getBoundingClientRect()]));
+    order.forEach((kind, index) => {
+      const column = buttons[kind]?.closest('[data-testid="stColumn"]');
+      if (column) column.style.order = String(index + 3);
+    });
+    let right = 0;
+    [...order].reverse().forEach(kind => {
+      const panel = document.querySelector(`.st-key-${kind}_side_panel`);
+      if (!panel) return;
+      panel.style.right = `${right}px`;
+      right += panel.getBoundingClientRect().width;
+    });
+    root.dataset.qlDockOrder = order.join('-');
+    localStorage.setItem(storageKey, JSON.stringify(order));
+    if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      requestAnimationFrame(() => kinds.forEach(kind => {
+        const button = buttons[kind];
+        const first = before[kind];
+        const last = button?.getBoundingClientRect();
+        if (!button || !first || !last) return;
+        const delta = first.left - last.left;
+        if (!delta) return;
+        button.animate([{transform:`translateX(${delta}px)`},{transform:'translateX(0)'}],
+          {duration:180,easing:'cubic-bezier(.2,.8,.2,1)'});
+      }));
+    }
+  };
+  window.__quantLabApplyPanelOrder = () => applyOrder(false);
+
+  const bind = (button, kind) => {
     if (button.dataset.reorderBound === '1') return;
     button.dataset.reorderBound = '1';
-    button.setAttribute('aria-description', '按住并左右拖动可与另一个面板交换位置');
+    button.setAttribute('aria-description', '按住并左右拖动可调整三个面板的顺序');
     button.addEventListener('click', (event) => {
       if (button.dataset.suppressClick !== '1') return;
       event.preventDefault();
@@ -129,12 +166,17 @@ TOPBAR_REORDER_JS = """
         if (Math.abs(next.clientX - startX) < 8 && !dragged) return;
         dragged = true;
         button.classList.add('is-reordering');
-        const midpoint = other.getBoundingClientRect().left + other.getBoundingClientRect().width / 2;
-        if (kind === 'guide') {
-          setOrder(next.clientX < midpoint ? 'guide-deepseek' : 'deepseek-guide');
-        } else {
-          setOrder(next.clientX < midpoint ? 'deepseek-guide' : 'guide-deepseek');
+        const others = order.filter(value => value !== kind);
+        let target = others.length;
+        for (let index = 0; index < others.length; index++) {
+          const other = document.querySelector(`.st-key-${others[index]}_panel_toggle button`);
+          if (other && next.clientX < other.getBoundingClientRect().left + other.getBoundingClientRect().width/2) {
+            target = index; break;
+          }
         }
+        const updated = [...others];
+        updated.splice(target, 0, kind);
+        if (updated.join('|') !== order.join('|')) { order = updated; applyOrder(true); }
       };
       const stop = () => {
         button.classList.remove('is-reordering');
@@ -152,16 +194,24 @@ TOPBAR_REORDER_JS = """
     });
   };
   const initialize = () => {
-    const guide = document.querySelector('.st-key-guide_panel_toggle button');
-    const deepseek = document.querySelector('.st-key-deepseek_panel_toggle button');
-    if (!guide || !deepseek) return;
-    bind(guide, 'guide', deepseek);
-    bind(deepseek, 'deepseek', guide);
+    kinds.forEach(kind => {
+      const button = document.querySelector(`.st-key-${kind}_panel_toggle button`);
+      if (button) bind(button, kind);
+    });
+    applyOrder(false);
   };
   initialize();
   window.__quantLabTopbarObserver?.disconnect();
   window.__quantLabTopbarObserver = new MutationObserver(initialize);
   window.__quantLabTopbarObserver.observe(document.body, {childList:true, subtree:true});
+  if (!window.__quantLabFullscreenEscapeBound) {
+    window.__quantLabFullscreenEscapeBound = true;
+    window.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !document.querySelector('.ql-maximized-panel')) return;
+      [...document.querySelectorAll('.st-key-right_dock button')]
+        .find(button => button.textContent.includes('⛶'))?.click();
+    });
+  }
 })();
 </script>
 """
@@ -244,9 +294,6 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
                     st.rerun()
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 st.warning(str(exc))
-        st.toggle("新手模式（关闭为专业模式）", key="learning_mode", on_change=persist_setting,
-                  args=("learning_mode",), help="只改变教学提示和知识入口，不改变金融计算。")
-        st.caption("当前使用：" + ("新手模式" if st.session_state["learning_mode"] else "专业模式"))
         if valid_symbol:
             if st.button("重新获取证券名称", key="refresh_security_name"):
                 names.security_name(market, symbol, force=True)
@@ -276,10 +323,6 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
                     st.session_state[f"symbol_{chosen[0]}"] = chosen[1]
             st.selectbox("从自选股选择", [None] + watch_items, key="sidebar_watch", on_change=choose_watch,
                          format_func=lambda item: "手动输入" if item is None else names.security_label(*item))
-        st.toggle("自动刷新行情（仅市场页）", key="refresh_enabled", on_change=persist_setting, args=("refresh_enabled",))
-        st.selectbox("自动刷新间隔", INTERVALS, key="refresh_interval_seconds",
-                     format_func=lambda seconds: f"{seconds//60} 分钟", on_change=persist_setting, args=("refresh_interval_seconds",))
-        st.caption("自动刷新仅在软件和市场页会话运行时生效；关闭软件后不更新。")
         if st.session_state.get("settings_error"):
             st.warning(st.session_state.pop("settings_error"))
         if not valid_symbol:
@@ -327,13 +370,27 @@ def _toggle_guide_panel() -> None:
     )
 
 
+def _toggle_notes_panel() -> None:
+    st.session_state["notes_panel_open"] = not st.session_state.get("notes_panel_open", False)
+
+
+def _toggle_settings() -> None:
+    st.session_state["settings_open"] = not st.session_state.get("settings_open", False)
+
+
 def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
     st.session_state.setdefault("guide_panel_open", False)
+    st.session_state.setdefault("notes_panel_open", False)
+    st.session_state.setdefault("settings_open", False)
+    st.session_state.setdefault("maximized_panel", None)
     with st.container(key="global_topbar"):
-        brand, workspace, guide, assistant = st.columns(
-            [2.2, 4.25, 1.65, 1.55], vertical_alignment="center", gap="small"
+        settings, brand, workspace, guide, assistant, research = st.columns(
+            [.48, 1.9, 3.1, 1.35, 1.3, 1.25], vertical_alignment="center", gap="small"
         )
+        with settings:
+            st.button("⚙", key="settings_toggle", width="stretch", on_click=_toggle_settings,
+                      help="打开设置")
         with brand:
             st.html(
                 '<div class="ql-topbar-brand"><span>Q/</span>'
@@ -353,21 +410,35 @@ def _global_topbar() -> None:
                 on_click=_toggle_deepseek_panel,
                 help="打开或关闭右侧 DeepSeek 助手；按住并左右拖动可与使用指引调换顺序。只有点击发送才调用付费 API。",
             )
+        with research:
+            st.button("研究笔记", key="notes_panel_toggle", width="stretch",
+                      on_click=_toggle_notes_panel,
+                      help="打开或关闭研究笔记；按住并左右拖动可调整顺序。")
         st.html(TOPBAR_REORDER_JS, unsafe_allow_javascript=True)
 
 
 def _render_right_dock(context: dict, bundle) -> None:
     guide_open = st.session_state.get("guide_panel_open", False)
     deepseek_open = st.session_state.get("deepseek_panel_open", False)
-    if not (guide_open or deepseek_open):
+    notes_open = st.session_state.get("notes_panel_open", False)
+    maximized = st.session_state.get("maximized_panel")
+    if maximized:
+        guide_open = maximized == "guide"
+        deepseek_open = maximized == "deepseek"
+        notes_open = maximized == "notes"
+    if not (guide_open or deepseek_open or notes_open):
         return
     with st.container(key="right_dock"):
+        if maximized:
+            st.html('<span class="ql-maximized-panel"></span>')
         if guide_open:
             render_learning_panel()
             if st.session_state.get("active_learning_context"):
                 context["learning_context"] = st.session_state["active_learning_context"]
         if deepseek_open:
             render_deepseek_panel(context, bundle)
+        if notes_open:
+            render_research_panel()
         st.html(DOCK_RESIZE_JS, unsafe_allow_javascript=True)
 
 
@@ -620,6 +691,9 @@ def render_app() -> None:
         initial_sidebar_state="expanded",
     )
     st.html(CSS_PATH)
+    if not library_configured():
+        render_library_setup()
+        return
     initialize_settings()
     initialize_credentials()
     protect_research_widgets()
@@ -680,9 +754,6 @@ def render_app() -> None:
     elif page == "Quant Academy":
         _header(page, market, symbol, latest_date)
         render_academy()
-    elif page == "研究笔记":
-        _header(page, market, symbol, latest_date)
-        record = render_research_notes()
     else:
         _header(page, market, symbol, latest_date)
         if error:
@@ -708,3 +779,5 @@ def render_app() -> None:
         context["learning_context"] = st.session_state["active_learning_context"]
     st.session_state["_current_ai_context"] = context
     _render_right_dock(context, bundle)
+    if st.session_state.get("settings_open"):
+        render_settings_panel()

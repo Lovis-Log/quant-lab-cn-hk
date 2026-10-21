@@ -369,6 +369,14 @@ def render_learning_center(*, panel: bool = False):
 
 def _close_learning_panel() -> None:
     st.session_state["guide_panel_open"] = False
+    if st.session_state.get("maximized_panel") == "guide":
+        st.session_state["maximized_panel"] = None
+
+
+def _toggle_learning_maximize() -> None:
+    st.session_state["maximized_panel"] = (
+        None if st.session_state.get("maximized_panel") == "guide" else "guide"
+    )
 
 
 def render_learning_panel() -> None:
@@ -377,12 +385,15 @@ def render_learning_panel() -> None:
             '<div class="ql-resize-handle" data-panel="guide" role="separator" '
             'aria-label="调整新手使用指引宽度" tabindex="0"></div>'
         )
-        title, close = st.columns([5, 1], vertical_alignment="center", gap="small")
+        title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
         with title:
             st.html(
                 '<div class="ql-ai-panel-title"><strong>新手使用指引</strong>'
                 '<span>LEARNING CENTER</span></div>'
             )
+        with maximize:
+            st.button("⛶", key="guide_panel_maximize", width="stretch",
+                      on_click=_toggle_learning_maximize, help="最大化或恢复新手使用指引")
         with close:
             st.button("×", key="guide_panel_close", width="stretch",
                       on_click=_close_learning_panel, help="关闭新手使用指引")

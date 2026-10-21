@@ -5,6 +5,7 @@ its app entry is temporarily instrumented with a mock transport and restored.
 """
 
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -107,6 +108,7 @@ def main():
                 sidebar = page.get_by_test_id("stSidebar")
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0
                 assert sidebar.get_by_text("新手使用指引", exact=True).count() == 0
+                assert sidebar.get_by_text("研究笔记", exact=True).count() == 0
                 main = page.get_by_test_id("stMain")
                 main_before = main.bounding_box()
                 page.get_by_role("button", name="新手使用指引", exact=True).click()
@@ -118,9 +120,15 @@ def main():
                 panel = page.locator(".st-key-deepseek_side_panel")
                 expect(panel).to_be_visible(timeout=10000)
                 assert page.get_by_role("dialog").count() == 0
-                panel.get_by_text("DeepSeek 连接设置", exact=True).click()
+                page.get_by_role("button", name="⚙", exact=True).click()
                 settle(page)
-                expect(panel.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                settings_panel = page.locator(".st-key-settings_panel")
+                expect(settings_panel).to_be_visible(timeout=10000)
+                settings_panel.get_by_role("tab", name="DeepSeek", exact=True).click()
+                settle(page)
+                expect(settings_panel.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                settings_panel.get_by_role("button", name="×", exact=True).click()
+                settle(page)
                 guide_box = guide_panel.bounding_box()
                 box = panel.bounding_box()
                 main_after = main.bounding_box()
@@ -157,8 +165,34 @@ def main():
                 assert hit_target.get("panel") == "deepseek"
                 assert resize_state.get("stored") == str(round(resized_box["width"]))
                 assert resized_box and resized_box["width"] >= box["width"] + 35
+                page.get_by_role("button", name="研究笔记", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                expect(notes_panel).to_be_visible(timeout=10000)
+                notes_panel.get_by_label("笔记标题", exact=True).fill("GUI 附件笔记")
+                notes_panel.get_by_label("Markdown 正文", exact=True).fill("# 图表记录\n\n本地托管附件验收。")
+                png = base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z2S8AAAAASUVORK5CYII="
+                )
+                notes_panel.get_by_label("添加附件", exact=True).locator('input[type="file"]').set_input_files([
+                    {"name":"chart.png", "mimeType":"image/png", "buffer":png},
+                    {"name":"evidence.pdf", "mimeType":"application/pdf", "buffer":b"%PDF-1.4\n%%EOF"},
+                ])
+                notes_panel.get_by_role("button", name="保存所选附件到草稿", exact=True).click()
+                settle(page)
+                page.locator(".st-key-notes_side_panel").get_by_role("button", name="插入", exact=True).click()
+                settle(page)
+                page.locator(".st-key-notes_side_panel").get_by_role("button", name="保存笔记", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                expect(notes_panel.get_by_role("combobox", name="选择内容", exact=True)).to_have_value(
+                    "笔记 · GUI 附件笔记", timeout=10000
+                )
+                assert notes_panel.get_by_role("button", name="下载 · evidence.pdf", exact=True).count() == 1
+                page.screenshot(path=str(directory/"triple-side-panels.png"), full_page=False)
                 guide_button = page.get_by_role("button", name="新手使用指引", exact=True)
                 deepseek_button = page.get_by_role("button", name="DeepSeek 助手", exact=True)
+                notes_button = page.get_by_role("button", name="研究笔记", exact=True)
                 guide_button_box = guide_button.bounding_box()
                 deepseek_button_box = deepseek_button.bounding_box()
                 assert guide_button_box and deepseek_button_box
@@ -177,7 +211,8 @@ def main():
                 )
                 page.mouse.up()
                 page.wait_for_timeout(350)
-                assert page.evaluate("localStorage.getItem('quantlab.dock.panelOrder')") == "deepseek-guide"
+                stored_order = page.evaluate("JSON.parse(localStorage.getItem('quantlab.dock.panelOrder'))")
+                assert stored_order[0] == "deepseek" and set(stored_order) == {"guide","deepseek","notes"}
                 guide_panel = page.locator(".st-key-guide_side_panel")
                 panel = page.locator(".st-key-deepseek_side_panel")
                 reordered_guide_button_box = guide_button.bounding_box()
@@ -189,13 +224,26 @@ def main():
                 assert swapped_guide_box and swapped_deepseek_box
                 assert swapped_deepseek_box["x"] < swapped_guide_box["x"]
                 page.screenshot(path=str(directory/"dual-side-panels-swapped.png"), full_page=False)
+                notes_panel.get_by_role("button", name="⛶", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                maximized_box = notes_panel.bounding_box()
+                assert maximized_box and maximized_box["width"] >= viewport_width - 3
+                page.keyboard.press("Escape")
+                settle(page)
+                expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
                 summary.update({"global_topbar_dom": True, "topbar_pages_removed_from_sidebar": True,
                                 "deepseek_global_launcher": True, "learning_global_launcher": True,
-                                "dual_panels_open": True, "panels_reordered_by_drag": True,
+                                "notes_global_launcher": True, "triple_panels_open": True,
+                                "markdown_note_with_attachments": True,
+                                "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,
                                 "panel_width_before": box["width"],
                                 "panel_width_after": resized_box["width"],
                                 "remembered_key_restored_on_start": True})
+                page.locator(".st-key-notes_side_panel").get_by_role("button", name="×", exact=True).click()
+                settle(page)
                 guide_panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
@@ -324,12 +372,14 @@ def main():
                     page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
                     settle(page)
                     expect(page.get_by_label("当前学习目标", exact=True)).to_have_value("桌面验收：掌握回撤后理解样本外", timeout=15000)
-                    sidebar.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
+                    page.get_by_role("button", name="⚙", exact=True).click()
                     settle(page)
-                    page.get_by_text("当前使用：专业模式", exact=True).wait_for(timeout=10000)
-                    sidebar.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
+                    page.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
                     settle(page)
-                    page.get_by_text("当前使用：新手模式", exact=True).wait_for(timeout=10000)
+                    page.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
+                    settle(page)
+                    page.locator(".st-key-settings_panel").get_by_role("button", name="×", exact=True).click()
+                    settle(page)
                     sidebar.get_by_text("市场数据", exact=True).click()
                     settle(page)
                     summary.update({"learning_resumed_in_actual_dom":True,"goal_restored_in_actual_dom":True,
@@ -345,9 +395,12 @@ def main():
                 assert sidebar.get_by_label("DeepSeek API Key", exact=True).count() == 0
                 summary["deepseek_in_right_panel"] = True
                 deepseek_panel = page.locator(".st-key-deepseek_side_panel")
-                deepseek_panel.get_by_text("DeepSeek 连接设置", exact=True).click()
+                page.get_by_role("button", name="⚙", exact=True).click()
                 settle(page)
-                key = deepseek_panel.get_by_label("DeepSeek API Key", exact=True)
+                settings_panel = page.locator(".st-key-settings_panel")
+                settings_panel.get_by_role("tab", name="DeepSeek", exact=True).click()
+                settle(page)
+                key = settings_panel.get_by_label("DeepSeek API Key", exact=True)
                 assert key.get_attribute("type") == "password"
                 assert key.input_value() == dummy_key
                 if args.mock_ai:
@@ -355,7 +408,7 @@ def main():
                     page.get_by_role("button", name="测试连接", exact=True).click()
                     settle(page)
                     page.get_by_text("连接成功；已取得官方可用模型列表。", exact=True).wait_for(timeout=10000)
-                    picker = page.get_by_role("combobox", name="DeepSeek 模型", exact=True)
+                    picker = settings_panel.get_by_role("combobox", name="DeepSeek 模型", exact=True)
                     picker.click()
                     settle(page)
                     page.screenshot(path=str(directory/"model-picker.png"), full_page=True)
@@ -364,6 +417,8 @@ def main():
                     # DOM representation in a particular WebView2 runtime.
                     picker.fill("mock-b")
                     picker.press("Enter")
+                    settle(page)
+                    page.locator(".st-key-settings_panel").get_by_role("button", name="×", exact=True).click()
                     settle(page)
                     page.get_by_label("问题（确认后发送）", exact=True).fill("解释最大回撤并给出手算例子")
                     page.get_by_role("button", name="发送到 DeepSeek", exact=True).click()
@@ -392,12 +447,14 @@ def main():
                         page.get_by_role("button", name="下载可复核研究报告", exact=True).wait_for(timeout=10000)
                         summary.update({"research_shared_connection": True, "research_json_hypothesis": True,
                                         "local_controlled_experiment": True, "research_json_report": True})
-                    page.get_by_role("button", name="清除密钥", exact=True).click()
+                    page.get_by_role("button", name="⚙", exact=True).click()
+                    settle(page)
+                    page.locator(".st-key-settings_panel").get_by_role("button", name="清除密钥", exact=True).click()
                     settle(page)
                     expect(page.get_by_label("DeepSeek API Key", exact=True)).to_have_value("", timeout=10000)
                     summary["key_cleared"] = True
                 else:
-                    manual = page.get_by_label("手动模型 ID", exact=True)
+                    manual = settings_panel.get_by_label("手动模型 ID", exact=True)
                     import sqlite3
                     database = directory / "research.sqlite3"
                     if database.exists():

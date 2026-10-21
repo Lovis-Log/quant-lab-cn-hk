@@ -10,7 +10,7 @@ from threading import RLock
 import requests
 
 from quant_lab.market_data import normalize_symbol
-from quant_lab.paths import user_data_dir
+from quant_lab.paths import securities_dir, user_data_dir
 from quant_lab.refresh import RefreshCache
 
 
@@ -98,7 +98,7 @@ _file_lock = RLock()
 
 def _read_directory(market: str) -> Directory:
     filename = "a_shares.json" if market == "A 股" else "hk_shares.json"
-    candidates = (user_data_dir() / "securities" / filename,
+    candidates = (securities_dir() / filename,
                   Path(__file__).parent / "resources" / filename)
     error = None
     for path in candidates:
@@ -120,7 +120,7 @@ def security_directory(market: str, *, force: bool = False) -> Directory:
             return _read_directory(market)
         directory = fetch_directory(market)
         filename = "a_shares.json" if market == "A 股" else "hk_shares.json"
-        path = user_data_dir() / "securities" / filename
+        path = securities_dir() / filename
         with _file_lock:
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_suffix(".tmp")

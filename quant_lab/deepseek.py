@@ -67,7 +67,7 @@ class DeepSeekClient:
     def __init__(self, key: str, session=None):
         self._key = key.strip()
         if not self._key or len(self._key) > 256 or any(c.isspace() for c in self._key):
-            raise AIRequestError("请填写有效的 DeepSeek API Key（当前会话密码输入框）。")
+            raise AIRequestError("请在左上齿轮设置中填写有效的 DeepSeek API Key。")
         self._session = session or requests.Session()
         self.model_used = ""
 
