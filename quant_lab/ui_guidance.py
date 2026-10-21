@@ -84,10 +84,16 @@ def navigate(page, *, section=None, guide=None, course=None):
         raise ValueError("未知功能页面。")
     if page == CENTER:
         st.session_state["guide_panel_open"] = True
+        st.session_state["right_dock_visible"] = True
+        st.session_state["last_active_panel"] = "guide"
     else:
         st.session_state["learning_return_page"] = page
         st.session_state["nav_page"] = page
         st.session_state["guide_panel_open"] = False
+        if not any(st.session_state.get(key, False) for key in (
+            "deepseek_panel_open", "notes_panel_open"
+        )):
+            st.session_state["right_dock_visible"] = False
     if section:
         st.session_state["center_section"] = section
     if guide:
@@ -371,6 +377,10 @@ def _close_learning_panel() -> None:
     st.session_state["guide_panel_open"] = False
     if st.session_state.get("maximized_panel") == "guide":
         st.session_state["maximized_panel"] = None
+    if not any(st.session_state.get(key, False) for key in (
+        "deepseek_panel_open", "notes_panel_open"
+    )):
+        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_learning_maximize() -> None:
@@ -385,16 +395,18 @@ def render_learning_panel() -> None:
             '<div class="ql-resize-handle" data-panel="guide" role="separator" '
             'aria-label="调整新手使用指引宽度" tabindex="0"></div>'
         )
-        title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
-        with title:
-            st.html(
-                '<div class="ql-ai-panel-title"><strong>新手使用指引</strong>'
-                '<span>LEARNING CENTER</span></div>'
-            )
-        with maximize:
-            st.button("⛶", key="guide_panel_maximize", width="stretch",
-                      on_click=_toggle_learning_maximize, help="最大化或恢复新手使用指引")
-        with close:
-            st.button("×", key="guide_panel_close", width="stretch",
-                      on_click=_close_learning_panel, help="关闭新手使用指引")
-        render_learning_center(panel=True)
+        with st.container(key="guide_panel_header"):
+            title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
+            with title:
+                st.html(
+                    '<div class="ql-ai-panel-title"><strong>新手使用指引</strong>'
+                    '<span>LEARNING CENTER</span></div>'
+                )
+            with maximize:
+                st.button("⛶", key="guide_panel_maximize", width="stretch",
+                          on_click=_toggle_learning_maximize, help="最大化或恢复新手使用指引")
+            with close:
+                st.button("×", key="guide_panel_close", width="stretch",
+                          on_click=_close_learning_panel, help="关闭新手使用指引")
+        with st.container(key="guide_panel_body"):
+            render_learning_center(panel=True)

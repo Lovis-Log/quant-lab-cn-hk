@@ -287,6 +287,10 @@ def _close_panel() -> None:
     st.session_state["notes_panel_open"] = False
     if st.session_state.get("maximized_panel") == "notes":
         st.session_state["maximized_panel"] = None
+    if not any(st.session_state.get(key, False) for key in (
+        "guide_panel_open", "deepseek_panel_open"
+    )):
+        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_maximize() -> None:
@@ -296,11 +300,13 @@ def _toggle_maximize() -> None:
 def render_research_panel() -> dict | None:
     with st.container(key="notes_side_panel"):
         st.html('<div class="ql-resize-handle" data-panel="notes" role="separator" aria-label="调整研究笔记宽度" tabindex="0"></div>')
-        title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
-        with title:
-            st.html('<div class="ql-ai-panel-title"><strong>研究笔记</strong><span>RESEARCH NOTES</span></div>')
-        with maximize:
-            st.button("⛶", key="notes_panel_maximize", on_click=_toggle_maximize, width="stretch")
-        with close:
-            st.button("×", key="notes_panel_close", on_click=_close_panel, width="stretch")
-        return render_research_notes()
+        with st.container(key="notes_panel_header"):
+            title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
+            with title:
+                st.html('<div class="ql-ai-panel-title"><strong>研究笔记</strong><span>RESEARCH NOTES</span></div>')
+            with maximize:
+                st.button("⛶", key="notes_panel_maximize", on_click=_toggle_maximize, width="stretch")
+            with close:
+                st.button("×", key="notes_panel_close", on_click=_close_panel, width="stretch")
+        with st.container(key="notes_panel_body"):
+            return render_research_notes()

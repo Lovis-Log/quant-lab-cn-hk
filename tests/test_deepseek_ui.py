@@ -50,6 +50,33 @@ def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     assert app.session_state["maximized_panel"] is None
 
 
+def test_right_dock_launcher_hides_and_restores_open_panels(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    assert app.session_state["right_dock_visible"] is False
+    assert app.session_state["guide_panel_open"] is False
+
+    app.button(key="right_dock_toggle").click().run()
+    assert app.session_state["right_dock_visible"] is True
+    assert app.session_state["guide_panel_open"] is True
+    assert app.button(key="guide_panel_maximize")
+
+    widget(app, "button", "DeepSeek 助手").click().run()
+    widget(app, "button", "研究笔记").click().run()
+    app.button(key="right_dock_toggle").click().run()
+    assert app.session_state["right_dock_visible"] is False
+    assert app.session_state["guide_panel_open"] is True
+    assert app.session_state["deepseek_panel_open"] is True
+    assert app.session_state["notes_panel_open"] is True
+    assert not [button for button in app.button if button.key == "notes_panel_maximize"]
+
+    app.button(key="right_dock_toggle").click().run()
+    assert app.session_state["right_dock_visible"] is True
+    assert app.button(key="guide_panel_maximize")
+    assert app.button(key="deepseek_panel_maximize")
+    assert app.button(key="notes_panel_maximize")
+
+
 def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     calls = []

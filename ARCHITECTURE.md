@@ -51,7 +51,7 @@ V2 构建输出到 `dist/packages/<版本>/QuantLab`，manifest 保存 `payload_
 
 `PRAGMA user_version=4` 保留旧实验、行情 BLOB、自选股、名称、非敏感设置和学习记录，新增 `note_categories`、`note_drafts`、`note_attachments` 以及笔记/实验的分类和回收站字段。旧库先一致性备份，再在 `BEGIN IMMEDIATE` 事务中升级；失败回滚，原快照与指纹不重写。
 
-`global_topbar` 固定横跨窗口，并取代左栏中的 AI、新手指引和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；面板顺序同步更新 `right` 偏移，最大化时只渲染目标面板并保留其余打开状态。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
+`global_topbar` 固定横跨窗口，并取代左栏中的 AI、新手指引和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；各面板外壳不滚动，固定头部下的 `*_panel_body` 独立滚动。`right_dock_visible` 只控制整个停靠区的显示，保留各面板打开状态；最大化时只渲染目标面板、清除主区让位宽度，并把面板限制在全局顶栏下方。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
 
 `notes.py` 负责分类树、草稿、统一笔记/实验检索、回收站、附件验证和 ZIP 导出。附件先写临时文件，再原子改名并记录相对路径、MIME、大小与 SHA-256；图片 `attachment://id` 标记在渲染前从 Markdown 中移除并由受控组件显示，避免浏览器请求未知协议。
 

@@ -101,6 +101,8 @@ def main():
                     settle(page)
                 topbar = page.locator(".st-key-global_topbar")
                 expect(topbar).to_be_visible(timeout=10000)
+                dock_toggle = page.get_by_role("button", name="▥", exact=True)
+                expect(dock_toggle).to_be_visible(timeout=10000)
                 viewport_width = page.evaluate("window.innerWidth")
                 topbar_box = topbar.bounding_box()
                 assert topbar_box and topbar_box["x"] <= 1
@@ -188,7 +190,48 @@ def main():
                 expect(notes_panel.get_by_role("combobox", name="选择内容", exact=True)).to_have_value(
                     "笔记 · GUI 附件笔记", timeout=10000
                 )
-                assert notes_panel.get_by_role("button", name="下载 · evidence.pdf", exact=True).count() == 1
+                expect(notes_panel.get_by_role("button", name="下载 · evidence.pdf", exact=True)).to_have_count(
+                    1, timeout=10000
+                )
+                sticky_headers = []
+                for panel_name in ("guide", "deepseek", "notes"):
+                    current_panel = page.locator(f".st-key-{panel_name}_side_panel")
+                    current_header = current_panel.locator(f".st-key-{panel_name}_panel_header")
+                    current_body = current_panel.locator(f".st-key-{panel_name}_panel_body")
+                    expect(current_header).to_be_visible(timeout=10000)
+                    expect(current_body).to_be_visible(timeout=10000)
+                    current_body.evaluate("element => { element.scrollTop = element.scrollHeight; }")
+                    page.wait_for_timeout(120)
+                    panel_scroll = current_body.evaluate("element => element.scrollTop")
+                    header_box = current_header.bounding_box()
+                    panel_box = current_panel.bounding_box()
+                    assert header_box and panel_box
+                    assert abs(header_box["y"] - panel_box["y"]) <= 2, {
+                        "panel": panel_name, "header_box": header_box, "panel_box": panel_box,
+                    }
+                    expect(current_header.get_by_role("button", name="⛶", exact=True)).to_be_visible()
+                    sticky_headers.append({"panel": panel_name, "scroll_top": panel_scroll,
+                                           "header_y": header_box["y"]})
+                    current_body.evaluate("element => { element.scrollTop = 0; }")
+                assert any(item["scroll_top"] > 0 for item in sticky_headers)
+
+                dock_toggle.click()
+                settle(page)
+                expect(page.locator(".st-key-guide_side_panel")).not_to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-deepseek_side_panel")).not_to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-notes_side_panel")).not_to_be_visible(timeout=10000)
+                page.wait_for_function("""() => {
+                  const main = document.querySelector('[data-testid="stMain"]');
+                  return main && parseFloat(getComputedStyle(main).paddingRight) < 1;
+                }""", timeout=3000)
+                hidden_padding = main.evaluate("element => getComputedStyle(element).paddingRight")
+                assert float(hidden_padding.removesuffix("px")) < 1
+                dock_toggle.click()
+                settle(page)
+                expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-notes_side_panel")).to_be_visible(timeout=10000)
+                notes_panel = page.locator(".st-key-notes_side_panel")
                 page.screenshot(path=str(directory/"triple-side-panels.png"), full_page=False)
                 guide_button = page.get_by_role("button", name="新手使用指引", exact=True)
                 deepseek_button = page.get_by_role("button", name="DeepSeek 助手", exact=True)
@@ -229,6 +272,14 @@ def main():
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 maximized_box = notes_panel.bounding_box()
                 assert maximized_box and maximized_box["width"] >= viewport_width - 3
+                maximized_header_box = notes_panel.locator(".st-key-notes_panel_header").bounding_box()
+                current_topbar_box = topbar.bounding_box()
+                assert maximized_header_box and current_topbar_box
+                assert abs(maximized_box["y"] - (current_topbar_box["y"] + current_topbar_box["height"])) <= 2
+                assert abs(maximized_header_box["y"] - maximized_box["y"]) <= 2
+                expect(topbar).to_be_visible()
+                expect(dock_toggle).to_be_visible()
+                assert main.evaluate("element => getComputedStyle(element).paddingRight") == "0px"
                 page.keyboard.press("Escape")
                 settle(page)
                 expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
@@ -236,6 +287,8 @@ def main():
                 summary.update({"global_topbar_dom": True, "topbar_pages_removed_from_sidebar": True,
                                 "deepseek_global_launcher": True, "learning_global_launcher": True,
                                 "notes_global_launcher": True, "triple_panels_open": True,
+                                "right_dock_launcher": True, "sticky_panel_headers": sticky_headers,
+                                "topbar_preserved_during_maximize": True,
                                 "markdown_note_with_attachments": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,

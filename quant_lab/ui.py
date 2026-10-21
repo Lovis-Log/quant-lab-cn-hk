@@ -361,17 +361,50 @@ def _toggle_deepseek_panel() -> None:
     opening = not st.session_state.get("deepseek_panel_open", False)
     st.session_state["deepseek_panel_open"] = opening
     if opening:
+        st.session_state["right_dock_visible"] = True
+        st.session_state["last_active_panel"] = "deepseek"
         st.session_state.setdefault("ai_workspace", "对话与辅导")
+    elif not any(st.session_state.get(key, False) for key in (
+        "guide_panel_open", "notes_panel_open"
+    )):
+        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_guide_panel() -> None:
-    st.session_state["guide_panel_open"] = not st.session_state.get(
-        "guide_panel_open", False
-    )
+    opening = not st.session_state.get("guide_panel_open", False)
+    st.session_state["guide_panel_open"] = opening
+    if opening:
+        st.session_state["right_dock_visible"] = True
+        st.session_state["last_active_panel"] = "guide"
+    elif not any(st.session_state.get(key, False) for key in (
+        "deepseek_panel_open", "notes_panel_open"
+    )):
+        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_notes_panel() -> None:
-    st.session_state["notes_panel_open"] = not st.session_state.get("notes_panel_open", False)
+    opening = not st.session_state.get("notes_panel_open", False)
+    st.session_state["notes_panel_open"] = opening
+    if opening:
+        st.session_state["right_dock_visible"] = True
+        st.session_state["last_active_panel"] = "notes"
+    elif not any(st.session_state.get(key, False) for key in (
+        "guide_panel_open", "deepseek_panel_open"
+    )):
+        st.session_state["right_dock_visible"] = False
+
+
+def _toggle_right_dock() -> None:
+    visible = st.session_state.get("right_dock_visible", False)
+    if visible:
+        st.session_state["right_dock_visible"] = False
+        return
+    if not any(st.session_state.get(key, False) for key in (
+        "guide_panel_open", "deepseek_panel_open", "notes_panel_open"
+    )):
+        panel = st.session_state.get("last_active_panel", "guide")
+        st.session_state[f"{panel}_panel_open"] = True
+    st.session_state["right_dock_visible"] = True
 
 
 def _toggle_settings() -> None:
@@ -382,15 +415,22 @@ def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
     st.session_state.setdefault("guide_panel_open", False)
     st.session_state.setdefault("notes_panel_open", False)
+    st.session_state.setdefault("right_dock_visible", False)
+    st.session_state.setdefault("last_active_panel", "guide")
     st.session_state.setdefault("settings_open", False)
     st.session_state.setdefault("maximized_panel", None)
     with st.container(key="global_topbar"):
-        settings, brand, workspace, guide, assistant, research = st.columns(
-            [.48, 1.9, 3.1, 1.35, 1.3, 1.25], vertical_alignment="center", gap="small"
+        settings, dock, brand, workspace, guide, assistant, research = st.columns(
+            [.42, .42, 1.75, 2.9, 1.32, 1.28, 1.18],
+            vertical_alignment="center", gap="small"
         )
         with settings:
             st.button("⚙", key="settings_toggle", width="stretch", on_click=_toggle_settings,
                       help="打开设置")
+        with dock:
+            st.button("▥", key="right_dock_toggle", width="stretch",
+                      on_click=_toggle_right_dock,
+                      help="显示或隐藏整个右侧停靠区")
         with brand:
             st.html(
                 '<div class="ql-topbar-brand"><span>Q/</span>'
@@ -418,6 +458,8 @@ def _global_topbar() -> None:
 
 
 def _render_right_dock(context: dict, bundle) -> None:
+    if not st.session_state.get("right_dock_visible", False):
+        return
     guide_open = st.session_state.get("guide_panel_open", False)
     deepseek_open = st.session_state.get("deepseek_panel_open", False)
     notes_open = st.session_state.get("notes_panel_open", False)

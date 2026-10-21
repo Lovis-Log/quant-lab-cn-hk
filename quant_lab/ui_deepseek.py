@@ -84,6 +84,8 @@ def open_ai_followup(prompt, topic):
     st.session_state["deepseek_prompt"] = prompt
     st.session_state["ai_workspace"] = "对话与辅导"
     st.session_state["deepseek_panel_open"] = True
+    st.session_state["right_dock_visible"] = True
+    st.session_state["last_active_panel"] = "deepseek"
 
 
 def connection_state() -> tuple[str, str, dict, str | None]:
@@ -282,6 +284,10 @@ def _close_deepseek_panel() -> None:
     st.session_state["deepseek_panel_open"] = False
     if st.session_state.get("maximized_panel") == "deepseek":
         st.session_state["maximized_panel"] = None
+    if not any(st.session_state.get(key, False) for key in (
+        "guide_panel_open", "notes_panel_open"
+    )):
+        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_deepseek_maximize() -> None:
@@ -296,19 +302,21 @@ def render_deepseek_panel(context: dict, bundle=None):
             '<div class="ql-resize-handle" data-panel="deepseek" role="separator" '
             'aria-label="调整 DeepSeek 助手宽度" tabindex="0"></div>'
         )
-        title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
-        with title:
-            st.html(
-                '<div class="ql-ai-panel-title"><strong>DeepSeek 助手</strong>'
-                '<span>AI RESEARCH ASSISTANT</span></div>'
+        with st.container(key="deepseek_panel_header"):
+            title, maximize, close = st.columns([5, 1, 1], vertical_alignment="center", gap="small")
+            with title:
+                st.html(
+                    '<div class="ql-ai-panel-title"><strong>DeepSeek 助手</strong>'
+                    '<span>AI RESEARCH ASSISTANT</span></div>'
+                )
+            with maximize:
+                st.button("⛶", key="deepseek_panel_maximize", width="stretch",
+                          on_click=_toggle_deepseek_maximize, help="最大化或恢复 DeepSeek 助手")
+            with close:
+                st.button("×", key="deepseek_panel_close", width="stretch",
+                          on_click=_close_deepseek_panel, help="关闭 DeepSeek 侧栏")
+        with st.container(key="deepseek_panel_body"):
+            st.caption("右侧停靠面板 · 仅在你明确点击发送后调用 DeepSeek")
+            render_deepseek(
+                context, bundle, chat_only=False, connection_expanded=False, compact=True
             )
-        with maximize:
-            st.button("⛶", key="deepseek_panel_maximize", width="stretch",
-                      on_click=_toggle_deepseek_maximize, help="最大化或恢复 DeepSeek 助手")
-        with close:
-            st.button("×", key="deepseek_panel_close", width="stretch",
-                      on_click=_close_deepseek_panel, help="关闭 DeepSeek 侧栏")
-        st.caption("右侧停靠面板 · 仅在你明确点击发送后调用 DeepSeek")
-        render_deepseek(
-            context, bundle, chat_only=False, connection_expanded=False, compact=True
-        )
