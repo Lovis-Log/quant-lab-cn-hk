@@ -535,12 +535,18 @@ def _main_page(
         "": "不复权", "qfq": "前复权", "hfq": "后复权"
     }[adjustment]
     has_data = history is not None and not history.empty
+    demonstration = bool(has_data and history_evidence(bundle).get("demonstration"))
+    real_data = has_data and not demonstration
     if error:
         st.error(error)
     elif history is not None and history.empty:
         st.info("该股票在所选日期内没有历史交易记录。请调整日期范围后重试。")
 
-    overview_tag = f"真实历史数据 · {adjustment_label}" if has_data else "未加载真实行情"
+    overview_tag = (
+        f"真实历史数据 · {adjustment_label}" if real_data else
+        f"模拟/教学数据 · {adjustment_label}" if demonstration else
+        "未加载真实行情"
+    )
     st.html(
         '<div class="ql-section-head"><div><span class="ql-eyebrow">01 / MARKET OVERVIEW</span>'
         f'<h2>研究概览</h2></div><span class="ql-tag">{overview_tag}</span></div>'
@@ -582,7 +588,11 @@ def _main_page(
     chart_col, info_col = st.columns([3.35, 1], gap="small")
     with chart_col:
         with st.container(border=True):
-            legend = f"● {source}历史日线" if has_data else "● 模拟序列 · 无单位"
+            legend = (
+                f"● {source} · 真实历史日线" if real_data else
+                f"● {source} · 模拟/教学数据" if demonstration else
+                "● 模拟序列 · 无单位"
+            )
             st.html(
                 '<div class="ql-panel-header"><div><span class="ql-eyebrow">02 / PRICE & VOLUME</span>'
                 f'<h2>行情图表</h2></div><span class="ql-legend">{legend}</span></div>'
@@ -593,15 +603,16 @@ def _main_page(
                     st.plotly_chart(
                         history_price_chart(history, currency).update_layout(title_text=names.security_label(market, symbol, bundle.company_name)), width="stretch", theme=None,
                         config={"displaylogo": False, "scrollZoom": False},
-                        alt=f"{source}真实历史日线的收盘价（{unit}每股）和成交量（股）。",
+                        alt=f"{source}{'模拟/教学' if demonstration else '真实历史'}日线的收盘价（{unit}每股）和成交量（股）。",
                     )
                 with candle_tab:
                     st.plotly_chart(
                         history_candlestick_chart(history, currency).update_layout(title_text=names.security_label(market, symbol, bundle.company_name)), width="stretch", theme=None,
                         config={"displaylogo": False, "scrollZoom": False},
-                        alt=f"{source}真实历史日线的开高低收 K 线及成交量。红色上涨，绿色下跌。",
+                        alt=f"{source}{'模拟/教学' if demonstration else '真实历史'}日线的开高低收 K 线及成交量。红色上涨，绿色下跌。",
                     )
-                st.caption(f"来源：{source}；{adjustment_label}价格；红涨绿跌。图表不是实时行情。")
+                provenance_note = "模拟/教学数据，不是上游真实行情。" if demonstration else "图表不是实时行情。"
+                st.caption(f"来源：{source}；{adjustment_label}价格；红涨绿跌。{provenance_note}")
             else:
                 preview_tab, candle_tab = st.tabs(("走势与活动量 · 演示", "K 线 · 等待数据"))
                 with preview_tab:
@@ -624,19 +635,25 @@ def _main_page(
             beijing(bundle.received_at)
             if bundle is not None and bundle.received_at is not None else "—"
         )
-        status_class = "ql-status-ok" if has_data else ""
-        status_text = "已加载真实历史数据" if has_data else "尚未加载真实行情"
+        status_class = "ql-status-ok" if real_data else ""
+        status_text = (
+            "已加载真实历史数据" if real_data else
+            "已加载模拟/教学数据" if demonstration else
+            "尚未加载真实行情"
+        )
+        data_type = f"{market}股票 · {'模拟/教学日线' if demonstration else '历史日线'}"
+        latest_label = "最新样本日期" if demonstration else "最新交易日"
         with st.container(border=True):
             st.html(
                 '<div class="ql-info-title"><span class="ql-eyebrow">DATA STATUS</span>'
                 '<h2>数据说明</h2></div>'
                 f'<div class="ql-status-banner {status_class}"><span>●</span> {status_text}</div>'
-                f'<div class="ql-info-row"><span>数据类型</span><strong>{market}股票 · 历史日线</strong></div>'
+                f'<div class="ql-info-row"><span>数据类型</span><strong>{data_type}</strong></div>'
                 f'<div class="ql-info-row"><span>数据来源</span><strong>{source}</strong></div>'
                 f'<div class="ql-info-row"><span>本地缓存</span><strong>{"是" if bundle is not None and bundle.cached else "否"}</strong></div>'
                 f'<div class="ql-info-row"><span>价格口径</span><strong>{adjustment_label}</strong></div>'
                 f'<div class="ql-info-row"><span>价格币种</span><strong>{currency}</strong></div>'
-                f'<div class="ql-info-row"><span>最新交易日</span><strong>{latest}</strong></div>'
+                f'<div class="ql-info-row"><span>{latest_label}</span><strong>{latest}</strong></div>'
                 f'<div class="ql-info-row"><span>接收时间（北京时间）</span><strong>{received}</strong></div>'
                 '<div class="ql-info-row"><span>延迟状态</span><strong>历史日线；确切延迟未知</strong></div>'
                 '<div class="ql-info-row"><span>成交量单位</span><strong>股</strong></div>'
@@ -667,7 +684,8 @@ def _main_page(
                 "导出 CSV", table.to_csv(index=False).encode("utf-8-sig"),
                 file_name=f"{market}_{symbol}_{first}_{last}_{adjustment or 'raw'}.csv", mime="text/csv",
             )
-            st.caption(f"日期以实际交易日为准。价格单位：{unit}/股；成交量：股；成交额：{unit}。")
+            date_note = "日期为模拟/教学样本日期" if demonstration else "日期以实际交易日为准"
+            st.caption(f"{date_note}。价格单位：{unit}/股；成交量：股；成交额：{unit}。")
         else:
             st.dataframe(
                 pd.DataFrame(columns=["日期", "开盘价", "最高价", "最低价", "收盘价", "成交量"]),

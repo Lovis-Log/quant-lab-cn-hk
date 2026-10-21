@@ -65,7 +65,10 @@ def status_rows(value, next_attempt=None, *, session_cache=False) -> dict:
     observation = getattr(value, "observation_date", None)
     if observation is None and hasattr(value, "frame") and not value.frame.empty:
         observation = value.frame.date.iloc[-1].date()
-    return {"行情日期（交易日）": str(observation) if observation else "无有效交易日",
+    demonstration = any(word in value.source.lower()
+                        for word in ("模拟", "演示", "教学", "demo", "simulation", "teaching"))
+    date_label = "样本日期（模拟/教学）" if demonstration else "行情日期（交易日）"
+    return {date_label: str(observation) if observation else "无有效日期",
             "上次成功获取时间": beijing(received), "来源": value.source,
             "缓存状态": "上次有效数据（更新失败）" if value.update_error else
                          "本地缓存/会话快照" if value.cached or session_cache else "本次取得上游响应",
@@ -78,8 +81,13 @@ def status_rows(value, next_attempt=None, *, session_cache=False) -> dict:
 
 def show_history_status(bundle, next_attempt=None, *, session_cache=False):
     if bundle is not None:
-        st.markdown("#### 数据更新状态 · 历史日线")
+        demonstration = any(word in bundle.source.lower()
+                            for word in ("模拟", "演示", "教学", "demo", "simulation", "teaching"))
+        st.markdown("#### 数据更新状态 · " + ("模拟/教学日线" if demonstration else "历史日线"))
         st.write(status_rows(bundle, next_attempt, session_cache=session_cache))
         if bundle.update_error:
             st.warning(bundle.update_error)
-    st.caption("行情日期是价格对应的交易日；确切延迟未知。自动刷新仅在市场页和当前应用会话运行时生效，关闭软件后不更新。")
+    if bundle is not None and demonstration:
+        st.caption("当前为模拟/教学样本，不代表上游真实行情。自动刷新仅在市场页和当前应用会话运行时生效。")
+    else:
+        st.caption("行情日期是价格对应的交易日；确切延迟未知。自动刷新仅在市场页和当前应用会话运行时生效，关闭软件后不更新。")

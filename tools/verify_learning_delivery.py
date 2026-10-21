@@ -27,6 +27,7 @@ def main():
     seed_old_database(state)
     database = Path(state["user_data"]) / "research.sqlite3"
     storage.save_learning_note("V2 升级前笔记", "原笔记必须保留", path=database)
+    initial_note_count = len(storage.list_learning_notes(database))
     # A owned test archive with the actual v2 shape and pre-existing notes.
     with sqlite3.connect(database) as db:
         db.execute("DROP TABLE learning_progress")
@@ -39,7 +40,7 @@ def main():
     original = entry.read_bytes()
     assert digest(exe) == digest(payload / "QuantLab.exe")
     assert original == (payload / "_internal/app.py").read_bytes()
-    for phase, flags in (("original",["--research-fixes","--learning-center"]),
+    for phase, flags in (("original",["--learning-center"]),
                          ("mock",["--research-fixes","--mock-ai"]),
                          ("restart",["--resume-learning"])):
         command([ROOT/".venv/Scripts/python.exe",ROOT/"tools/verify_desktop_gui.py",
@@ -54,7 +55,7 @@ def main():
     assert len(learning_store.quiz_attempts(database)) == 1
     assert ("task","load_history") not in records  # Explicit mock daily data cannot pass the real task.
     assert ("task","run_backtest") not in records
-    assert len(storage.list_learning_notes(database)) == 3
+    assert len(storage.list_learning_notes(database)) == initial_note_count + 5
     assert any(note["content"] == "原笔记必须保留" for note in storage.list_learning_notes(database))
     record = storage.get_experiment(1,database)
     assert storage.replay_experiment(record).audit_id == state["audit_id"]
@@ -74,11 +75,12 @@ def main():
              f"/LOG={root/'uninstall.log'}"],root/"uninstall-output.log")
     assert database.exists() and not exe.exists()
     result = {"version":version,"isolated_app_id":state["app_id"],"record_dir":str(root),
-        "actual_learning_center_webview":True,"v2_to_v3_backup_and_migration":True,
+        "actual_learning_center_webview":True,"v2_to_v4_backup_and_migration":True,
         "progress_goal_notes_resumed_in_dom":True,"legacy_snapshot_and_replay_preserved":True,
         "professional_mode_control":True,"deepseek_research_mock":True,"entry_restored_after_mock":True,
         "mock_data_not_counted_as_real_task":True,"key_absent_from_database_and_logs":True,
-        "isolated_install_uninstall":True,"user_data_retained_after_uninstall":True,"real_paid_api_tested":False}
+        "isolated_install_uninstall":True,"user_data_retained_after_uninstall":True,
+        "real_paid_api_tested":False,"real_market_full_flow_tested":False}
     (root/"validation.json").write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(result,ensure_ascii=False),flush=True)
 

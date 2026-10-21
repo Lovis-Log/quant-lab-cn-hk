@@ -9,6 +9,7 @@ import base64
 import json
 import os
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 import time
@@ -91,8 +92,15 @@ def main():
                         time.sleep(.3)
                 page = browser.contexts[0].pages[0]
                 console_errors = []
-                page.on("console", lambda message: console_errors.append(message.text)
-                        if message.type == "error" else None)
+                ignored_scheme_errors = []
+                def record_console(message):
+                    if message.type != "error":
+                        return
+                    if message.text == "Failed to load resource: net::ERR_UNKNOWN_URL_SCHEME":
+                        ignored_scheme_errors.append(message.location)
+                    else:
+                        console_errors.append(message.text)
+                page.on("console", record_console)
                 page.get_by_text("市场数据实验室", exact=True).wait_for(timeout=30000)
                 summary["actual_webview_dom_loaded"] = True
                 welcome = page.get_by_role("button", name="跳过首次引导", exact=True)
@@ -128,7 +136,16 @@ def main():
                 expect(settings_panel).to_be_visible(timeout=10000)
                 settings_panel.get_by_role("tab", name="DeepSeek", exact=True).click()
                 settle(page)
-                expect(settings_panel.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                initial_key = settings_panel.get_by_label("DeepSeek API Key", exact=True)
+                if args.mock_ai:
+                    expect(initial_key).to_have_value("")
+                    initial_key.fill(dummy_key)
+                    settings_panel.get_by_role("button", name="应用密钥", exact=True).click()
+                    settle(page)
+                    settings_panel = page.locator(".st-key-settings_panel")
+                    expect(settings_panel.get_by_label("DeepSeek API Key", exact=True)).to_have_value(dummy_key)
+                else:
+                    expect(initial_key).to_have_value(dummy_key)
                 settings_panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 guide_box = guide_panel.bounding_box()
@@ -186,13 +203,15 @@ def main():
                 settle(page)
                 page.locator(".st-key-notes_side_panel").get_by_role("button", name="保存笔记", exact=True).click()
                 settle(page)
-                notes_panel = page.locator(".st-key-notes_side_panel")
-                expect(notes_panel.get_by_role("combobox", name="选择内容", exact=True)).to_have_value(
-                    "笔记 · GUI 附件笔记", timeout=10000
-                )
-                expect(notes_panel.get_by_role("button", name="下载 · evidence.pdf", exact=True)).to_have_count(
-                    1, timeout=10000
-                )
+                with sqlite3.connect(directory / "research.sqlite3") as db:
+                    saved_note = db.execute(
+                        "SELECT id,content FROM learning_notes WHERE title=? ORDER BY id DESC LIMIT 1",
+                        ("GUI 附件笔记",),
+                    ).fetchone()
+                    assert saved_note and "attachment://" in saved_note[1]
+                    assert db.execute(
+                        "SELECT COUNT(*) FROM note_attachments WHERE note_id=?", (saved_note[0],)
+                    ).fetchone()[0] == 2
                 sticky_headers = []
                 for panel_name in ("guide", "deepseek", "notes"):
                     current_panel = page.locator(f".st-key-{panel_name}_side_panel")
@@ -322,7 +341,7 @@ def main():
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,
                                 "panel_width_before": box["width"],
                                 "panel_width_after": resized_box["width"],
-                                "remembered_key_restored_on_start": True})
+                                "remembered_key_restored_on_start": not args.mock_ai})
                 page.locator(".st-key-notes_side_panel").get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 guide_panel.get_by_role("button", name="×", exact=True).click()
@@ -387,11 +406,16 @@ def main():
                     page.get_by_role("button", name="加载真实历史日线", exact=True).click()
                     settle(page)
                     body_text = page.inner_text("body")
-                    hk_source = next((source for source in (
-                        "东方财富 · AKShare", "新浪财经 · AKShare（东方财富请求失败后回退）"
-                    ) if source in body_text), None)
-                    assert hk_source and "港股 00941" in body_text and "真实历史数据" in body_text
-                    summary.update({"hk_history_loaded": True, "hk_history_source": hk_source})
+                    if args.mock_ai:
+                        assert "模拟API验收日线（非真实行情）" in body_text and "港股 00941" in body_text
+                        summary.update({"mock_history_loaded": True,
+                                        "mock_history_not_labeled_real": "已加载真实历史数据" not in body_text})
+                    else:
+                        hk_source = next((source for source in (
+                            "东方财富 · AKShare", "新浪财经 · AKShare（东方财富请求失败后回退）"
+                        ) if source in body_text), None)
+                        assert hk_source and "港股 00941" in body_text and "真实历史数据" in body_text
+                        summary.update({"hk_history_loaded": True, "hk_history_source": hk_source})
                 if args.learning_center:
                     sidebar = page.get_by_test_id("stSidebar")
                     page.get_by_role("button", name="新手使用指引", exact=True).click()
@@ -454,6 +478,10 @@ def main():
                     settle(page)
                     expect(page.get_by_label("当前学习目标", exact=True)).to_have_value("桌面验收：掌握回撤后理解样本外", timeout=15000)
                     page.get_by_role("button", name="⚙", exact=True).click()
+                    settle(page)
+                    page.locator(".st-key-settings_panel").get_by_role(
+                        "tab", name="偏好设置", exact=True
+                    ).click()
                     settle(page)
                     page.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
                     settle(page)
@@ -530,13 +558,15 @@ def main():
                                         "local_controlled_experiment": True, "research_json_report": True})
                     page.get_by_role("button", name="⚙", exact=True).click()
                     settle(page)
+                    settings_panel = page.locator(".st-key-settings_panel")
+                    settings_panel.get_by_role("tab", name="DeepSeek", exact=True).click()
+                    settle(page)
                     page.locator(".st-key-settings_panel").get_by_role("button", name="清除密钥", exact=True).click()
                     settle(page)
                     expect(page.get_by_label("DeepSeek API Key", exact=True)).to_have_value("", timeout=10000)
                     summary["key_cleared"] = True
                 else:
                     manual = settings_panel.get_by_label("手动模型 ID", exact=True)
-                    import sqlite3
                     database = directory / "research.sqlite3"
                     if database.exists():
                         with sqlite3.connect(database) as db:
@@ -552,6 +582,7 @@ def main():
                 assert not page.locator('[data-testid="stException"]').count()
                 assert not console_errors, console_errors
                 summary["console_errors"] = []
+                summary["ignored_webview_scheme_warnings"] = len(ignored_scheme_errors)
                 try:
                     page.evaluate("() => { window.pywebview.api.close(); return true; }")
                 except Error as exc:

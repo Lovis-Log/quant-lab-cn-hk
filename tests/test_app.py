@@ -67,6 +67,24 @@ def test_provider_error_keeps_metrics_empty(monkeypatch) -> None:
                for item in app.get("html"))
 
 
+def test_simulated_history_is_never_labeled_real(monkeypatch) -> None:
+    history = pd.DataFrame(
+        {"date": pd.to_datetime(["2026-10-08", "2026-10-09"]),
+         "open": [9.5, 10.5], "high": [10.5, 12.0], "low": [9.0, 10.0],
+         "close": [10.0, 11.0], "volume": [1000, 2000], "amount": [10000, 22000]}
+    )
+    bundle = HistoryBundle(history, "A 股", "600519", "明确模拟教学数据", "CNY", "")
+    monkeypatch.setattr("quant_lab.ui.fetch_history", lambda *_: bundle)
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(entrypoint, default_timeout=20).run()
+    app.sidebar.button[0].click().run()
+
+    assert not app.exception
+    assert any("已加载模拟/教学数据" in item.value for item in app.get("html"))
+    assert not any("已加载真实历史数据" in item.value for item in app.get("html"))
+    assert any("不是上游真实行情" in item.value for item in app.get("caption"))
+
+
 def test_hk_history_uses_hkd_and_its_own_source(monkeypatch) -> None:
     history = pd.DataFrame(
         {"date": pd.to_datetime(["2026-10-08", "2026-10-09"]),
