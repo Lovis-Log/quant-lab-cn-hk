@@ -45,6 +45,32 @@ TOPBAR_PAGES = {"AI 研究助手", "新手使用指引", "研究笔记"}
 PAGES = tuple(page for page in GUIDES if page not in TOPBAR_PAGES)
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
+SIDEBAR_LAYOUT_JS = """
+<script>
+(() => {
+  const root = document.documentElement;
+  const sidebar = document.querySelector('[data-testid="stSidebar"]');
+  const sync = () => {
+    if (!sidebar || getComputedStyle(sidebar).display === 'none') return;
+    const width = sidebar.getBoundingClientRect().width;
+    if (width > 0) root.style.setProperty('--ql-sidebar-width', `${width}px`);
+  };
+  window.__quantLabSidebarResizeObserver?.disconnect();
+  if (sidebar) {
+    const observer = new ResizeObserver(sync);
+    observer.observe(sidebar);
+    window.__quantLabSidebarResizeObserver = observer;
+  }
+  if (window.__quantLabSidebarWindowResize) {
+    window.removeEventListener('resize', window.__quantLabSidebarWindowResize);
+  }
+  window.__quantLabSidebarWindowResize = sync;
+  window.addEventListener('resize', sync);
+  sync();
+})();
+</script>
+"""
+
 DOCK_RESIZE_JS = """
 <script>
 (() => {
@@ -428,6 +454,7 @@ def _global_topbar() -> None:
                       help="打开或关闭研究笔记；按住并左右拖动可调整顺序。")
         sidebar_state = "visible" if st.session_state["left_sidebar_visible"] else "hidden"
         st.html(f'<span class="ql-left-sidebar-state ql-left-sidebar-{sidebar_state}"></span>')
+        st.html(SIDEBAR_LAYOUT_JS, unsafe_allow_javascript=True)
         st.html(TOPBAR_REORDER_JS, unsafe_allow_javascript=True)
 
 

@@ -70,6 +70,17 @@ def test_left_sidebar_launcher_does_not_change_open_panels(tmp_path, monkeypatch
     assert app.button(key="deepseek_panel_maximize")
     assert app.button(key="notes_panel_maximize")
 
+    app.button(key="notes_panel_maximize").click().run()
+    assert app.session_state["maximized_panel"] == "notes"
+    app.button(key="left_sidebar_toggle").click().run()
+    assert app.session_state["left_sidebar_visible"] is False
+    assert app.session_state["maximized_panel"] == "notes"
+    app.button(key="left_sidebar_toggle").click().run()
+    assert app.session_state["left_sidebar_visible"] is True
+    assert app.session_state["maximized_panel"] == "notes"
+    assert not [button for button in app.button if button.key == "deepseek_panel_maximize"]
+    assert app.button(key="notes_panel_maximize")
+
 
 def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))

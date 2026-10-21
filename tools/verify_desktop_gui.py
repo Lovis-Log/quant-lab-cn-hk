@@ -273,7 +273,12 @@ def main():
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 maximized_box = notes_panel.bounding_box()
-                assert maximized_box and maximized_box["width"] >= viewport_width - 3
+                sidebar_box = sidebar.bounding_box()
+                assert maximized_box and sidebar_box
+                assert abs(maximized_box["x"] - (sidebar_box["x"] + sidebar_box["width"])) <= 3, {
+                    "maximized": maximized_box, "sidebar": sidebar_box,
+                }
+                assert abs((maximized_box["x"] + maximized_box["width"]) - viewport_width) <= 3
                 maximized_header_box = notes_panel.locator(".st-key-notes_panel_header").bounding_box()
                 current_topbar_box = topbar.bounding_box()
                 assert maximized_header_box and current_topbar_box
@@ -282,6 +287,25 @@ def main():
                 expect(topbar).to_be_visible()
                 expect(sidebar_toggle).to_be_visible()
                 assert main.evaluate("element => getComputedStyle(element).paddingRight") == "0px"
+                page.screenshot(path=str(directory/"maximized-with-sidebar.png"), full_page=False)
+
+                sidebar_toggle.click()
+                settle(page)
+                expect(sidebar).not_to_be_visible(timeout=10000)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                app_maximized_box = notes_panel.bounding_box()
+                assert app_maximized_box and app_maximized_box["x"] <= 2
+                assert app_maximized_box["width"] >= viewport_width - 3
+                page.screenshot(path=str(directory/"maximized-without-sidebar.png"), full_page=False)
+
+                sidebar_toggle.click()
+                settle(page)
+                expect(sidebar).to_be_visible(timeout=10000)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                restored_maximized_box = notes_panel.bounding_box()
+                restored_sidebar_box = sidebar.bounding_box()
+                assert restored_maximized_box and restored_sidebar_box
+                assert abs(restored_maximized_box["x"] - restored_sidebar_box["width"]) <= 3
                 page.keyboard.press("Escape")
                 settle(page)
                 expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
@@ -291,6 +315,8 @@ def main():
                                 "notes_global_launcher": True, "triple_panels_open": True,
                                 "left_sidebar_launcher": True, "sticky_panel_headers": sticky_headers,
                                 "topbar_preserved_during_maximize": True,
+                                "maximize_respects_visible_sidebar": True,
+                                "maximize_fills_app_without_sidebar": True,
                                 "markdown_note_with_attachments": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,
