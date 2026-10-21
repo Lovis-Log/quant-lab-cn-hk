@@ -88,7 +88,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 `1.2.1-rc.1` 名称和 DeepSeek 修复曾仅在本地交付，记录保留。当前 V2 独立升级遵循项目通用同步与预发布流程；实际发布状态见 [发布记录](docs/RELEASES.md)。
 
-V2 本地构建路径为 `dist/packages/2.0.1-rc.1/QuantLab/QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.0.0-rc.1-Setup.exe`，实际验证与构建状态见 [V2 验收报告](docs/V2_ACCEPTANCE.md)。[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为 V2 新验收证据。
+当前候选版构建路径为 `dist/packages/2.1.0-rc.1/QuantLab/QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.1.0-rc.1-Setup.exe`，发布与验收记录见 [v2.1.0-rc.1](docs/releases/v2.1.0-rc.1.md)。[V2 初版验收](docs/V2_ACCEPTANCE.md)、[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为当前候选版的新验收证据。
 
 ### 常见问题
 

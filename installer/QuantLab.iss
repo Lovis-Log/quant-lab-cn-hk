@@ -1,9 +1,9 @@
 #define MyAppName "Quant Lab CN/HK"
 #ifndef MyAppVersion
-  #define MyAppVersion "2.0.0-rc.1"
+  #define MyAppVersion "2.1.0-rc.1"
 #endif
 #ifndef MyAppFileVersion
-  #define MyAppFileVersion "2.0.0.0"
+  #define MyAppFileVersion "2.1.0.0"
 #endif
 #define MyAppExeName "QuantLab.exe"
 #ifndef MyPayloadDir
