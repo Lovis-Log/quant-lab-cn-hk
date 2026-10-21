@@ -3,13 +3,15 @@ header[data-testid="stHeader"] { display:none; }
 .st-key-global_topbar { position:fixed; inset:0 0 auto 0; z-index:1200; height:var(--ql-topbar); padding:6px 14px; background:#0C111B; border-bottom:1px solid #2A3444; box-shadow:0 3px 14px rgba(0,0,0,.2); overflow:hidden; }
 .st-key-global_topbar [data-testid="stVerticalBlock"] { height:100%; gap:0; }
 .st-key-global_topbar button { min-height:36px; border-color:#34435A; background:#172133; color:#DCE6F3; font-size:12px; font-weight:600; white-space:nowrap; }
-.st-key-settings_toggle button,.st-key-right_dock_toggle button { font-size:17px; padding-left:4px; padding-right:4px; }
+.st-key-settings_toggle button,.st-key-left_sidebar_toggle button { font-size:17px; padding-left:4px; padding-right:4px; }
 .st-key-guide_panel_toggle button,.st-key-deepseek_panel_toggle button,.st-key-notes_panel_toggle button { cursor:grab; user-select:none; }
 .st-key-guide_panel_toggle button.is-reordering,.st-key-deepseek_panel_toggle button.is-reordering,.st-key-notes_panel_toggle button.is-reordering { cursor:grabbing; opacity:.72; }
 [data-testid="stAppViewContainer"]:has(.st-key-guide_side_panel) .st-key-guide_panel_toggle button,
 [data-testid="stAppViewContainer"]:has(.st-key-deepseek_side_panel) .st-key-deepseek_panel_toggle button { border-color:#2F8B72; background:#16312D; color:#A7F3D0; }
 [data-testid="stAppViewContainer"]:has(.st-key-notes_side_panel) .st-key-notes_panel_toggle button { border-color:#2F8B72; background:#16312D; color:#A7F3D0; }
-[data-testid="stAppViewContainer"]:has(.st-key-right_dock) .st-key-right_dock_toggle button { border-color:#2F8B72; background:#16312D; color:#A7F3D0; }
+.ql-left-sidebar-state { display:none; }
+[data-testid="stAppViewContainer"]:has(.ql-left-sidebar-visible) .st-key-left_sidebar_toggle button { border-color:#2F8B72; background:#16312D; color:#A7F3D0; }
+[data-testid="stAppViewContainer"]:has(.ql-left-sidebar-hidden) [data-testid="stSidebar"] { display:none !important; }
 .ql-topbar-brand { display:flex; align-items:center; gap:10px; height:36px; color:var(--ql-text); }
 .ql-topbar-brand span { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:7px; background:#17362F; color:var(--ql-green); font-weight:800; letter-spacing:-2px; padding-right:2px; }
 .ql-topbar-brand strong { font-size:13px; letter-spacing:.035em; white-space:nowrap; }

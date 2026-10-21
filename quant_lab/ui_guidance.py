@@ -84,16 +84,10 @@ def navigate(page, *, section=None, guide=None, course=None):
         raise ValueError("未知功能页面。")
     if page == CENTER:
         st.session_state["guide_panel_open"] = True
-        st.session_state["right_dock_visible"] = True
-        st.session_state["last_active_panel"] = "guide"
     else:
         st.session_state["learning_return_page"] = page
         st.session_state["nav_page"] = page
         st.session_state["guide_panel_open"] = False
-        if not any(st.session_state.get(key, False) for key in (
-            "deepseek_panel_open", "notes_panel_open"
-        )):
-            st.session_state["right_dock_visible"] = False
     if section:
         st.session_state["center_section"] = section
     if guide:
@@ -377,10 +371,6 @@ def _close_learning_panel() -> None:
     st.session_state["guide_panel_open"] = False
     if st.session_state.get("maximized_panel") == "guide":
         st.session_state["maximized_panel"] = None
-    if not any(st.session_state.get(key, False) for key in (
-        "deepseek_panel_open", "notes_panel_open"
-    )):
-        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_learning_maximize() -> None:

@@ -101,8 +101,8 @@ def main():
                     settle(page)
                 topbar = page.locator(".st-key-global_topbar")
                 expect(topbar).to_be_visible(timeout=10000)
-                dock_toggle = page.get_by_role("button", name="▥", exact=True)
-                expect(dock_toggle).to_be_visible(timeout=10000)
+                sidebar_toggle = page.get_by_role("button", name="▥", exact=True)
+                expect(sidebar_toggle).to_be_visible(timeout=10000)
                 viewport_width = page.evaluate("window.innerWidth")
                 topbar_box = topbar.bounding_box()
                 assert topbar_box and topbar_box["x"] <= 1
@@ -215,19 +215,21 @@ def main():
                     current_body.evaluate("element => { element.scrollTop = 0; }")
                 assert any(item["scroll_top"] > 0 for item in sticky_headers)
 
-                dock_toggle.click()
+                sidebar_toggle.click()
                 settle(page)
-                expect(page.locator(".st-key-guide_side_panel")).not_to_be_visible(timeout=10000)
-                expect(page.locator(".st-key-deepseek_side_panel")).not_to_be_visible(timeout=10000)
-                expect(page.locator(".st-key-notes_side_panel")).not_to_be_visible(timeout=10000)
-                page.wait_for_function("""() => {
-                  const main = document.querySelector('[data-testid="stMain"]');
-                  return main && parseFloat(getComputedStyle(main).paddingRight) < 1;
-                }""", timeout=3000)
-                hidden_padding = main.evaluate("element => getComputedStyle(element).paddingRight")
-                assert float(hidden_padding.removesuffix("px")) < 1
-                dock_toggle.click()
+                expect(sidebar).not_to_be_visible(timeout=10000)
+                expect(page.locator(".ql-left-sidebar-hidden")).to_be_attached(timeout=10000)
+                expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-notes_side_panel")).to_be_visible(timeout=10000)
+                workspace_without_sidebar = page.get_by_test_id("stMainBlockContainer").bounding_box()
+                assert workspace_without_sidebar and workspace_after
+                assert workspace_without_sidebar["x"] < workspace_after["x"] - 100, {
+                    "with_sidebar": workspace_after, "without_sidebar": workspace_without_sidebar,
+                }
+                sidebar_toggle.click()
                 settle(page)
+                expect(sidebar).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-notes_side_panel")).to_be_visible(timeout=10000)
@@ -278,7 +280,7 @@ def main():
                 assert abs(maximized_box["y"] - (current_topbar_box["y"] + current_topbar_box["height"])) <= 2
                 assert abs(maximized_header_box["y"] - maximized_box["y"]) <= 2
                 expect(topbar).to_be_visible()
-                expect(dock_toggle).to_be_visible()
+                expect(sidebar_toggle).to_be_visible()
                 assert main.evaluate("element => getComputedStyle(element).paddingRight") == "0px"
                 page.keyboard.press("Escape")
                 settle(page)
@@ -287,7 +289,7 @@ def main():
                 summary.update({"global_topbar_dom": True, "topbar_pages_removed_from_sidebar": True,
                                 "deepseek_global_launcher": True, "learning_global_launcher": True,
                                 "notes_global_launcher": True, "triple_panels_open": True,
-                                "right_dock_launcher": True, "sticky_panel_headers": sticky_headers,
+                                "left_sidebar_launcher": True, "sticky_panel_headers": sticky_headers,
                                 "topbar_preserved_during_maximize": True,
                                 "markdown_note_with_attachments": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,

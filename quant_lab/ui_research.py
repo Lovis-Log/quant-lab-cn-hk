@@ -287,10 +287,6 @@ def _close_panel() -> None:
     st.session_state["notes_panel_open"] = False
     if st.session_state.get("maximized_panel") == "notes":
         st.session_state["maximized_panel"] = None
-    if not any(st.session_state.get(key, False) for key in (
-        "guide_panel_open", "deepseek_panel_open"
-    )):
-        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_maximize() -> None:

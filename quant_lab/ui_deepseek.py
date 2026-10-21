@@ -84,8 +84,6 @@ def open_ai_followup(prompt, topic):
     st.session_state["deepseek_prompt"] = prompt
     st.session_state["ai_workspace"] = "对话与辅导"
     st.session_state["deepseek_panel_open"] = True
-    st.session_state["right_dock_visible"] = True
-    st.session_state["last_active_panel"] = "deepseek"
 
 
 def connection_state() -> tuple[str, str, dict, str | None]:
@@ -284,10 +282,6 @@ def _close_deepseek_panel() -> None:
     st.session_state["deepseek_panel_open"] = False
     if st.session_state.get("maximized_panel") == "deepseek":
         st.session_state["maximized_panel"] = None
-    if not any(st.session_state.get(key, False) for key in (
-        "guide_panel_open", "notes_panel_open"
-    )):
-        st.session_state["right_dock_visible"] = False
 
 
 def _toggle_deepseek_maximize() -> None:
