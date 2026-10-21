@@ -1,6 +1,7 @@
 """Unified categorized notes and immutable research archives."""
 
 from pathlib import Path
+import json
 import re
 import sqlite3
 from uuid import uuid4
@@ -126,6 +127,43 @@ def _render_editor(categories: list[dict]) -> None:
     st.text_area("Markdown 正文", key="note_editor_content", height=260,
                  on_change=_autosave_draft, args=(draft_id,),
                  help="字段变化时自动保存草稿；点击保存后写入正式笔记。")
+    draft_key = json.dumps(f"quantlab.noteDraft.{draft_id}")
+    st.html(f"""
+    <script>
+    (() => {{
+      const key = {draft_key};
+      const bind = () => {{
+        const title = document.querySelector('input[aria-label="笔记标题"]');
+        const content = document.querySelector('textarea[aria-label="Markdown 正文"]');
+        if (!title || !content || content.dataset.localDraftBound === '1') return;
+        content.dataset.localDraftBound = '1';
+        const saved = localStorage.getItem(key);
+        if (saved) {{
+          try {{
+            const value = JSON.parse(saved);
+            const setInput = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+            const setArea = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+            if (value.title !== undefined && value.title !== title.value) {{
+              setInput.call(title, value.title); title.dispatchEvent(new Event('input', {{bubbles:true}}));
+            }}
+            if (value.content !== undefined && value.content !== content.value) {{
+              setArea.call(content, value.content); content.dispatchEvent(new Event('input', {{bubbles:true}}));
+            }}
+          }} catch (_) {{ localStorage.removeItem(key); }}
+        }}
+        const save = () => localStorage.setItem(key, JSON.stringify({{
+          title:title.value, content:content.value, updatedAt:new Date().toISOString()
+        }}));
+        title.addEventListener('input', save);
+        content.addEventListener('input', save);
+      }};
+      bind();
+      const observer = new MutationObserver(bind);
+      observer.observe(document.body, {{childList:true,subtree:true}});
+      window.setTimeout(() => observer.disconnect(), 5000);
+    }})();
+    </script>
+    """, unsafe_allow_javascript=True)
     uploads = st.file_uploader("添加附件", accept_multiple_files=True,
         type=[ext[1:] for ext in sorted(notes.ALLOWED_EXTENSIONS)], key="note_attachment_upload")
     if st.button("保存所选附件到草稿", disabled=not uploads, key="note_attachment_save"):
