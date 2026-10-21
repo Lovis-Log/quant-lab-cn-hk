@@ -100,7 +100,9 @@ def main() -> None:
                         page.get_by_role("option", name="6. 夏普比率").click()
                         page.get_by_test_id("stAlertContentInfo").filter(has_text="年化夏普示例").wait_for(timeout=10_000)
                         page.get_by_role("button", name="研究笔记", exact=True).click()
-                        page.get_by_text("尚无已保存实验").wait_for(timeout=10_000)
+                        notes_panel = page.locator(".st-key-notes_side_panel")
+                        notes_panel.wait_for(state="visible", timeout=10_000)
+                        notes_panel.get_by_label("笔记标题", exact=True).wait_for(timeout=10_000)
                         database = data_dir / "research.sqlite3"
                         with sqlite3.connect(database) as db:
                             assert db.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0] == 1
