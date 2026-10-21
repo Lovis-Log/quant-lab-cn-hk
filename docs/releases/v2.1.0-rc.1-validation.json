@@ -1,0 +1,57 @@
+{
+  "version": "2.1.0-rc.1",
+  "source_commit": "fb760b7af859ee26c1907a03f4fe3e067d21a6ff",
+  "pytest": {
+    "passed": 115,
+    "failed": 0,
+    "skipped": 0
+  },
+  "packaged_offline_smoke": {
+    "service_ready": true,
+    "browser_loaded": true,
+    "watchlist_persistence": true,
+    "learning_page": true,
+    "notes_panel": true,
+    "child_stopped": true
+  },
+  "isolated_delivery": {
+    "app_id": "F018A34A-7947-42D2-87E3-6EC79BF8543B",
+    "actual_webview_dom": true,
+    "original_package_phase": true,
+    "mock_api_phase": true,
+    "restart_phase": true,
+    "v2_to_v4_backup_and_migration": true,
+    "legacy_snapshot_and_replay_preserved": true,
+    "install_and_uninstall": true,
+    "user_data_retained_after_uninstall": true
+  },
+  "ui_and_notes": {
+    "triple_panels_open": true,
+    "sticky_panel_headers": true,
+    "left_sidebar_toggle": true,
+    "maximize_respects_sidebar": true,
+    "maximize_fills_without_sidebar": true,
+    "panel_drag_resize_and_reorder": true,
+    "markdown_note_with_two_managed_attachments": true,
+    "learning_progress_and_goal_restored": true,
+    "console_errors": []
+  },
+  "security_and_provenance": {
+    "credential_manager_restore": true,
+    "key_absent_from_database_and_logs": true,
+    "mock_fixture_removed_after_check": true,
+    "mock_history_not_labeled_real": true,
+    "mock_data_not_counted_as_real_task": true
+  },
+  "limitations": {
+    "real_paid_api_tested": false,
+    "real_market_full_flow_tested": false,
+    "release_channel": "prerelease"
+  },
+  "local_logs": {
+    "build": "dist/release/2.1.0-rc.1/build.log",
+    "packaged_smoke": "dist/release/2.1.0-rc.1/packaged-smoke-final.log",
+    "delivery": "dist/release/2.1.0-rc.1/learning-delivery-final.log",
+    "desktop": ".tools/learning-delivery-b3e93c68184944b694e0853f6f80191b"
+  }
+}

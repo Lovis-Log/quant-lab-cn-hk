@@ -21,4 +21,4 @@
 | 1.2.1-rc.1 | 本地构建与验收完成，未发布 | [构建与验收](releases/v1.2.1-rc.1.md) |
 | [v2.0.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.0.0-rc.1) | 已发布，Learning Center MVP 预发布 | [验收报告](V2_ACCEPTANCE.md) |
 | [v2.0.1-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.0.1-rc.1) | 已发布，界面整合预发布 | [发布说明与过程](releases/v2.0.1-rc.1.md) |
-| v2.1.0-rc.1 | 发布准备中，研究笔记工作台预发布 | [发布说明与过程](releases/v2.1.0-rc.1.md) |
+| [v2.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.1.0-rc.1) | 已发布，研究笔记工作台预发布 | [发布说明与过程](releases/v2.1.0-rc.1.md) |
