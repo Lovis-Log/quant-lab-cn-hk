@@ -41,9 +41,59 @@
 | `deepseek` | `quant_lab/ui_settings.py:79-80`, `quant_lab/ui_deepseek.py:103-278`, `quant_lab/deepseek.py:21-235`, `quant_lab/ai_research.py:38-159`, `quant_lab/credentials.py:50-88` | 设置控件、付费请求、模型列表、JSON 验证、上下文白名单、凭据存储 |
 | `research_notes` | `quant_lab/ui_research.py:60-308`, `quant_lab/notes.py:22-415`, `quant_lab/storage.py:138-216` | 分类、草稿、附件、回收站、实验复算、ZIP、快照校验 |
 
+## 批次 2 文章来源映射
+
+| 文章 ID | 主要来源 | 支持的具体主张 |
+| --- | --- | --- |
+| `instrument_identity` | S001, S013, P004 | 代码规范化规则；名称/目录只作身份辅助；不验证上市状态；目录快照时间和限制 |
+| `ohlcv` | S001, P004, A032 | 开高低收/成交量/成交额字段、单位、验证关系；日线不是实时行情；价格与收益率区别 |
+| `trading_calendar` | S001, S002, S003, P004 | 实际交易日来自上游；区间过滤/排序/去重；组合共同日期；252 是近似；无独立日历服务 |
+| `timezone_and_session` | S023, S001, S002, S003, P002 | UTC 存储、北京时间显示；`received_at` 不是报价时间；无交易时段模型 |
+| `currency_and_fx` | S024, S001, P004, A035 | CNY/HKD 标注；同币种组合限制；不做汇率换算；本地收益与汇率收益分解 |
+| `price_adjustment` | S001, P003, P004, A033 | 不复权/前复权/后复权；复权信号与不复权成交分离；复权非总回报 |
+| `corporate_actions` | S001, P004, A033, A032 | 分红/拆股/送股/配股概念；软件未实现公司行动台账和现金流 |
+| `data_provenance` | S001, P002, P004, A034 | 来源、接收时间、缓存、复权、币种；FAIR 和可复现边界 |
+| `cache_and_freshness` | S001, P002, P004, S008 | 15 分钟历史缓存/64 条；5 分钟快照；名称 24 小时/5 分钟冷却；失败保留旧值 |
+| `data_quality_and_bias` | S001, P003, P004, A006, A016, A022, A034 | 字段校验；缺失自然日/交易日/停牌/重复/异常值/幸存者/前视偏差的区分 |
+| `simple_return` | P003, A009, A032 | 价格收益率公式；百分数/小数；不含分红/费用；区间首尾收益率 |
+| `log_return` | A032, A020, A009 | 对数收益率定义、可加性、与简单收益率差异；软件未实现 |
+| `compound_return` | P003, P005, A009, A032 | 多期乘法、复利、先涨后跌、回本不对称 |
+| `annualized_return` | P003, A009, A032 | 252/n 几何年化；收益间隔数；短样本放大；不是未来预测 |
+| `arithmetic_vs_geometric_mean` | P003, A009, A032, A013 | 算术/几何均值差异；夏普分子与年化收益的不同口径；无并列 UI |
+| `variance` | P003, A009 | 样本方差 `n−1`、总体方差 `n`；小数/百分数单位；方差不是百分比 |
+| `standard_deviation` | P003, A009 | 标准差是方差平方根；样本/总体分母；年化波动率基础 |
+| `volatility` | P003, A009, A020, A022 | 日标准差 × `√252`；历史波动不是方向/未来预测；厚尾和波动聚集 |
+| `maximum_drawdown` | P003, A014, A026 | 运行峰值、回撤、最大回撤、恢复涨幅；路径依赖 |
+| `sharpe_ratio` | P003, A002, A009, A026 | 日超额均值/样本标准差 × `√252`；默认无风险利率 0；零波动不显示 |
+
+## 批次 2 代码依据
+
+| 文章 ID | 代码位置 | 核对内容 |
+| --- | --- | --- |
+| `instrument_identity` | `market_data.py:20-36`, `securities.py`, `names.py:42-121` | 代码规范化、候选目录、名称缓存和身份边界 |
+| `ohlcv` | `processing.py:17-58`, `ui.py:510-520`, `ui.py:671-695` | 字段验证、表格/CSV、单位和图表 |
+| `trading_calendar` | `processing.py:42-58`, `data.py:148-165`, `portfolio.py:19-35`, `research.py:26-64` | 日期过滤/排序/去重、缓存键、共同日期、样本切分 |
+| `timezone_and_session` | `ui_updates.py:51-79`, `data.py:105-125`, `ui.py:289-299` | UTC 存储、北京时间显示、日期默认值和快照窗口 |
+| `currency_and_fx` | `data.py:79-101`, `portfolio.py:19-35`, `ui.py:528-530` | CNY/HKD 标签、同币种组合约束、价格/金额单位 |
+| `price_adjustment` | `data.py:71-111`, `ui.py:300`, `ui_strategy.py:131-139` | 三种复权口径、复权信号、不复权成交 |
+| `corporate_actions` | 无独立实现；`data.py` 复权参数、`docs/DATA.md` | 当前软件未实现公司行动台账；仅复权价格间接体现 |
+| `data_provenance` | `data.py:25-44`, `refresh.py:9-67`, `ui_updates.py:61-93`, `storage.py:80-124` | 来源、接收时间、缓存、更新结果和实验快照 |
+| `cache_and_freshness` | `data.py:138-198`, `refresh.py:19-67`, `names.py:42-99` | TTL、单飞、失败保留、名称缓存和快照节流 |
+| `data_quality_and_bias` | `processing.py:17-58`, `statistics.py:44-128`, `portfolio.py:19-35` | 字段校验、缺失处理、时间切分和共同日期 |
+| `simple_return` | `metrics.py:30-55`, `knowledge.py:21-27`, `ui.py:555-586` | 首尾收盘价收益率、知识解释和页面指标 |
+| `log_return` | 无独立实现 | 当前软件未实现对数收益率 |
+| `compound_return` | `metrics.py:58-79`, `learning.py:69-82`, `knowledge.py:28-33` | 净值累计收益、复利课程和知识解释 |
+| `annualized_return` | `metrics.py:58-79`, `knowledge.py:95-100` | `(V_end/V_start)^(252/n)−1`、252 假设 |
+| `arithmetic_vs_geometric_mean` | `statistics.py:44-60`, `metrics.py:58-79`, `knowledge.py` | 日均收益、几何年化、夏普分子 |
+| `variance` | `metrics.py:58-79`, `statistics.py:44-60`, `ui_analysis.py:26-39`, `knowledge.py:40-45` | 样本方差 `ddof=1`、风险页显示和知识解释 |
+| `standard_deviation` | `metrics.py:58-79`, `knowledge.py:46-51`, `ui_analysis.py:26-39` | 样本标准差、年化波动率和风险页 |
+| `volatility` | `metrics.py:73-79`, `knowledge.py:52-57`, `ui_analysis.py:26-34` | 日标准差 × `√252`、年化波动率 |
+| `maximum_drawdown` | `metrics.py:70`, `knowledge.py:58-63`, `ui_analysis.py:33` | 运行峰值、回撤、最大回撤 |
+| `sharpe_ratio` | `metrics.py:73-79`, `knowledge.py:64-69`, `ui_strategy.py:186-190` | 日超额均值/样本标准差 × `√252`；默认无风险利率 0 |
+
 ## 专业词条来源分配
 
-`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 1 只撰写手册，专业文章状态均为 `todo`；后续批次应按以下优先级补充来源：
+`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2 已撰写市场与数据、收益与风险 20 篇；其余 65 篇仍为 `todo`。后续批次可按以下优先级补充来源：
 
 1. **市场与数据**：S001、S013、P004；公司行动和交易规则需补充交易所/监管机构官方页面。
 2. **收益与风险**：A009、A014、A002、P003；年化交易日假设需在正文明确。
@@ -56,7 +106,8 @@
 
 ## 待复核与缺口
 
-- 所有 `S` 外部页面在 2026-10-22 未联网核验；正式文章引用前必须重新访问并记录新日期。
+- S001–S024 外部页面在 2026-10-22 未逐条读取内容；S001–S007 的官方入口已由 Codex 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2 的 20 篇文章因此全部标 `drafted`，不标 `source_checked`。
+- 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）、A032（Campbell 等）、A033（Berk 与 DeMarzo）、A034（FAIR）、A035（Bekaert 与 Hodrick）均需复核书目/页面内容和版本。
 - 交易费用、税率、结算、申报单位和涨跌幅规则不能只靠本项目默认值推断；当前手册只把它们写成可修改假设。
 - 市场冲击、流动性、碎股、多币种组合和滚动前向分析当前没有实现；相关文章必须标记 `theory_only`，不得虚构按钮或指标。
 - `S013` 候选目录只提供身份字段，不证明上市状态；文章不得把“目录中存在”写成“可交易”。

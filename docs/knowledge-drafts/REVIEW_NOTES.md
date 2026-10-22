@@ -5,14 +5,14 @@
 代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
 恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）
 写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
-批次 1 草稿提交：`09b003f`；本文件同时记录 2026-10-22 Codex 复核后的修订。
+批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 基于 `99c70aa`。
 
 ## 1. 本轮完成内容
 
 - 10 篇使用手册草稿：`quick_start`、`workspace`、`market_data`、`strategy`、`backtest`、`risk_portfolio`、`statistics_ml`、`academy`、`deepseek`、`research_notes`。
 - `CATALOG.md`：10 篇手册 + 85 个专业词条的稳定 ID、标题、分类、状态、模块、关联词条、文章状态和主要来源。
-- `references/official.md`：S001–S022 外部官方来源；P001–P006 项目内依据。
-- `references/academic.md`：A001–A031 论文、教材和大学课程。
+- `references/official.md`：S001–S024 外部官方来源；P001–P006 项目内依据。
+- `references/academic.md`：A001–A035 论文、教材和大学课程。
 - `references/source-map.md`：手册 ID 到来源与代码位置的映射。
 - `README.md`：目录使用说明和批次边界。
 
@@ -134,28 +134,31 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 ## 5. `NEEDS_REVIEW` 清单
 
-以下项目仍需逐项核验。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但入口可访问不等于全部内容已经核验：
+以下项目仍需逐项核验。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但入口可访问不等于全部内容已经核验；S008–S024 未联网核验：
 
-1. `S001` AKShare 股票数据文档：入口可访问；接口名、字段、复权参数、上游来源待逐项核验。
-2. `S002` 上海证券交易所交易规则：入口可访问；具体条款、生效日期、申报单位和涨跌幅口径待逐项核验。
-3. `S003` 香港交易所交易运作常见问题：入口可访问；交易单位/每手股数的具体表述待核验。
-4. `S004` 香港交易所 VCM 常见问题：入口可访问；机制细节和适用证券范围待核验。
-5. `S005`–`S007` DeepSeek 模型列表、Chat Completions、JSON Output：入口可访问；模型 ID、字段、错误码和 JSON 要求待逐项核验。
-6. `S008`–`S011` Python、pandas、NumPy、SQLite 文档：版本和 API 行为。
-7. `S012` Microsoft Edge WebView2 Runtime：安装要求和版本。
-8. `S013` 巨潮资讯 A 股基础目录：端点、字段、公开访问状态。
-9. `S014`–`S020` scikit-learn、SciPy、dataclasses、sqlite3、Git、pytest 文档：版本和示例行为。
-10. `S021`–`S022` Windows 凭据管理器：API 行为和权限要求。
-11. `A001`–`A031` 论文、教材和课程：DOI、ISBN、页码、版次、作者列表和课程页面版本。
-12. 所有交易费用、税率、结算、申报单位和涨跌幅数字：不能从本软件默认值推断现行规则；正式内容发布前必须以交易所、监管机构或券商官方资料重新核验。
+1. `S001`–`S007` 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款、版本号、生效日期和生效口径仍需逐项核验；`S008`–`S024` 的页面内容未在 2026-10-22 联网核验。发布前必须重新访问原始页面。
+2. `S001` AKShare 股票数据文档：入口可访问；接口名、字段、复权参数、上游来源待逐项核验。
+3. `S002` 上海证券交易所交易规则：入口可访问；具体条款、生效日期、申报单位和涨跌幅口径待逐项核验。
+4. `S003` 香港交易所交易运作常见问题：入口可访问；交易单位/每手股数的具体表述待核验。
+5. `S004` 香港交易所 VCM 常见问题：入口可访问；机制细节和适用证券范围待核验。
+6. `S005`–`S007` DeepSeek 模型列表、Chat Completions、JSON Output：入口可访问；模型 ID、字段、错误码和 JSON 要求待逐项核验。
+7. `S008`–`S011` Python、pandas、NumPy、SQLite 文档：版本和 API 行为。
+8. `S012` Microsoft Edge WebView2 Runtime：安装要求和版本。
+9. `S013` 巨潮资讯 A 股基础目录：端点、字段、公开访问状态。
+10. `S014`–`S020` scikit-learn、SciPy、dataclasses、sqlite3、Git、pytest 文档：版本和示例行为。
+11. `S021`–`S022` Windows 凭据管理器：API 行为和权限要求。
+12. `S023` IANA Time Zone Database：时区标识、偏移和夏令时规则；页面内容待核验。
+13. `S024` ISO 4217 Currency Codes：货币代码标准；页面内容待核验。
+14. `A001`–`A035` 论文、教材和课程：DOI、ISBN、页码、版次、作者列表和课程页面版本；A032–A035 为批次 2 新增。
+15. 所有交易费用、税率、结算、申报单位和涨跌幅数字：不能从本软件默认值推断现行规则；正式内容发布前必须以交易所、监管机构或券商官方资料重新核验。
 
 ## 6. 来源统计
 
 | 类型 | 数量 | 说明 |
 | --- | --- | --- |
-| 外部官方 `S` | 22 | S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，字段/条款待逐项核验；S008–S022 待核验 |
+| 外部官方 `S` | 24 | S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，字段/条款待逐项核验；S008–S024 待核验 |
 | 项目内 `P` | 6 | P001–P006；2026-10-22 已读 |
-| 学术 `A` | 31 | A001–A031；书目信息待复核 |
+| 学术 `A` | 35 | A001–A035；书目信息待复核 |
 | 手册引用 | 10 篇 | 每篇至少引用 P 文档；关键页面引用 S/A |
 | 专业词条来源映射 | 85 条 | 见 `CATALOG.md` 各行“主要来源” |
 
@@ -169,21 +172,81 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 6. 12 个 `needs_code_review` 专业词条：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；不拆分 ID。
 7. 后续文章对上述复合词条分节写明“已实现/已显示”“未显示/未提供”“未实现”，不得把整手、固定滑点、MAE、均值等已实现部分误写成 `theory_only`。
 8. 港股 1–5 位补足与界面“5 位”提示是否统一。
-9. 外部来源：S001–S007 入口已由 Codex 确认可访问，但字段/条款/生效口径待逐项核验；S008–S022 与 A001–A031 仍待核验。
+9. 外部来源：S001–S007 入口已由 Codex 确认可访问，但字段/条款/生效口径待逐项核验；S008–S024 与 A001–A035 仍待核验。
 10. 接入手册后按 AGENTS.md 做真实 WebView DOM/控件验收；本批次未启动 GUI，不能把文档完成当成验收通过。
 
 ## 8. 未执行事项
 
 - 未启动 Streamlit 或桌面 WebView；未核对实际 DOM。手册中的控件名称来自代码 `st.button`/`st.selectbox`/`st.text_input` 等定义，但实际渲染仍需 GUI 验收。
-- 未逐项核验外部页面内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款和生效口径仍需逐项核验；S008–S022 未联网核验。
+- 未逐项核验外部页面内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款和生效口径仍需逐项核验；S008–S024 未联网核验。
+- 批次 2 的 20 篇文章状态均为 `drafted`，未标 `source_checked`；外部来源内容未逐条读取。
 - 未运行付费 DeepSeek 请求；手册中的请求边界来自代码和现有文档。
 - 未修改或迁移 SQLite 数据库；未写入任何 Key；未创建安装包、标签或 Release。
 - 本次修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只改文档。
+- 批次 2 后再次使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning；未修改程序代码。
 
 ## 9. 声明
 
-本轮修订只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册草稿尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+本轮（批次 1 修订与批次 2）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 20 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
 
 ## 10. 下一批次建议
 
-批次 2：市场与数据、收益与风险共 20 篇专业文章。建议先写 `instrument_identity`、`ohlcv`、`price_adjustment`、`data_provenance`、`simple_return`、`volatility`、`maximum_drawdown`、`sharpe_ratio`，把手册中的口径延伸到公式和手算例子；继续使用 `theory_only` 标注未实现能力，并在写完后把 `CATALOG.md` 中对应文章状态从 `todo` 更新为 `drafted` 或 `source_checked`。本次修订不进入批次 2。
+批次 2 已完成 20 篇（市场与数据、收益与风险），文章状态均为 `drafted`。下一批次（未开始）为批次 3：策略与执行、回测与研究，共 20 篇；本次提交不进入批次 3。批次 3 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
+
+## 11. 批次 2：市场与数据、收益与风险（20 篇）
+
+### 11.1 完成状态
+
+- 20 篇文章已写入 `articles/market_data/`（10 篇）和 `articles/return_risk/`（10 篇）。
+- 文章状态全部为 `drafted`；外部来源内容未逐条读取，未标 `source_checked`。
+- 软件状态：`implemented` 14 篇、`needs_code_review` 4 篇、`theory_only` 2 篇。
+- 四个 `needs_code_review`：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`；正文均分三层写“已计算/显示、只间接使用、未提供/未建模”。
+- 两个 `theory_only`：`corporate_actions`、`log_return`；正文明确写“当前软件未实现”。
+- 未新增或删除内容 ID，专业词条总数仍为 85；新增来源编号 S023、S024、A032–A035。
+
+### 11.2 公式与口径清单
+
+| 文章 ID | 核心公式/口径 | 软件状态 | 主要来源 | 待复核/说明 |
+| --- | --- | --- | --- | --- |
+| `instrument_identity` | `normalize(market, raw) -> code`；A 股 `\d{6}`，港股 `\d{1,5}` 补足五位 | `implemented` | S001, S013, P004 | 代码规范化不等于上市身份验证 |
+| `ohlcv` | `r_t=close_t/close_{t-1}−1`；`range=high−low`；`amount/volume≈平均价` | `implemented` | S001, P004, A032 | 字段/单位/复权接口 NEEDS_REVIEW |
+| `trading_calendar` | `D_common=∩D_i`；`R_ann=(P_n/P_1)^(252/(n−1))−1` | `needs_code_review` | S001, S002, S003, P004 | 实际交易日 vs 独立日历服务分层 |
+| `timezone_and_session` | `t_Beijing=t_UTC+8h`；`age=now−received_at` | `needs_code_review` | S023, S001, S002, S003, P002 | 接收时间不是交易所报价时间 |
+| `currency_and_fx` | `r_investor=(1+r_local)(1+r_fx)−1` | `implemented` | S024, S001, P004, A035 | 软件只标注币种，不做汇率换算 |
+| `price_adjustment` | `P_adj=P×f`；`r_total≈(P_ex+D)/P_cum−1` | `implemented` | S001, P003, P004, A033 | 复权价非成交价；上游复权行为待核验 |
+| `corporate_actions` | `r_total=(P_ex+D)/P_cum−1`；拆股价值不变 | `theory_only` | S001, P004, A033, A032 | 软件未实现分红现金流/公司行动表 |
+| `data_provenance` | `prov=(source,...,received_at,...)`；`fingerprint=H(...)` | `implemented` | S001, P002, P004, A034 | 本地溯源非不可篡改审计 |
+| `cache_and_freshness` | `age=now−t_success`；`fresh=(age<TTL)` | `implemented` | S001, P002, P004, S008 | 缓存不是实时行情；失败保留旧值 |
+| `data_quality_and_bias` | `missing_rate=missing/expected`；`duplicate_rate=dup/total` | `needs_code_review` | S001, P003, P004, A006, A016, A022, A034 | 校验不等于无偏；幸存者/前视偏差未控制 |
+| `simple_return` | `R=P_1/P_0−1` | `implemented` | P003, A009, A032 | 价格收益率；不含分红/费用 |
+| `log_return` | `r_log=ln(P_t/P_{t−1})` | `theory_only` | A032, A020, A009 | 当前软件未实现对应对数收益率 |
+| `compound_return` | `V_n=V_0∏(1+r_i)` | `implemented` | P003, P005, A009, A032 | 多期乘法；不是收益率直接相加 |
+| `annualized_return` | `R_ann=(V_n/V_0)^(252/n)−1` | `implemented` | P003, A009, A032 | n 是收益间隔数；不是未来预测 |
+| `arithmetic_vs_geometric_mean` | `a=mean(r)`；`g=(∏(1+r))^(1/n)−1` | `needs_code_review` | P003, A009, A032, A013 | 软件分别使用但无并列 UI；需分层 |
+| `variance` | `s²=Σ(x−x̄)²/(n−1)`；总体 `σ²=/n` | `implemented` | P003, A009 | 样本分母 n−1；方差不是百分比 |
+| `standard_deviation` | `s=√s²`；`σ_ann≈s_daily×√252` | `implemented` | P003, A009 | 样本/总体分母不同；年化是近似 |
+| `volatility` | `σ_ann≈s_daily×√252` | `implemented` | P003, A009, A020, A022 | 历史波动不是方向/未来预测 |
+| `maximum_drawdown` | `D_t=V_t/max_{s≤t}V_s−1`；`MDD=min D_t` | `implemented` | P003, A014, A026 | 路径指标；不是未来损失上限 |
+| `sharpe_ratio` | `S=(mean−r_f)/s×√252` | `implemented` | P003, A002, A009, A026 | 默认 rf=0；零波动不显示；不是盈利概率 |
+
+### 11.3 来源与核验
+
+- 批次 2 新增来源：S023 IANA Time Zone Database、S024 ISO 4217 Currency Codes、A032 Campbell/Lo/MacKinlay（1997）、A033 Berk/DeMarzo（2020）、A034 Wilkinson 等（2016）、A035 Bekaert/Hodrick（2018）。
+- S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，但具体字段/条款/口径未逐条核验；S008–S024 未联网核验。
+- A001–A035 的 DOI、ISBN、页码、版次和作者列表均待复核；A032–A035 是批次 2 新增书目。
+- 交易规则、接口字段、复权行为、时区和货币代码均标记 NEEDS_REVIEW（核验日期：2026-10-22）。
+- 文章状态全部 `drafted`；未把“入口可访问”写成“内容已核验”。
+- frontmatter 的 `last_verified: 2026-10-22` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
+
+### 11.4 需要 Codex 复核的问题（批次 2）
+
+1. 确认四个 `needs_code_review` 词条的三层写法准确：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`；不拆分 ID。
+2. 确认 `corporate_actions`、`log_return` 保持 `theory_only`，正文“当前软件未实现”没有暗示按钮或指标。
+3. 确认 252 个年交易日近似、`n` 为收益间隔数、年化公式与 `docs/METHODOLOGY.md` 和 `metrics.py` 一致。
+4. 确认算术平均/几何平均文章只解释现有口径，不要求新增并列指标或 UI。
+5. 确认样本方差/标准差使用 `n−1`、总体分母 `n` 仅作对照，不把总体公式写成软件功能。
+6. 确认 `corporate_actions` 的“仅复权间接体现、无分红现金流”描述与当前回测/估值边界一致。
+7. 确认数据质量文章对缺失自然日/缺失交易日/停牌/重复/异常值/幸存者偏差/前视偏差的区分没有过度声称控制。
+8. 确认 `cache_and_freshness` 的 TTL、失败保留、手动绕过和 `received_at` 语义与 `data.py`/`refresh.py` 一致。
+9. 确认新增来源 S023/S024、A032–A035 的书目/页面信息和 NEEDS_REVIEW 标注；正式发布前重新核验。
+10. 确认 20 篇文章状态保持 `drafted`；只有逐条读取外部资料后才能升级为 `source_checked`。

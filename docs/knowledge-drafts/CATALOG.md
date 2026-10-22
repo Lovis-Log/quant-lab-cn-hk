@@ -1,9 +1,10 @@
 # 使用手册与专业知识库总目录
 
-状态：批次 1（10 篇使用手册）已完成草稿；85 个专业词条已建目录，正文待后续批次
+状态：批次 1 手册已修订；批次 2 的 20 篇专业文章已起草；85 个专业词条中其余 65 篇待后续批次
 日期：2026-10-22
 目标版本：Quant Lab CN/HK `2.2.0-rc.1` 的内容输入
 当前代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
+文档基线：`99c70aa`（批次 1 修订）
 写作范围：仅 `docs/knowledge-drafts/`，未修改程序、测试、数据库、VERSION 或发行文件
 
 ## 状态与口径
@@ -31,8 +32,8 @@
 - 10 篇手册按 2.2.0 已锁定的“使用手册”三入口结构撰写：快速开始、功能说明、专业知识库。当前 2.1.0-rc.1 仍显示“新手使用指引”及旧学习中心分区；Codex 接入时应逐项核对实际 DOM 和控件。
 - 手册不使用复选框、任务状态、测验、打卡、完成度或“完成本章”措辞。Academy 手册只描述固定教学样本和参数实验，不描述测验或进度。
 - 手册中的“显示详细解释提示”对应产品决定中的新标签；当前 `ui_settings.py` 仍显示“新手模式（关闭为专业模式）”。
-- 所有 `implemented` 声明都以本地代码为依据；代码位置见 `references/source-map.md`。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但具体接口字段、条款和生效口径仍待逐项核验；S008–S022 仍待核验。
-- 85 个专业词条的正文均为 `todo`；本目录只锁定 ID、标题、分类、状态、模块、关联词条和主要来源，供后续批次续写。
+- 所有 `implemented` 声明都以本地代码为依据；代码位置见 `references/source-map.md`。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但具体接口字段、条款和生效口径仍待逐项核验；S008–S024 仍待核验。
+- 85 个专业词条中，批次 2 已起草 20 篇（`market_data` 10、`return_risk` 10），其余 65 篇为 `todo`；本目录同时记录文章状态、来源和关联文章。
 
 ### Codex 批次 1 复核调整（2026-10-22）
 
@@ -40,6 +41,16 @@
 - `manual/research_notes.md` 已修正草稿丢失说明：SQLite 草稿不会因清除 WebView 本地存储而删除；只有尚未同步的输入可能丢失；只有“放弃草稿”会删除数据库草稿和草稿附件。
 - `manual/deepseek.md` 的目标版本“学习笔记”已统一改为“研究笔记”；程序按钮“保存选定回答到学习笔记”仍需同步重命名，记录在 `REVIEW_NOTES.md`。
 - `references/official.md` 的 S001–S007 已改为“官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验”。
+
+### 批次 2 进展（2026-10-22）
+
+- 20 篇专业文章已写入 `articles/market_data/` 与 `articles/return_risk/`，全部文章状态为 `drafted`。
+- `trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean` 保持 `needs_code_review`，并在正文分三层说明“已计算/显示、只间接使用、未提供/未建模”。
+- `corporate_actions`、`log_return` 保持 `theory_only`，正文明确写“当前软件未实现”。
+- 不新增或删除 ID，专业词条总数仍为 85。
+- 外部来源未逐条读取内容；S001–S007 入口已由 Codex 确认可访问，但字段/条款待核验；S008–S024 与 A001–A035 待核验。所有文章状态只能是 `drafted`，不标 `source_checked`。
+- 每篇计算文章含可手算样本；价格/收益率、百分数/小数、样本/总体分母在相关文章中区分；交易规则、接口、字段和复权行为标记 NEEDS_REVIEW（核验日期：2026-10-22）。
+- 文章 frontmatter 的 `last_verified: 2026-10-22` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验；外部来源仍需逐条读取。
 
 ## 使用手册（10 篇）
 
@@ -60,31 +71,31 @@
 
 | ID | 中文标题 / English | 功能状态 | 关联模块 | 关联词条 | 文章状态 | 主要来源 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `instrument_identity` | 证券身份与代码规范化 / Instrument Identity and Symbol Normalization | `implemented` | `market_data.py`, `securities.py`, `names.py`, `ui.py` | `ohlcv`, `currency_and_fx`, `data_provenance` | `todo` | S001, S013, P004 | 规范化与名称/目录辅助；未用交易所名录验证上市身份。 |
-| `ohlcv` | 开高低收与成交量 / OHLCV | `implemented` | `processing.py`, `data.py`, `ui.py` | `instrument_identity`, `trading_calendar`, `data_quality_and_bias` | `todo` | S001, P004 | 字段校验、表格和 CSV。 |
-| `trading_calendar` | 交易日历 / Trading Calendar | `needs_code_review` | `data.py`, `processing.py`, `portfolio.py` | `timezone_and_session`, `alignment_join_and_merge`, `ohlcv` | `todo` | S001, P004 | 实际交易日用于对齐；不提供独立日历服务，文章需分层说明“已使用日期/未提供日历接口”。 |
-| `timezone_and_session` | 时区与交易时段 / Time Zone and Trading Session | `needs_code_review` | `data.py`, `ui_updates.py` | `trading_calendar`, `data_provenance` | `todo` | S001, S002, S003 | 接收时间存 UTC、显示北京时间；不建模盘中交易时段，文章需分层说明。 |
-| `currency_and_fx` | 币种与汇率 / Currency and FX | `implemented` | `data.py`, `portfolio.py`, `ui.py` | `multi_currency_portfolio`, `instrument_identity` | `todo` | S001, P004 | 标注 CNY/HKD；组合限制同币种；不做汇率换算。 |
-| `price_adjustment` | 价格复权 / Price Adjustment | `implemented` | `data.py`, `ui.py`, `ui_strategy.py` | `corporate_actions`, `simple_return`, `next_open_execution` | `todo` | S001, P004 | 三口径；信号可用复权，成交/估值用不复权。 |
-| `corporate_actions` | 公司行动 / Corporate Actions | `theory_only` | 仅通过复权价格间接体现 | `price_adjustment`, `simple_return`, `data_quality_and_bias` | `todo` | S001, P004 | 未单独建模分红、拆股现金流或公司行动表。 |
-| `data_provenance` | 数据来源与时间戳 / Data Provenance | `implemented` | `data.py`, `refresh.py`, `ui_updates.py`, `storage.py` | `cache_and_freshness`, `timezone_and_session`, `reproducibility_and_audit` | `todo` | S001, P002, P004 | 来源、`received_at`、缓存和更新结果。 |
-| `cache_and_freshness` | 缓存与新鲜度 / Cache and Freshness | `implemented` | `data.py`, `refresh.py`, `ui_updates.py` | `data_provenance`, `provider_api_cache_and_concurrency` | `todo` | S001, P002, P004 | 历史 15 分钟/64 条，快照 5 分钟；手动绕过。 |
-| `data_quality_and_bias` | 数据质量与偏差 / Data Quality and Bias | `needs_code_review` | `processing.py`, `data.py`, `docs/METHODOLOGY.md` | `missing_data`, `data_provenance`, `lookahead_bias`, `overfitting` | `todo` | S001, P003, P004, A006 | 字段校验、重复/非正/异常值已实现；幸存者偏差、前视偏差等未完全消除，文章需逐项分层。 |
+| `instrument_identity` | 证券身份与代码规范化 / Instrument Identity and Symbol Normalization | `implemented` | `market_data.py`, `securities.py`, `names.py`, `ui.py` | `ohlcv`, `currency_and_fx`, `data_provenance`, `corporate_actions` | `drafted` | S001, S013, P004 | 批次 2 已起草；规范化与名称/目录辅助；未用交易所名录验证上市身份。 |
+| `ohlcv` | 开高低收与成交量 / OHLCV | `implemented` | `processing.py`, `data.py`, `ui.py` | `trading_calendar`, `data_quality_and_bias`, `simple_return`, `price_adjustment` | `drafted` | S001, P004, A032 | 批次 2 已起草；字段校验、表格和 CSV；价格/收益率单位区分。 |
+| `trading_calendar` | 交易日历 / Trading Calendar | `needs_code_review` | `data.py`, `processing.py`, `portfolio.py` | `timezone_and_session`, `alignment_join_and_merge`, `data_quality_and_bias`, `annualized_return` | `drafted` | S001, S002, S003, P004 | 批次 2 已起草；实际交易日对齐；无独立日历服务；已分三层说明。 |
+| `timezone_and_session` | 时区与交易时段 / Time Zone and Trading Session | `needs_code_review` | `data.py`, `ui_updates.py` | `data_provenance`, `cache_and_freshness`, `trading_calendar`, `reproducibility_and_audit` | `drafted` | S023, S001, S002, S003, P002 | 批次 2 已起草；UTC 存储/北京时间显示；无交易时段模型；已分三层说明。 |
+| `currency_and_fx` | 币种与汇率 / Currency and FX | `implemented` | `data.py`, `portfolio.py`, `ui.py` | `multi_currency_portfolio`, `price_adjustment`, `data_provenance`, `portfolio_weights_and_constraints` | `drafted` | S024, S001, P004, A035 | 批次 2 已起草；CNY/HKD 标注；同币种组合；不做汇率换算。 |
+| `price_adjustment` | 价格复权 / Price Adjustment | `implemented` | `data.py`, `ui.py`, `ui_strategy.py` | `corporate_actions`, `simple_return`, `next_open_execution`, `data_provenance` | `drafted` | S001, P003, P004, A033 | 批次 2 已起草；三口径；信号可用复权，成交/估值用不复权；复权非总回报。 |
+| `corporate_actions` | 公司行动 / Corporate Actions | `theory_only` | 仅通过复权价格间接体现 | `price_adjustment`, `simple_return`, `compound_return`, `data_quality_and_bias` | `drafted` | S001, P004, A033, A032 | 批次 2 已起草；`theory_only`；未单独建模分红、拆股现金流或公司行动表。 |
+| `data_provenance` | 数据来源与时间戳 / Data Provenance | `implemented` | `data.py`, `refresh.py`, `ui_updates.py`, `storage.py` | `cache_and_freshness`, `timezone_and_session`, `reproducibility_and_audit`, `data_quality_and_bias` | `drafted` | S001, P002, P004, A034 | 批次 2 已起草；来源、`received_at`、缓存和更新结果；FAIR 边界。 |
+| `cache_and_freshness` | 缓存与新鲜度 / Cache and Freshness | `implemented` | `data.py`, `refresh.py`, `ui_updates.py` | `data_provenance`, `provider_api_cache_and_concurrency`, `data_quality_and_bias`, `reproducibility_and_audit` | `drafted` | S001, P002, P004, S008 | 批次 2 已起草；历史 15 分钟/64 条，快照 5 分钟；手动绕过；缓存非实时。 |
+| `data_quality_and_bias` | 数据质量与偏差 / Data Quality and Bias | `needs_code_review` | `processing.py`, `data.py`, `docs/METHODOLOGY.md` | `missing_data`, `lookahead_bias`, `data_provenance`, `overfitting`, `cache_and_freshness` | `drafted` | S001, P003, P004, A006, A016, A022, A034 | 批次 2 已起草；字段校验已实现；缺失/停牌/重复/异常/幸存者/前视偏差逐项分层；已分三层说明。 |
 
 ## 收益与风险（10）
 
 | ID | 中文标题 / English | 功能状态 | 关联模块 | 关联词条 | 文章状态 | 主要来源 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `simple_return` | 简单收益率 / Simple Return | `implemented` | `metrics.py`, `knowledge.py`, `ui.py` | `log_return`, `compound_return`, `returns_and_pct_change` | `todo` | P003, A009 | 首尾收盘价；不含分红/费用。 |
-| `log_return` | 对数收益率 / Log Return | `theory_only` | 无 | `simple_return`, `compound_return` | `todo` | A009, A020 | 当前不使用对数收益。 |
-| `compound_return` | 复合收益 / Compound Return | `implemented` | `metrics.py`, `learning.py`, `knowledge.py` | `simple_return`, `annualized_return`, `arithmetic_vs_geometric_mean` | `todo` | P005, A009 | 多期乘法；学院和净值。 |
-| `annualized_return` | 年化收益 / Annualized Return | `implemented` | `metrics.py`, `knowledge.py` | `compound_return`, `arithmetic_vs_geometric_mean`, `volatility` | `todo` | P003, A009 | 252 日换算，不是预测。 |
-| `arithmetic_vs_geometric_mean` | 算术平均与几何平均 / Arithmetic vs Geometric Mean | `needs_code_review` | `metrics.py`, `statistics.py` | `compound_return`, `annualized_return`, `sharpe_ratio` | `todo` | A009, A013 | 算术均值用于夏普分子、几何年化用于收益换算；无并列比较 UI，文章需说明。 |
-| `variance` | 方差 / Variance | `implemented` | `metrics.py`, `statistics.py`, `knowledge.py`, `ui_analysis.py` | `standard_deviation`, `covariance`, `sample_and_population` | `todo` | P003, A009 | 样本分母 `n−1`。 |
-| `standard_deviation` | 标准差 / Standard Deviation | `implemented` | `metrics.py`, `knowledge.py` | `variance`, `volatility`, `standard_error` | `todo` | P003, A009 | 样本标准差。 |
-| `volatility` | 波动率 / Volatility | `implemented` | `metrics.py`, `knowledge.py`, `ui_analysis.py` | `standard_deviation`, `sharpe_ratio`, `autocorrelation_and_stationarity` | `todo` | P003, A009 | 日标准差 × `√252`。 |
-| `maximum_drawdown` | 最大回撤 / Maximum Drawdown | `implemented` | `metrics.py`, `knowledge.py`, `ui_analysis.py` | `equity_curve`, `volatility`, `rebalancing_and_turnover` | `todo` | P003, A014 | 历史路径指标，非未来损失上限。 |
-| `sharpe_ratio` | 夏普比率 / Sharpe Ratio | `implemented` | `metrics.py`, `knowledge.py`, `ui_strategy.py` | `volatility`, `annualized_return`, `benchmark` | `todo` | P003, A002 | 默认无风险利率 0；零波动不显示。 |
+| `simple_return` | 简单收益率 / Simple Return | `implemented` | `metrics.py`, `knowledge.py`, `ui.py` | `log_return`, `compound_return`, `returns_and_pct_change`, `annualized_return` | `drafted` | P003, A009, A032 | 批次 2 已起草；首尾收盘价；不含分红/费用；百分数/小数区分。 |
+| `log_return` | 对数收益率 / Log Return | `theory_only` | 无 | `simple_return`, `compound_return`, `annualized_return`, `volatility` | `drafted` | A032, A020, A009 | 批次 2 已起草；`theory_only`；当前不使用对数收益；与简单收益率区分。 |
+| `compound_return` | 复合收益 / Compound Return | `implemented` | `metrics.py`, `learning.py`, `knowledge.py` | `annualized_return`, `arithmetic_vs_geometric_mean`, `maximum_drawdown`, `equity_curve` | `drafted` | P003, P005, A009, A032 | 批次 2 已起草；多期乘法；学院和净值；先涨后跌/回本例子。 |
+| `annualized_return` | 年化收益 / Annualized Return | `implemented` | `metrics.py`, `knowledge.py` | `compound_return`, `arithmetic_vs_geometric_mean`, `volatility`, `maximum_drawdown` | `drafted` | P003, A009, A032 | 批次 2 已起草；252/n 几何换算；不是预测；短样本放大。 |
+| `arithmetic_vs_geometric_mean` | 算术平均与几何平均 / Arithmetic vs Geometric Mean | `needs_code_review` | `metrics.py`, `statistics.py` | `compound_return`, `annualized_return`, `sharpe_ratio`, `volatility` | `drafted` | P003, A009, A032, A013 | 批次 2 已起草；算术/几何均值分层；无并列 UI；已分三层说明。 |
+| `variance` | 方差 / Variance | `implemented` | `metrics.py`, `statistics.py`, `knowledge.py`, `ui_analysis.py` | `standard_deviation`, `covariance`, `sample_and_population`, `volatility` | `drafted` | P003, A009 | 批次 2 已起草；样本分母 `n−1` vs 总体 `n`；小数/百分数单位。 |
+| `standard_deviation` | 标准差 / Standard Deviation | `implemented` | `metrics.py`, `knowledge.py` | `variance`, `volatility`, `standard_error`, `sharpe_ratio` | `drafted` | P003, A009 | 批次 2 已起草；样本标准差；样本/总体分母；年化基础。 |
+| `volatility` | 波动率 / Volatility | `implemented` | `metrics.py`, `knowledge.py`, `ui_analysis.py` | `standard_deviation`, `sharpe_ratio`, `autocorrelation_and_stationarity`, `maximum_drawdown` | `drafted` | P003, A009, A020, A022 | 批次 2 已起草；日标准差 × `√252`；历史波动非未来预测。 |
+| `maximum_drawdown` | 最大回撤 / Maximum Drawdown | `implemented` | `metrics.py`, `knowledge.py`, `ui_analysis.py` | `equity_curve`, `volatility`, `sharpe_ratio`, `rebalancing_and_turnover` | `drafted` | P003, A014, A026 | 批次 2 已起草；路径指标；恢复涨幅；非未来损失上限。 |
+| `sharpe_ratio` | 夏普比率 / Sharpe Ratio | `implemented` | `metrics.py`, `knowledge.py`, `ui_strategy.py` | `volatility`, `annualized_return`, `benchmark`, `standard_deviation`, `maximum_drawdown` | `drafted` | P003, A002, A009, A026 | 批次 2 已起草；默认无风险利率 0；零波动不显示；不是盈利概率。 |
 
 ## 策略与执行（10）
 
@@ -211,9 +222,9 @@
 4. **DeepSeek 面板文案与按钮重命名**：`ui_ai.py` 提示“请在本页上方‘DeepSeek 连接设置’配置密钥”，但面板没有连接控件，实际在 `⚙` → DeepSeek；同时 `ui_deepseek.py` 的“保存选定回答到学习笔记”需按目标版本改为“保存选定回答到研究笔记”，并同步成功/错误提示。
 5. **Academy 过拟合课程知识解释**：第 8 课没有 `readings`，`render_knowledge("bias", None)` 会显示“没有足够计算值”。手册已说明以表格/结论为准；是否需要传入模拟结果，待 Codex 判断。
 6. **12 个 `needs_code_review` 专业词条**：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。不拆分 ID，总数保持 85。
-7. **复合词条文章分层规则**：后续文章必须分别写清“已实现/已显示”“未显示/未提供”“未实现”三部分；不得把整手、固定滑点、MAE、均值、样本方差等已实现部分误写成 theory_only，也不得把碎股、市场冲击、RMSE、中位数、总体公式等未实现部分写成按钮或指标。
+7. **复合词条文章分层规则**：批次 2 已对四个 `needs_code_review` 词条分节；后续文章必须继续分别写清“已实现/已显示”“未显示/未提供”“未实现”三部分；不得把整手、固定滑点、MAE、均值、样本方差等已实现部分误写成 theory_only，也不得把碎股、市场冲击、RMSE、中位数、总体公式等未实现部分写成按钮或指标。
 8. **港股代码位数**：`normalize_symbol` 接受 1–5 位并补足五位，但侧栏提示写“港股请输入 5 位”。手册已同时说明；是否统一提示，待 Codex 判断。
-9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S022 与 A001–A031 仍待核验。发布前更新 `official.md`、`academic.md` 和文章核验日期。
+9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S024 与 A001–A035 仍待核验。批次 2 的 20 篇文章状态为 `drafted`，外部来源未逐条读取，不能标 `source_checked`；发布前更新 `official.md`、`academic.md` 和文章核验日期。
 10. **GUI 验收**：本批次只写文档，未启动 WebView，也未核对实际 DOM。Codex 接入手册内容后，必须按 AGENTS.md 做真实 WebView DOM/控件验收，不能把编译、健康检查或窗口显示当作通过。
 
 ## 计数与验收
@@ -221,13 +232,16 @@
 | 项目 | 数量 | 状态 |
 | --- | --- | --- |
 | 使用手册 | 10 | 全部有草稿；8 篇 `source_checked`，2 篇 `review_needed`（`workspace`, `academy`） |
-| 专业词条 | 85 | 全部列入目录；正文均为 `todo` |
+| 专业词条 | 85 | 全部列入目录；20 篇 `drafted`，65 篇 `todo` |
 | 合计内容项 | 95 | 与交接文档一致 |
+| `drafted` 专业文章 | 20 | `market_data` 10、`return_risk` 10 |
+| `todo` 专业文章 | 65 | 批次 3–5 待撰写 |
+| `source_checked` 专业文章 | 0 | 外部来源未逐条读取，不能标 `source_checked` |
 | `implemented` 专业词条 | 62 | 逐行统计；见各分类表 |
 | `theory_only` 专业词条 | 10 | `corporate_actions`, `log_return`, `mean_reversion`, `walk_forward_analysis`, `data_snooping_and_multiple_testing`, `diversification`, `multi_currency_portfolio`, `sampling_distribution`, `confidence_interval`, `autocorrelation_and_stationarity` |
 | `academy_demo` 专业词条 | 1 | `overfitting` |
 | `needs_code_review` 专业词条 | 12 | `trading_calendar`, `timezone_and_session`, `data_quality_and_bias`, `arithmetic_vs_geometric_mean`, `lot_size_and_fractional_shares`, `slippage_liquidity_market_impact`, `cash_position_and_pnl`, `rebalancing_and_turnover`, `sample_and_population`, `mean_and_median`, `standard_error`, `mae_and_rmse` |
 | `needs_code_review` 手册章节 | 1 | `workspace` |
-| 外部来源 | S001–S022 | S001–S007 入口已由 Codex 确认可访问，字段/条款待核验；S008–S022 待核验 |
+| 外部来源 | S001–S024 | S001–S007 入口已由 Codex 确认可访问，字段/条款待核验；S008–S024 待核验 |
 | 项目内来源 | P001–P006 | 已只读核对 |
-| 学术来源 | A001–A031 | 书目信息待复核，标记 `NEEDS_REVIEW` |
+| 学术来源 | A001–A035 | 书目信息待复核，标记 `NEEDS_REVIEW` |
