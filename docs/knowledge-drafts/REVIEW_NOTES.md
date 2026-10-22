@@ -4,7 +4,8 @@
 批次：使用手册 10 篇
 代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
 恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）
-写作范围：仅新增 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
+写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
+批次 1 草稿提交：`09b003f`；本文件同时记录 2026-10-22 Codex 复核后的修订。
 
 ## 1. 本轮完成内容
 
@@ -13,7 +14,18 @@
 - `references/official.md`：S001–S022 外部官方来源；P001–P006 项目内依据。
 - `references/academic.md`：A001–A031 论文、教材和大学课程。
 - `references/source-map.md`：手册 ID 到来源与代码位置的映射。
-- `README.md`（如已创建）：目录使用说明和批次边界。
+- `README.md`：目录使用说明和批次边界。
+
+### 1.1 Codex 批次 1 复核结论与修订（2026-10-22）
+
+Codex 对批次 1 的复核结论已落实为以下修改：
+
+1. `CATALOG.md` 中 12 个复合或部分实现词条统一改为 `needs_code_review`：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。不拆分 ID，专业词条总数保持 85。
+2. `manual/research_notes.md` 已修正草稿丢失说明：SQLite 已保存草稿不会因清除 WebView 本地存储而删除；只有尚未同步的输入可能丢失；只有“放弃草稿”会删除数据库草稿和草稿附件。
+3. `manual/deepseek.md` 中目标版本的“学习笔记”已统一改为“研究笔记”。当前程序按钮“保存选定回答到学习笔记”仍需同步重命名，见第 4.2 节。
+4. `CATALOG.md` 与 `REVIEW_NOTES.md` 的状态统计已按逐行状态更新：`implemented` 62、`theory_only` 10、`academy_demo` 1、`needs_code_review` 12 个专业词条，另有 1 个手册章节 `workspace` 为 `needs_code_review`。
+5. `references/official.md` 中 S001–S007 已改为“官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验”；没有把入口可访问写成全部内容已经核验。
+6. 已重新核对：手册 10 篇、专业词条 85 个、手册相关术语 ID 均存在、修改范围仅限 `docs/knowledge-drafts/`。
 
 ## 2. 只读核对范围
 
@@ -83,38 +95,52 @@
    - `normalize_symbol` 对港股接受 1–5 位数字并补足五位；侧栏提示写“港股请输入 5 位”。
    - 手册同时说明“1–5 位会补足为五位”；是否统一提示，待 Codex 判断。
 
-7. **部分实现词条的分层**
-   - `lot_size_and_fractional_shares`：整手已实现，碎股未实现，按交接文档标 `theory_only`。
-   - `slippage_liquidity_market_impact`：固定基点滑点已实现，流动性和市场冲击未实现，按交接文档标 `theory_only`。
-   - `rebalancing_and_turnover`：曲线假设每日固定权重再平衡，换手/成本未建模；标 `needs_code_review`，文章需决定拆分或只写假设。
-   - `mae_and_rmse`：MAE 已显示，RMSE 未显示。
-   - `mean_and_median`：均值已显示，中位数未显示。
-   - `sample_and_population`：样本分母 `n−1` 已使用，总体公式未提供。
-   - `standard_error`：t 检验内部使用，未单独显示。
-   - `cash_position_and_pnl`：现金/股数逐日记录，PnL 可推导但无单独列。
-   - `trading_calendar`、`timezone_and_session`：使用实际交易日和北京时间，但不提供独立交易日历/交易时段模型。
+7. **复合或部分实现词条统一复核**
+   - 按 Codex 复核结论，以下 12 个词条统一标 `needs_code_review`，不拆分 ID：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。
+   - 其中已实现或已显示的部分包括：实际交易日对齐、北京时间显示、字段校验、算术均值、整手数量、固定基点滑点、现金/股数记录、每日固定权重再平衡假设、样本分母 `n−1`、均值、t 检验内部标准误、MAE。
+   - 未实现、未显示或未建模的部分包括：独立交易日历服务、盘中交易时段、幸存者/前视偏差控制、算术/几何均值并列比较、碎股、流动性与市场冲击、单独 PnL 列、换手/调仓成本、总体公式、中位数、单独标准误显示、RMSE。
+   - 后续文章必须分段说明这些差异，不得把已实现部分误写成 `theory_only`，也不得把未实现部分写成按钮或指标。
 
 ## 4. `needs_code_review` 清单
+
+### 4.1 专业词条（12）
+
+| ID | 部分实现/待复核内容 | 建议 |
+| --- | --- | --- |
+| `trading_calendar` | 实际交易日用于对齐；无独立日历服务 | 文章分层：已使用日期 vs 未提供日历接口 |
+| `timezone_and_session` | 接收时间存 UTC、显示北京时间；不建模盘中交易时段 | 文章分层：时间戳 vs 交易时段 |
+| `data_quality_and_bias` | 字段校验已实现；幸存者/前视偏差未完全控制 | 逐项区分缺失、停牌、重复、异常值和偏差 |
+| `arithmetic_vs_geometric_mean` | 算术均值用于夏普分子、几何年化用于收益换算；无并列比较 UI | 文章并列解释，不虚构比较指标 |
+| `lot_size_and_fractional_shares` | 整手已实现；碎股未实现 | 不拆 ID；文章分节说明 |
+| `slippage_liquidity_market_impact` | 固定基点滑点已实现；流动性与市场冲击未实现 | 不拆 ID；文章分节说明 |
+| `cash_position_and_pnl` | 现金/股数逐日记录；PnL 可推导但无单独列 | 说明推导方式，不写“PnL 指标” |
+| `rebalancing_and_turnover` | 每日固定权重再平衡假设；换手/成本未建模 | 说明假设，不写完整成本模型 |
+| `sample_and_population` | 样本分母 `n−1` 已使用；总体公式未提供 | 文章并列，标注软件口径 |
+| `mean_and_median` | 均值已显示；中位数未显示 | 文章分层说明 |
+| `standard_error` | t 检验内部计算；不单独显示 | 说明内部使用，不写独立指标 |
+| `mae_and_rmse` | MAE 已显示；RMSE 未显示 | 文章分层说明，不拆 ID |
+
+### 4.2 手册与程序事项
 
 | 对象 | 问题 | 建议 |
 | --- | --- | --- |
 | `workspace`（手册） | 三入口、顶栏改名、设置标签尚未在当前代码实现 | Codex 接入手册内容时按目标结构改造，并做 WebView DOM 验收 |
-| `rebalancing_and_turnover` | 每日固定权重再平衡已假设，换手/成本未建模 | 决定文章是否拆分“再平衡假设”和“换手成本”；不要写成完整成本模型 |
 | `academy`（文章状态 `review_needed`） | 当前仍有测验/学习中心入口，目标移除 | 移除旧入口后复核测试和帮助文本 |
 | `deepseek`（文案差异） | 面板提示与实际设置位置不一致 | 修正文案或调整入口；手册已按实际位置写 |
+| `deepseek` 按钮重命名 | 当前程序按钮为“保存选定回答到学习笔记” | 目标版本改为“保存选定回答到研究笔记”，同步成功/错误提示和测试 |
 | `academy` 第 8 课 | 过拟合课程知识解释无当前值 | 决定是否传模拟结果或改写为“本课无单一指标” |
-| `mae_and_rmse`、`mean_and_median`、`sample_and_population`、`standard_error`、`cash_position_and_pnl`、`trading_calendar`、`timezone_and_session` | 部分实现/部分显示 | 后续文章统一采用“已实现/未显示/未建模”分层，必要时拆 ID |
 | 港股代码提示 | 1–5 位补足 vs 界面提示 5 位 | 统一文案或输入校验；不要改变 `normalize_symbol` 行为前先加测试 |
+| GUI 验收 | 本批次未启动 WebView，未核对实际 DOM | 按 AGENTS.md 做真实 WebView DOM/控件验收 |
 
 ## 5. `NEEDS_REVIEW` 清单
 
-以下项目不是软件代码问题，而是外部页面/书目未能在本轮联网核验：
+以下项目仍需逐项核验。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但入口可访问不等于全部内容已经核验：
 
-1. `S001` AKShare 股票数据文档：接口名、字段、复权参数、上游来源。
-2. `S002` 上海证券交易所交易规则：链接是否为当前有效版本、生效日期、申报单位和涨跌幅条款。
-3. `S003` 香港交易所交易运作常见问题：交易单位/每手股数的具体表述。
-4. `S004` 香港交易所 VCM 常见问题：机制细节和适用证券范围。
-5. `S005`–`S007` DeepSeek 模型列表、Chat Completions、JSON Output：模型 ID、字段、错误码和 JSON 要求。
+1. `S001` AKShare 股票数据文档：入口可访问；接口名、字段、复权参数、上游来源待逐项核验。
+2. `S002` 上海证券交易所交易规则：入口可访问；具体条款、生效日期、申报单位和涨跌幅口径待逐项核验。
+3. `S003` 香港交易所交易运作常见问题：入口可访问；交易单位/每手股数的具体表述待核验。
+4. `S004` 香港交易所 VCM 常见问题：入口可访问；机制细节和适用证券范围待核验。
+5. `S005`–`S007` DeepSeek 模型列表、Chat Completions、JSON Output：入口可访问；模型 ID、字段、错误码和 JSON 要求待逐项核验。
 6. `S008`–`S011` Python、pandas、NumPy、SQLite 文档：版本和 API 行为。
 7. `S012` Microsoft Edge WebView2 Runtime：安装要求和版本。
 8. `S013` 巨潮资讯 A 股基础目录：端点、字段、公开访问状态。
@@ -127,7 +153,7 @@
 
 | 类型 | 数量 | 说明 |
 | --- | --- | --- |
-| 外部官方 `S` | 22 | S001–S022；页面内容未联网核验，标记 `NEEDS_REVIEW` |
+| 外部官方 `S` | 22 | S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，字段/条款待逐项核验；S008–S022 待核验 |
 | 项目内 `P` | 6 | P001–P006；2026-10-22 已读 |
 | 学术 `A` | 31 | A001–A031；书目信息待复核 |
 | 手册引用 | 10 篇 | 每篇至少引用 P 文档；关键页面引用 S/A |
@@ -138,25 +164,26 @@
 1. 顶栏“新手使用指引” → “使用手册”，以及“快速开始/功能说明/专业知识库”三入口的实际接入。
 2. 设置“新手模式（关闭为专业模式）” → “显示详细解释提示”，确认只影响提示密度。
 3. Academy 移除“保存实验与测验”入口，保留固定教学样本和参数实验。
-4. DeepSeek 面板“本页上方配置”文案与 `⚙` → DeepSeek 实际位置不一致。
+4. DeepSeek 面板“本页上方配置”文案与 `⚙` → DeepSeek 实际位置不一致；同时把“保存选定回答到学习笔记”改为“保存选定回答到研究笔记”，同步成功/错误提示和测试。
 5. Academy 第 8 课知识解释无当前值，确认是否需要传入模拟结果。
-6. `rebalancing_and_turnover` 的“每日再平衡假设/换手成本未建模”如何分层。
-7. 部分实现词条的 `theory_only`/`implemented` 标注：`mae_and_rmse`、`mean_and_median`、`sample_and_population`、`standard_error`、`cash_position_and_pnl`、`trading_calendar`、`timezone_and_session`。
+6. 12 个 `needs_code_review` 专业词条：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；不拆分 ID。
+7. 后续文章对上述复合词条分节写明“已实现/已显示”“未显示/未提供”“未实现”，不得把整手、固定滑点、MAE、均值等已实现部分误写成 `theory_only`。
 8. 港股 1–5 位补足与界面“5 位”提示是否统一。
-9. 外部来源 `S001`–`S022`、`A001`–`A031` 的页面/书目复核和核验日期更新。
+9. 外部来源：S001–S007 入口已由 Codex 确认可访问，但字段/条款/生效口径待逐项核验；S008–S022 与 A001–A031 仍待核验。
 10. 接入手册后按 AGENTS.md 做真实 WebView DOM/控件验收；本批次未启动 GUI，不能把文档完成当成验收通过。
 
 ## 8. 未执行事项
 
 - 未启动 Streamlit 或桌面 WebView；未核对实际 DOM。手册中的控件名称来自代码 `st.button`/`st.selectbox`/`st.text_input` 等定义，但实际渲染仍需 GUI 验收。
-- 未联网核验外部页面；2026-10-22 的 WebFetch 尝试被网络策略阻止。
+- 未逐项核验外部页面内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款和生效口径仍需逐项核验；S008–S022 未联网核验。
 - 未运行付费 DeepSeek 请求；手册中的请求边界来自代码和现有文档。
 - 未修改或迁移 SQLite 数据库；未写入任何 Key；未创建安装包、标签或 Release。
+- 本次修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只改文档。
 
 ## 9. 声明
 
-本轮只新增/更新 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册草稿尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+本轮修订只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册草稿尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
 
 ## 10. 下一批次建议
 
-批次 2：市场与数据、收益与风险共 20 篇专业文章。建议先写 `instrument_identity`、`ohlcv`、`price_adjustment`、`data_provenance`、`simple_return`、`volatility`、`maximum_drawdown`、`sharpe_ratio`，把手册中的口径延伸到公式和手算例子；继续使用 `theory_only` 标注未实现能力，并在写完后把 `CATALOG.md` 中对应文章状态从 `todo` 更新为 `drafted` 或 `source_checked`。
+批次 2：市场与数据、收益与风险共 20 篇专业文章。建议先写 `instrument_identity`、`ohlcv`、`price_adjustment`、`data_provenance`、`simple_return`、`volatility`、`maximum_drawdown`、`sharpe_ratio`，把手册中的口径延伸到公式和手算例子；继续使用 `theory_only` 标注未实现能力，并在写完后把 `CATALOG.md` 中对应文章状态从 `todo` 更新为 `drafted` 或 `source_checked`。本次修订不进入批次 2。

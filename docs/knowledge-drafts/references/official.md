@@ -6,7 +6,7 @@
 
 - `S` 编号用于外部官方文档、数据服务和软件 API。
 - `P` 编号用于本项目内已读的规范、架构、方法和数据文档；它们不是外部权威来源，只用于证明当前软件行为。
-- 外部页面在 2026-10-22 尝试联网核验时被当前网络策略阻止，未能逐页读取正文。下列链接和用途来自项目现有文档或通行官方入口；页面内容、版本、生效日期和具体条款在发布前必须重新核验，统一标记 `NEEDS_REVIEW`。
+- S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问；但入口可访问不等于接口字段、条款、生效日期或生效口径已经核验。S008–S022 在 2026-10-22 未联网核验。下列链接和用途来自项目现有文档或通行官方入口；所有外部来源的具体内容在发布前仍必须逐项核验。
 - 会变化的交易规则、费用、结算、数据接口和软件 API 不应只依赖本表；写作和发布时应重新访问原始页面，并记录新的核验日期。
 - 本表不使用搜索结果链接、聚合转载或内容农场作为关键定义的唯一来源。
 
@@ -14,13 +14,13 @@
 
 | ID | 标题 | 机构/作者 | 年份或版本 | 原始页面 | 适用市场/范围 | 支持的具体主张 | 核验状态 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S001 | AKShare 股票数据文档 | AKShare 项目 | 现行文档 | [AKShare 股票数据文档](https://github.com/akfamily/akshare/blob/main/docs/data/stock/stock.md) | A 股、港股历史日线 | `stock_zh_a_hist_tx`、`stock_hk_hist`、`stock_hk_daily` 接口与字段；复权参数 | NEEDS_REVIEW：页面未联网复核 |
-| S002 | 上海证券交易所交易规则 | 上海证券交易所 | 以官网现行版本为准 | [上海证券交易所交易规则](https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/c_20260424_10816482.shtml) | A 股 | 交易规则、申报单位、涨跌幅等制度背景；本软件只做简化假设 | NEEDS_REVIEW：页面未联网复核，生效日期待确认 |
-| S003 | 证券市场监管常见问题：交易运作 | 香港交易所 | 以官网现行版本为准 | [HKEX Securities Market Operations FAQ](https://www.hkex.com.hk/Global/Exchange/FAQ/Securities-Market/Trading/Securities-Market-Operations?sc_lang=en) | 港股 | 交易单位/每手股数等制度背景；软件要求用户自行核对交易单位 | NEEDS_REVIEW：页面未联网复核 |
-| S004 | 波动调节机制（VCM）常见问题 | 香港交易所 | 以官网现行版本为准 | [HKEX VCM FAQ](https://www.hkex.com.hk/Global/Exchange/FAQ/Securities-Market/Trading/VCM?sc_lang=en) | 港股 | 波动调节机制背景；当前回测未模拟 VCM | NEEDS_REVIEW：页面未联网复核 |
-| S005 | 列出模型 | DeepSeek | 现行 API 文档 | [DeepSeek List Models](https://api-docs.deepseek.com/api/list-models/) | DeepSeek API | 模型列表接口；软件从官方接口取得模型 ID 和能力 | NEEDS_REVIEW：页面未联网复核 |
-| S006 | Chat Completions | DeepSeek | 现行 API 文档 | [DeepSeek Create Chat Completion](https://api-docs.deepseek.com/api/create-chat-completion/) | DeepSeek API | 对话补全、流式响应和错误状态 | NEEDS_REVIEW：页面未联网复核 |
-| S007 | JSON Output | DeepSeek | 现行指南 | [DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/) | DeepSeek API | JSON 输出模式；软件在本地再次验证字段和参数 | NEEDS_REVIEW：页面未联网复核 |
+| S001 | AKShare 股票数据文档 | AKShare 项目 | 现行文档 | [AKShare 股票数据文档](https://github.com/akfamily/akshare/blob/main/docs/data/stock/stock.md) | A 股、港股历史日线 | `stock_zh_a_hist_tx`、`stock_hk_hist`、`stock_hk_daily` 接口与字段；复权参数 | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
+| S002 | 上海证券交易所交易规则 | 上海证券交易所 | 以官网现行版本为准 | [上海证券交易所交易规则](https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/c_20260424_10816482.shtml) | A 股 | 交易规则、申报单位、涨跌幅等制度背景；本软件只做简化假设 | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
+| S003 | 证券市场监管常见问题：交易运作 | 香港交易所 | 以官网现行版本为准 | [HKEX Securities Market Operations FAQ](https://www.hkex.com.hk/Global/Exchange/FAQ/Securities-Market/Trading/Securities-Market-Operations?sc_lang=en) | 港股 | 交易单位/每手股数等制度背景；软件要求用户自行核对交易单位 | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
+| S004 | 波动调节机制（VCM）常见问题 | 香港交易所 | 以官网现行版本为准 | [HKEX VCM FAQ](https://www.hkex.com.hk/Global/Exchange/FAQ/Securities-Market/Trading/VCM?sc_lang=en) | 港股 | 波动调节机制背景；当前回测未模拟 VCM | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
+| S005 | 列出模型 | DeepSeek | 现行 API 文档 | [DeepSeek List Models](https://api-docs.deepseek.com/api/list-models/) | DeepSeek API | 模型列表接口；软件从官方接口取得模型 ID 和能力 | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
+| S006 | Chat Completions | DeepSeek | 现行 API 文档 | [DeepSeek Create Chat Completion](https://api-docs.deepseek.com/api/create-chat-completion/) | DeepSeek API | 对话补全、流式响应和错误状态 | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
+| S007 | JSON Output | DeepSeek | 现行指南 | [DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/) | DeepSeek API | JSON 输出模式；软件在本地再次验证字段和参数 | 官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验 |
 | S008 | Python 3 文档 | Python Software Foundation | 现行版本 | [Python Documentation](https://docs.python.org/3/) | Python | 语言、异常、模块、类型注解、`sqlite3`、`dataclasses` 等 | NEEDS_REVIEW：页面未联网复核 |
 | S009 | pandas 文档 | pandas 开发团队 | 现行版本 | [pandas Documentation](https://pandas.pydata.org/docs/) | Python 数据处理 | Series/DataFrame、索引、`pct_change`、`rolling`、缺失值、连接 | NEEDS_REVIEW：页面未联网复核 |
 | S010 | NumPy 文档 | NumPy 开发团队 | 现行版本 | [NumPy Documentation](https://numpy.org/doc/stable/) | Python 数值计算 | 数组、有限值检查、向量化运算 | NEEDS_REVIEW：页面未联网复核 |
@@ -52,7 +52,7 @@
 
 ## 待复核事项
 
-1. 所有 `S` 来源的页面正文、版本号、生效日期和条款未在 2026-10-22 联网核验；发布前必须重新访问原始页面。
+1. `S001`–`S007` 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款、版本号、生效日期和生效口径仍需逐项核验；`S008`–`S022` 的页面内容未在 2026-10-22 联网核验。发布前必须重新访问原始页面。
 2. `S002` 的上交所规则链接包含 2026 年日期，需确认是否为当前有效版本；`S003`、`S004` 的港交所页面需确认语言版本和更新时间。
 3. `S001` 的 AKShare 文档需确认 A 股/港股接口名称、字段和复权参数仍与当前代码一致；上游接口可能变化。
 4. `S013` 的巨潮资讯端点需确认仍可公开访问，且字段足以支持代码/名称候选；本软件不把目录当作上市状态验证。
