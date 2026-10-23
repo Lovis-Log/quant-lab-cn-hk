@@ -1,11 +1,11 @@
-# 批次 1 复核记录与批次 2 修订记录
+# 批次 1 复核、批次 2 修订与批次 3 记录
 
-日期：2026-10-22；批次 2 修订：2026-10-23
-批次：使用手册 10 篇；专业文章批次 2 共 20 篇
+日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23
+批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇
 代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
-恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）
+恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）
 写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
-批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订基于 `0ada6fd`。
+批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`。
 
 ## 0. 批次 2 修订摘要（2026-10-23）
 
@@ -18,7 +18,7 @@
 7. 统计更新：专业词条 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 2 为 `implemented` 13、`needs_code_review` 5、`theory_only` 2。
 8. 来源状态：S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，具体规则仍按文章需要核验；A032、A034 书目/DOI 已核验；A033 修正 ISBN 后书目已核验；A035 第三版、ISBN 和 2017 出版日期已核验。
 9. 全目录扫描确认除合法状态词 `todo` 外，不存在英文内部编辑批注、未完成标记或其他内部自我校对文字。
-10. 手册仍为 10 篇，专业词条仍为 85 个，批次 2 仍为 20 篇且全部 `drafted`；本次不进入批次 3。
+10. 手册仍为 10 篇，专业词条仍为 85 个，批次 2 仍为 20 篇且全部 `drafted`；当时不进入批次 3，批次 3 随后单独完成。
 
 ## 1. 本轮完成内容
 
@@ -61,7 +61,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - `quant_lab/ui.py`, `ui_strategy.py`, `ui_research.py`, `ui_analysis.py`, `ui_terminal.py`, `ui_learning.py`, `ui_deepseek.py`, `ui_settings.py`, `ui_updates.py`, `ui_knowledge.py`, `ui_ai.py`
 - `quant_lab/strategy.py`, `research.py`, `metrics.py`, `notes.py`, `storage.py`, `paths.py`, `ai_context.py`, `deepseek.py`, `ai_research.py`, `credentials.py`, `names.py`, `refresh.py`, `market_data.py`, `processing.py`, `data.py`
 
-这些文件只读，没有修改。
+批次 3 额外只读核对 `strategy.py`、`backtest.py`、`research.py`、`metrics.py`、`storage.py`、`ui_strategy.py`、`learning.py`、`ui_learning.py`、`statistics.py`，用于核对策略条件、成交时序、费用、样本切分、参数敏感性和实验指纹；这些文件只读，没有修改。
 
 ## 3. 事实核对结果
 
@@ -167,6 +167,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 13. `S024` ISO 4217 Currency Codes：官方入口已由 Codex 于 2026-10-23 确认可访问；货币代码标准和适用范围仍按文章需要核验。
 14. `A001`–`A031` 论文、教材和课程：DOI、ISBN、页码、版次、作者列表和课程页面版本仍待复核。`A032`、`A034` 的书目/DOI 和 `A033`、`A035` 的书目/ISBN 已于 2026-10-23 核验；书目核验不等于已读取全文。
 15. 所有交易费用、税率、结算、申报单位和涨跌幅数字：不能从本软件默认值推断现行规则；正式内容发布前必须以交易所、监管机构或券商官方资料重新核验。
+16. 批次 3 使用的 `S002`、`S003`、`S004` 交易规则、费用、整手、涨跌停和 VCM 条款仍未逐项核验；文章只把它们作为研究假设，不能写成现行法定规则。
 
 ## 6. 来源统计
 
@@ -177,6 +178,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | 学术 `A` | 35 | A032–A035 书目/DOI/ISBN 已核验；A001–A031 书目信息待复核 |
 | 手册引用 | 10 篇 | 每篇至少引用 P 文档；关键页面引用 S/A |
 | 专业词条来源映射 | 85 条 | 见 `CATALOG.md` 各行“主要来源” |
+| 批次 3 新增来源 | 0 | 沿用现有 S/P/A；未新增来源编号 |
 
 ## 7. 建议 Codex 优先复核（最多 10 项）
 
@@ -186,10 +188,12 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 4. DeepSeek 面板“本页上方配置”文案与 `⚙` → DeepSeek 实际位置不一致；同时把“保存选定回答到学习笔记”改为“保存选定回答到研究笔记”，同步成功/错误提示和测试。
 5. Academy 第 8 课知识解释无当前值，确认是否需要传入模拟结果。
 6. 13 个 `needs_code_review` 专业词条：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；不拆分 ID。
-7. 后续文章对上述复合词条分节写明“已实现/已显示”“未显示/未提供”“未实现”，不得把整手、固定滑点、MAE、均值等已实现部分误写成 `theory_only`。
+7. 后续文章对上述复合词条分节写明“已实现/已显示”“未显示/未提供”“未实现”，不得把整手、固定滑点、MAE、均值等已实现部分误写成 `theory_only`；批次 3 已对整手、滑点、现金/PnL 三层写成。
 8. 港股 1–5 位补足与界面“5 位”提示是否统一。
 9. 外部来源：S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 入口已由 Codex 于 2026-10-23 确认可访问，但字段/条款/生效口径待逐项核验；S008–S022 与 A001–A031 仍待核验；A032–A035 书目/DOI/ISBN 已核验。
 10. 接入手册后按 AGENTS.md 做真实 WebView DOM/控件验收；本批次未启动 GUI，不能把文档完成当成验收通过。
+
+批次 3 的代码事实复核问题见第 12.4 节；本节保持最多 10 项。
 
 ## 8. 未执行事项
 
@@ -201,14 +205,15 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 本次修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只改文档。
 - 批次 2 后再次使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning；未修改程序代码。
 - 批次 2 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；首次使用默认临时目录运行时，Windows 拒绝访问 `pytest-of-LENOVO` 目录，属于环境权限问题，不是测试断言失败。本次仅修改 `docs/knowledge-drafts/`。
+- 批次 3 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次仅新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
 
 ## 9. 声明
 
-本轮（批次 1 修订、批次 2 起草与批次 2 修订）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 20 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+本轮（批次 1 修订、批次 2 起草与修订、批次 3 起草）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 40 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
 
 ## 10. 下一批次建议
 
-批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订，文章状态均为 `drafted`。下一批次（未开始）为批次 3：策略与执行、回测与研究，共 20 篇；本次提交不进入批次 3。批次 3 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
+批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订；批次 3 已完成 20 篇（策略与执行、回测与研究）草稿，文章状态均为 `drafted`。下一批次（未开始）为批次 4：组合分析、统计推断、机器学习，共 25 篇；本次提交不进入批次 4。批次 4 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
 
 ## 11. 批次 2：市场与数据、收益与风险（20 篇）
 
@@ -267,3 +272,68 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 8. 确认 `cache_and_freshness` 的 TTL、失败保留、手动绕过和 `received_at` 语义与 `data.py`/`refresh.py` 一致。
 9. 确认新增来源 S023/S024 的官方入口状态、A032–A035 的书目/DOI/ISBN 核验结果和仍需逐项核验的文章规则；正式发布前重新核验。
 10. 确认 20 篇文章状态保持 `drafted`；只有逐条读取外部资料后才能升级为 `source_checked`。
+
+## 12. 批次 3：策略与执行、回测与研究（20 篇）
+
+### 12.1 完成状态
+
+- 20 篇文章已写入 `articles/strategy_execution/`（10 篇）和 `articles/backtest_research/`（10 篇）。
+- 文章状态全部为 `drafted`；外部来源内容未逐条读取，未标 `source_checked`。
+- 软件状态：`implemented` 13 篇、`needs_code_review` 3 篇、`theory_only` 3 篇、`academy_demo` 1 篇。
+- 13 篇 `implemented`：`signal_position_order_trade`、`moving_average`、`moving_average_crossover`、`trend_following`、`lookahead_bias`、`next_open_execution`、`trading_costs`、`benchmark`、`equity_curve`、`in_sample_out_of_sample`、`temporal_split`、`parameter_sensitivity`、`reproducibility_and_audit`。
+- 3 篇 `needs_code_review`：`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`；正文均分三层写“已实现/已显示、未显示/未提供、未实现”。
+- 3 篇 `theory_only`：`mean_reversion`、`walk_forward_analysis`、`data_snooping_and_multiple_testing`；正文明确写“当前软件未实现”。
+- 1 篇 `academy_demo`：`overfitting`；只描述 Quant Academy 第 8 课固定模拟，不写自动检测器。
+- 未新增或删除内容 ID，专业词条总数仍为 85；未新增来源编号，沿用现有 S/P/A。
+- 三种策略与 `strategy.py` 一致：`single_ma` 为 `close > MA_long`；`dual_ma` 为 `MA_short > MA_long`；`trend` 为 `close > MA_long` 且 `MA_long.diff() > 0`。
+- 回测口径与 `backtest.py`/`research.py` 一致：信号 t 最早 t+1 开盘成交；复权价格只生成信号；成交和估值使用同日不复权价格；只做多、不加杠杆、不做空；卖出全部持股。
+- 基准在第二个交易日开盘尝试买入，使用同一成本与规则，不强制末日平仓。
+- 样本内外：`split=int(N×train_fraction)`；样本外统计从 `split−1` 净值开始；`split_date=raw_history["date"].iloc[split]`；参数敏感性仅样本内并跳过无效窗口。
+- 可复现性：`audit_id` 覆盖原始 CSV、信号 CSV、策略、成本配置和训练比例；来源、接收时间、市场、代码、名称、复权保存在实验档案，但不全部进入 `audit_id`；当前实验未保存源码提交或输入契约版本。
+- 批次 3 文章 frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
+
+### 12.2 公式与口径清单
+
+| 文章 ID | 核心公式/口径 | 软件状态 | 主要来源 | 待复核/说明 |
+| --- | --- | --- | --- | --- |
+| `signal_position_order_trade` | `decision_t=S_{t−1}`；`equity=cash+shares×close`；`filled/blocked` | `implemented` | P002, P003, P004 | 信号、目标持仓、订单、成交、持仓、估值分层 |
+| `moving_average` | `MA_N(t)=1/N Σ_{i=0}^{N−1} close_{t−i}`；`min_periods=N` | `implemented` | P003, P005, A008 | 窗口 2–250；前 N−1 日为空 |
+| `moving_average_crossover` | `S_t=1[MA_s(t)>MA_l(t)]` | `implemented` | P003, P005, A008 | 严格大于；相等为 0 |
+| `trend_following` | `S_t=1[close_t>MA_l(t)]×1[MA_l(t)>MA_l(t−1)]` | `implemented` | P003, P005, A008 | 短周期不参与条件 |
+| `mean_reversion` | `z_t=(P_t−μ_t)/σ_t`；`z≤−k` 入场，`z≥0` 退出 | `theory_only` | A008, A020 | 当前软件未实现 |
+| `lookahead_bias` | `S_t=f(I_t)`；成交在 `t+1` 开盘 | `implemented` | P003, P004, A016 | 无通用自动检测器 |
+| `next_open_execution` | `decision_{t+1}=S_t`；`fill=open×(1±s/10000)` | `implemented` | P003, P004, S002, S003 | 零成交量/涨跌停/T+1 可阻止成交 |
+| `lot_size_and_fractional_shares` | `max_lots=floor(cash/(fill×lot))`；卖出全部 | `needs_code_review` | S002, S003, P003, P004 | 整手已实现；碎股未实现；港股每手用户输入 |
+| `trading_costs` | `fee=max(min_comm,N×c_bps/10000)+N×t_bps/10000` | `implemented` | S002, S003, P003 | 默认值为可修改研究假设 |
+| `slippage_liquidity_market_impact` | `fill_buy=open×(1+s/10000)`；`fill_sell=open×(1−s/10000)` | `needs_code_review` | S002, S003, P003, A016 | 固定滑点已实现；订单簿/容量/冲击未实现 |
+| `benchmark` | `S_t=1`；第二个交易日开盘买入；不强制末日卖出 | `implemented` | P003, A006 | 同成本同规则；单资产买入持有 |
+| `equity_curve` | `E_t=cash_t+shares_t×close_t`；`r_t=E_t/E_{t−1}−1` | `implemented` | P003, A026 | 每日收盘估值；不复权价格 |
+| `cash_position_and_pnl` | 每日 `cash`、`shares`、`equity`；PnL 可推导 | `needs_code_review` | P003, P004, A026 | 独立 PnL/已实现/未实现列未提供 |
+| `in_sample_out_of_sample` | `split=int(N×f)`；测试从 `split−1` 净值起；`split_date=date[split]` | `implemented` | P003, A006, A016 | 单次切分，不是 walk-forward |
+| `temporal_split` | 回测同上；ML `train=[:split−1]`，`test=[split:]` | `implemented` | P003, A005, A016 | 机器学习一行间隔 |
+| `walk_forward_analysis` | 滚动训练/测试窗口拼接 | `theory_only` | P003, A005, A006, A016 | 当前只有单次切分和训练期 3 折 CV |
+| `parameter_sensitivity` | 3×3 网格；仅样本内；跳过 `short>=long` 或 `long>=len(raw_train)` | `implemented` | P003, A006, A016 | 不报告样本外、回撤或夏普 |
+| `overfitting` | Academy 固定模拟 `training(x)`/`testing(x)` | `academy_demo` | P003, P005, A006, A018 | 无自动过拟合检测器 |
+| `data_snooping_and_multiple_testing` | `FWER=1−(1−α)^m`；Bonferroni `α/m` | `theory_only` | P003, A007, A015, A016 | 当前未做多重检验校正 |
+| `reproducibility_and_audit` | `audit_id=first16hex(SHA256(raw_csv ‖ signal_csv ‖ repr(spec) ‖ repr(config) ‖ str(train_fraction)))` | `implemented` | P002, P004, S011, A034 | 未保存源码提交/输入契约版本 |
+
+### 12.3 来源与核验
+
+- 批次 3 未新增来源编号；沿用现有 S/P/A。`S002`、`S003`、`S004` 的官方入口已由 Codex 确认可访问，但交易规则、费用、整手、涨跌停和 VCM 的具体条款未逐项核验。
+- `A005`、`A006`、`A007`、`A008`、`A015`、`A016`、`A018`、`A020`、`A026` 的书目信息仍待复核；`A034` 的书目/DOI 已核验。书目核验不等于全文已读。
+- 所有费用、滑点、整手和涨跌停数字都是可修改研究假设，不得写成当前法定费用、券商报价或完整交易所仿真。
+- 文章状态全部 `drafted`；未把“入口可访问”写成“内容已核验”。
+- frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
+
+### 12.4 需要 Codex 复核的问题（批次 3）
+
+1. 确认三种策略条件与 `strategy.py` 完全一致：`single_ma` 只用长均线；`dual_ma` 严格短 > 长；`trend` 要求价格 > 长均线且长均线 `diff()>0`。
+2. 确认 `run_backtest` 使用 `close_signals.iloc[i-1]` 决策、t+1 开盘成交、卖出全部持股、只做多；确认基准在第二个交易日开盘尝试买入且不强制末日平仓。
+3. 确认 `split=int(N×train_fraction)`、样本外统计 `equity[split-1:]`、`split_date=raw_history["date"].iloc[split]` 的 off-by-one 口径与 `research.py` 一致。
+4. 确认参数敏感性仅使用 `raw_train`/`signal_train`，并跳过 `short>=long` 与 `long>=len(raw_train)`；确认“成交次数”只统计 `filled` 订单。
+5. 确认交易成本默认值、UI 标签“佣金/最低佣金/买入附加费用/卖出附加费用/单边滑点”和“研究假设”声明与 `backtest.py`/`ui_strategy.py` 一致。
+6. 确认 `lot_size_and_fractional_shares` 分层：整手已实现、碎股未实现、港股每手数量由用户输入且软件不自动验证。
+7. 确认 `slippage_liquidity_market_impact` 分层：固定基点滑点已实现；订单簿、容量和市场冲击未实现。
+8. 确认 `cash_position_and_pnl` 分层：每日 cash/shares/equity 已记录；独立 PnL/已实现/未实现盈亏列未提供。
+9. 确认 `audit_id` 的五类输入和实验档案字段：来源、接收时间、市场、代码、名称、复权保存在档案，但不全部进入 `audit_id`；当前未保存源码提交或输入契约版本。
+10. 确认 `mean_reversion`、`walk_forward_analysis`、`data_snooping_and_multiple_testing` 保持 `theory_only`，`overfitting` 保持 `academy_demo`；不要把 3 折训练期 CV 写成完整 walk-forward，也不要把 Academy 演示写成自动检测器。

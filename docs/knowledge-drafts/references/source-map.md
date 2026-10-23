@@ -1,6 +1,6 @@
 # 来源映射与用途
 
-日期：2026-10-22；批次 2 修订来源状态更新：2026-10-23
+日期：2026-10-22；批次 2 修订来源状态更新：2026-10-23；批次 3 文章映射：2026-10-23
 
 ## 映射原则
 
@@ -91,14 +91,66 @@
 | `maximum_drawdown` | `metrics.py:70`, `knowledge.py:58-63`, `ui_analysis.py:33` | 运行峰值、回撤、最大回撤 |
 | `sharpe_ratio` | `metrics.py:73-79`, `knowledge.py:64-69`, `ui_strategy.py:186-190` | 日超额均值/样本标准差 × `√252`；默认无风险利率 0 |
 
+## 批次 3 文章来源映射
+
+| 文章 ID | 主要来源 | 支持的具体主张 |
+| --- | --- | --- |
+| `signal_position_order_trade` | P002, P003, P004 | 信号、目标持仓、订单、成交、持仓和每日估值的分层；下一开盘成交 |
+| `moving_average` | P003, P005, A008 | 简单移动平均公式、`min_periods=N`、预热和窗口约束 |
+| `moving_average_crossover` | P003, P005, A008 | `dual_ma` 的短均线 > 长均线条件和严格大于边界 |
+| `trend_following` | P003, P005, A008 | 收盘价 > 长均线且长均线较前一日上升 |
+| `mean_reversion` | A008, A020 | 均值回归假说、z 分数和自相关/非平稳性背景；当前未实现 |
+| `lookahead_bias` | P003, P004, A016 | 收盘信号、下一开盘成交、复权信号与原始成交、时间切分 |
+| `next_open_execution` | P003, P004, S002, S003 | 信号 t、成交 t+1 开盘；交易规则和交易日背景 |
+| `lot_size_and_fractional_shares` | S002, S003, P003, P004 | 整数交易单位、碎股未实现、港股每手数量用户输入 |
+| `trading_costs` | S002, S003, P003 | 佣金、最低佣金、附加费和滑点公式；默认值为研究假设 |
+| `slippage_liquidity_market_impact` | S002, S003, P003, A016 | 固定基点滑点；订单簿、容量和市场冲击未实现 |
+| `benchmark` | P003, A006 | 同成本买入持有；第二个交易日开盘尝试买入；不强制末日平仓 |
+| `equity_curve` | P003, A026 | `equity=cash+shares×不复权收盘`；每日估值和回撤基础 |
+| `cash_position_and_pnl` | P003, P004, A026 | 每日 cash/shares/equity；独立 PnL 列未提供 |
+| `in_sample_out_of_sample` | P003, A006, A016 | `split=int(N×train_fraction)`；测试从 `split−1` 净值起；`split_date=date[split]` |
+| `temporal_split` | P003, A005, A016 | 按时间切分；机器学习训练/测试一行间隔 |
+| `walk_forward_analysis` | P003, A005, A006, A016 | 滚动训练/测试概念；当前只有单次切分和训练期 3 折 CV |
+| `parameter_sensitivity` | P003, A006, A016 | 仅样本内 3×3 网格；跳过无效窗口 |
+| `overfitting` | P003, P005, A006, A018 | Academy 固定模拟；无自动过拟合检测器 |
+| `data_snooping_and_multiple_testing` | P003, A007, A015, A016 | 数据窥探、多重检验和显著性阈值；当前未校正 |
+| `reproducibility_and_audit` | P002, P004, S011, A034 | 快照、指纹、复算、ZIP 和实验档案字段；未保存源码提交/输入契约版本 |
+
+## 批次 3 代码依据
+
+行号以 2026-10-23 的 `codex/learning-center-v2` 工作树为准；复核时以符号名和测试为准。
+
+| 文章 ID | 代码位置 | 核对内容 |
+| --- | --- | --- |
+| `signal_position_order_trade` | `strategy.py:34-52`, `backtest.py:96-162`, `ui_strategy.py:44-91` | 信号、决策、订单、成交、持仓和估值字段 |
+| `moving_average` | `strategy.py:28-52`, `learning.py:31-35`, `ui_strategy.py:64-90` | SMA、`min_periods=N`、窗口约束和图表 |
+| `moving_average_crossover` | `strategy.py:21-25`, `strategy.py:43-46`, `ui_strategy.py:21-41` | `dual_ma` 条件和短/长窗口校验 |
+| `trend_following` | `strategy.py:47-50` | 收盘价 > 长均线且长均线 `diff()>0` |
+| `mean_reversion` | 无独立实现；`strategy.py` 仅三种策略 | 当前软件未实现均值回归 |
+| `lookahead_bias` | `strategy.py:34-52`, `research.py:42-63`, `backtest.py:96-99`, `statistics.py:63-80` | 信号时序、下一开盘决策、特征/标签时序 |
+| `next_open_execution` | `backtest.py:96-99`, `backtest.py:146-149`, `research.py:42-44` | `i` 日使用 `i-1` 信号；`decision_date` 与 `date` |
+| `lot_size_and_fractional_shares` | `backtest.py:118-141`, `ui_strategy.py:99-102` | 整数手数、资金递减、卖出全部持股和交易单位输入 |
+| `trading_costs` | `backtest.py:14-65`, `backtest.py:118-141`, `ui_strategy.py:94-128` | 默认参数、费用公式和 UI 输入 |
+| `slippage_liquidity_market_impact` | `backtest.py:14-38`, `backtest.py:118-141`, `ui_strategy.py:115-118` | 固定基点滑点、零成交量阻止和参数范围 |
+| `benchmark` | `backtest.py:165-169`, `research.py:44` | 常数 1 信号；第二个交易日开盘尝试买入；不强制平仓 |
+| `equity_curve` | `backtest.py:154-160`, `metrics.py:58-79`, `ui_strategy.py:200-222` | 每日 `cash+shares×close`、指标和净值图 |
+| `cash_position_and_pnl` | `backtest.py:90-160`, `storage.py:80-124` | 每日现金/股数/净值；订单和指标保存；无独立 PnL 列 |
+| `in_sample_out_of_sample` | `research.py:45-63`, `ui_strategy.py:149`, `ui_strategy.py:211-222` | `split`、`split_date`、训练/测试统计和图中切分线 |
+| `temporal_split` | `research.py:45-62`, `statistics.py:83-128` | 回测切分；机器学习训练/测试和一行间隔 |
+| `walk_forward_analysis` | `research.py:45-62`, `statistics.py:98-106` | 当前只有单次切分和训练期 `TimeSeriesSplit(3, gap=1)` |
+| `parameter_sensitivity` | `research.py:67-90`, `ui_strategy.py:232-241` | 样本内网格、跳过条件和输出列 |
+| `overfitting` | `learning.py:61-65`, `learning.py:103-109`, `ui_learning.py:11-31` | Academy 第 8 课固定模拟和结论 |
+| `data_snooping_and_multiple_testing` | `statistics.py:44-60`, `research.py:67-90` | 单次 t 检验和参数网格；无多重检验校正 |
+| `reproducibility_and_audit` | `research.py:50-63`, `storage.py:80-216`, `ui_research.py:266-282` | 指纹输入、快照、复算、报告和 ZIP |
+
 ## 专业词条来源分配
 
-`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2 已撰写市场与数据、收益与风险 20 篇；其余 65 篇仍为 `todo`。后续批次可按以下优先级补充来源：
+`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2–3 已撰写市场与数据、收益与风险、策略与执行、回测与研究共 40 篇；其余 45 篇仍为 `todo`。后续批次可按以下优先级补充来源：
 
 1. **市场与数据**：S001、S013、P004；公司行动和交易规则需补充交易所/监管机构官方页面。
 2. **收益与风险**：A009、A014、A002、P003；年化交易日假设需在正文明确。
-3. **策略与执行**：P003、A008、S002、S003、S004；市场冲击和流动性需补充微观结构来源（后续检索）。
-4. **回测与研究**：A006、A007、A015、A016、P002、P003。
+3. **策略与执行**：P003、A008、S002、S003、S004；批次 3 已完成文章映射，市场冲击和流动性仍只有概念说明。
+4. **回测与研究**：A006、A007、A015、A016、P002、P003；批次 3 已完成文章映射。
 5. **组合分析**：A001、A013、A025、A026、A027、P003。
 6. **统计推断**：A003、A009、A019、A020、A021、A029、S016。
 7. **机器学习**：A005、A010、A016、A023、S014、S015。
@@ -106,8 +158,9 @@
 
 ## 待复核与缺口
 
-- S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2 的 20 篇文章因此全部标 `drafted`，不标 `source_checked`。
-- 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）的官方入口已确认可访问，具体规则仍按文章需要核验；A032（Campbell 等）、A034（FAIR）书目/DOI 已核验；A033（Berk 与 DeMarzo）修正 ISBN 后书目已核验；A035（Bekaert 与 Hodrick）第三版、ISBN 和 2017 出版日期已核验。
+- S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2–3 的 40 篇文章因此全部标 `drafted`，不标 `source_checked`。
+- 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）的官方入口已确认可访问，具体规则仍按文章需要核验；A032（Campbell 等）、A034（FAIR）书目/DOI 已核验；A033（Berk 与 DeMarzo）修正 ISBN 后书目已核验；A035（Bekaert 与 Hodrick）第三版、ISBN 和 2017 出版日期已核验。批次 3 未新增来源编号。
+- 批次 3 的交易费用、整手、涨跌停、T+1、零成交量和 VCM 仍按简化研究假设写作；S002、S003、S004 的具体条款未逐项核验。
 - 交易费用、税率、结算、申报单位和涨跌幅规则不能只靠本项目默认值推断；当前手册只把它们写成可修改假设。
 - 市场冲击、流动性、碎股、多币种组合和滚动前向分析当前没有实现；相关文章必须标记 `theory_only`，不得虚构按钮或指标。
 - `S013` 候选目录只提供身份字段，不证明上市状态；文章不得把“目录中存在”写成“可交易”。

@@ -6,7 +6,8 @@
 
 - 批次 1：10 篇使用手册已完成草稿并通过复核修订（2026-10-22）。
 - 批次 2：市场与数据、收益与风险 20 篇专业文章已起草并完成修订（2026-10-23）。
-- 85 个专业词条已在 `CATALOG.md` 建立稳定 ID、分类、状态、模块、关联词条和主要来源；其中 20 篇为 `drafted`，65 篇为 `todo`。专业词条状态为 `implemented` 61、`needs_code_review` 13、`theory_only` 10、`academy_demo` 1。
+- 批次 3：策略与执行、回测与研究 20 篇专业文章已起草（2026-10-23）。
+- 85 个专业词条已在 `CATALOG.md` 建立稳定 ID、分类、状态、模块、关联词条和主要来源；其中 40 篇为 `drafted`，45 篇为 `todo`。专业词条状态为 `implemented` 61、`needs_code_review` 13、`theory_only` 10、`academy_demo` 1。
 - 官方、学术和项目内来源见 `references/`；编号与核验状态以来源库为准。外部来源内容未逐条读取，文章不标 `source_checked`。
 - 未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件。
 
@@ -16,7 +17,7 @@
 docs/knowledge-drafts/
   README.md                 本说明
   CATALOG.md                10 篇手册 + 85 个词条的总目录
-  REVIEW_NOTES.md           批次 1 复核与批次 2 修订记录、needs_code_review 和 NEEDS_REVIEW
+  REVIEW_NOTES.md           批次 1 复核、批次 2 修订与批次 3 记录、needs_code_review 和 NEEDS_REVIEW
   manual/                   10 篇使用手册草稿
     quick_start.md
     workspace.md
@@ -35,6 +36,8 @@ docs/knowledge-drafts/
   articles/
     market_data/            市场与数据 10 篇（已起草）
     return_risk/            收益与风险 10 篇（已起草）
+    strategy_execution/     策略与执行 10 篇（已起草）
+    backtest_research/      回测与研究 10 篇（已起草）
 ```
 
 ## 阅读顺序
@@ -54,9 +57,9 @@ docs/knowledge-drafts/
 ## 批次工作方式
 
 - 每批只交付一个批次，完成后更新 `CATALOG.md` 和 `REVIEW_NOTES.md`。
-- 当前批次：批次 2（市场与数据、收益与风险，共 20 篇专业文章；2026-10-23 完成修订）。
-- 下一批次（未开始）：批次 3（策略与执行、回测与研究，共 20 篇）。
-- 后续批次依次为：组合/统计/机器学习（25）、Python 与工程（20）、全局统一与来源复核（6）。
+- 当前批次：批次 3（策略与执行、回测与研究，共 20 篇专业文章；2026-10-23 完成草稿）。
+- 下一批次（未开始）：批次 4（组合分析、统计推断、机器学习，共 25 篇）。
+- 后续批次依次为：Python 与工程（20）、全局统一与来源复核（6）。
 
 ## 边界
 

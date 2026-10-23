@@ -1,10 +1,10 @@
 # 使用手册与专业知识库总目录
 
-状态：批次 1 手册已修订；批次 2 的 20 篇专业文章已完成修订（仍为草稿）；85 个专业词条中其余 65 篇待后续批次
+状态：批次 1 手册已修订；批次 2 的 20 篇专业文章已完成修订；批次 3 的 20 篇专业文章已起草；85 个专业词条中其余 45 篇待后续批次
 日期：2026-10-23
 目标版本：Quant Lab CN/HK `2.2.0-rc.1` 的内容输入
 当前代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
-文档基线：`0ada6fd`（批次 2 草稿）
+文档基线：`3498f98`（批次 2 修订）
 写作范围：仅 `docs/knowledge-drafts/`，未修改程序、测试、数据库、VERSION 或发行文件
 
 ## 状态与口径
@@ -33,7 +33,7 @@
 - 手册不使用复选框、任务状态、测验、打卡、完成度或“完成本章”措辞。Academy 手册只描述固定教学样本和参数实验，不描述测验或进度。
 - 手册中的“显示详细解释提示”对应产品决定中的新标签；当前 `ui_settings.py` 仍显示“新手模式（关闭为专业模式）”。
 - 所有 `implemented` 声明都以本地代码为依据；代码位置见 `references/source-map.md`。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问；S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问；具体接口字段、条款和生效口径仍待逐项核验，S008–S022 仍待核验。
-- 85 个专业词条中，批次 2 已起草并修订 20 篇（`market_data` 10、`return_risk` 10），其余 65 篇为 `todo`；本目录同时记录文章状态、来源和关联文章。
+- 85 个专业词条中，批次 2–3 已起草并修订 40 篇（`market_data` 10、`return_risk` 10、`strategy_execution` 10、`backtest_research` 10），其余 45 篇为 `todo`；本目录同时记录文章状态、来源和关联文章。
 
 ### Codex 批次 1 复核调整（2026-10-22）
 
@@ -51,7 +51,7 @@
 - `currency_and_fx` 从 `implemented` 改为 `needs_code_review`：CNY/HKD 标注与同币种限制已实现；汇率数据、汇率换算、对冲和跨币种组合未实现。
 - 专业词条统计更新为 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 2 为 `implemented` 13、`needs_code_review` 5、`theory_only` 2。
 - 来源状态：S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，具体规则仍按文章需要核验；A032、A034 书目/DOI 已核验；A033 修正 ISBN 后书目已核验；A035 第三版、ISBN 和 2017 出版日期已核验。
-- 本次修订仍只改 `docs/knowledge-drafts/`，未进入批次 3；20 篇文章保持 `drafted`。
+- 该次修订只改 `docs/knowledge-drafts/`，当时未进入批次 3；20 篇文章保持 `drafted`；批次 3 随后单独完成。
 
 ### 批次 2 进展（2026-10-22，2026-10-23 修订）
 
@@ -62,6 +62,22 @@
 - 外部来源未逐条读取内容；S001–S007 入口已由 Codex 于 2026-10-22 确认可访问；S023、S024 入口已由 Codex 于 2026-10-23 确认可访问，具体规则仍按文章需要核验；S008–S022 待核验；A032–A035 书目/DOI/ISBN 已核验，A001–A031 待核验。所有文章状态只能是 `drafted`，不标 `source_checked`。
 - 每篇计算文章含可手算样本；价格/收益率、百分数/小数、样本/总体分母在相关文章中区分；交易规则、接口、字段和复权行为标记 NEEDS_REVIEW（核验日期：2026-10-22）。
 - 文章 frontmatter 的 `last_verified: 2026-10-22` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验；外部来源仍需逐条读取。
+
+### 批次 3 进展（2026-10-23）
+
+- 20 篇专业文章已写入 `articles/strategy_execution/`（10 篇）与 `articles/backtest_research/`（10 篇），全部文章状态为 `drafted`。
+- 13 篇 `implemented`：`signal_position_order_trade`、`moving_average`、`moving_average_crossover`、`trend_following`、`lookahead_bias`、`next_open_execution`、`trading_costs`、`benchmark`、`equity_curve`、`in_sample_out_of_sample`、`temporal_split`、`parameter_sensitivity`、`reproducibility_and_audit`。
+- 3 篇 `needs_code_review`：`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`；正文均分三层写“已实现/已显示、未显示/未提供、未实现”。
+- 3 篇 `theory_only`：`mean_reversion`、`walk_forward_analysis`、`data_snooping_and_multiple_testing`；正文明确写“当前软件未实现”。
+- 1 篇 `academy_demo`：`overfitting`；只描述 Quant Academy 第 8 课固定模拟，不写自动检测器。
+- 三种策略与本地代码一致：`single_ma` 为收盘价 > 长均线；`dual_ma` 为短均线 > 长均线；`trend` 为收盘价 > 长均线且长均线较前一日上升。
+- 回测口径：信号 t 最早 t+1 开盘成交；复权价格只生成信号，成交/估值使用同日不复权价格；只做多、不加杠杆、不做空，卖出全部持股。
+- 基准在第二个交易日开盘尝试买入，使用同一成本与成交规则，不强制末日平仓。
+- 样本内外：`split=int(N×train_fraction)`，样本外统计从 `split−1` 净值开始，`split_date=raw_history["date"].iloc[split]`；参数敏感性仅样本内并跳过无效窗口。
+- 可复现性：`audit_id` 覆盖原始 CSV、信号 CSV、策略、成本配置和训练比例；来源、接收时间、市场、代码、名称、复权保存在实验档案，但不全部进入 `audit_id`；当前实验未保存源码提交或输入契约版本。
+- 不新增或删除 ID，专业词条总数仍为 85；未新增来源编号，沿用现有 S/P/A。外部交易规则、费用和制度仍未逐项核验，相关文章保持 NEEDS_REVIEW。
+- 专业词条统计保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 3 为 `implemented` 13、`needs_code_review` 3、`theory_only` 3、`academy_demo` 1。
+- 批次 3 文章 frontmatter 的 `last_verified: 2026-10-23` 表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
 
 ## 使用手册（10 篇）
 
@@ -112,31 +128,31 @@
 
 | ID | 中文标题 / English | 功能状态 | 关联模块 | 关联词条 | 文章状态 | 主要来源 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `signal_position_order_trade` | 信号、持仓、订单与成交 / Signal, Position, Order, Trade | `implemented` | `strategy.py`, `backtest.py`, `ui_strategy.py` | `moving_average_crossover`, `next_open_execution`, `cash_position_and_pnl` | `todo` | P003, P004 | 信号/订单/成交分离。 |
-| `moving_average` | 移动平均线 / Moving Average | `implemented` | `strategy.py`, `knowledge.py`, `learning.py` | `moving_average_crossover`, `trend_following`, `rolling_window` | `todo` | P003, A008 | `min_periods=N`。 |
-| `moving_average_crossover` | 均线交叉 / Moving Average Crossover | `implemented` | `strategy.py`, `ui_strategy.py` | `moving_average`, `trend_following`, `signal_position_order_trade` | `todo` | P003, A008 | 双均线趋势。 |
-| `trend_following` | 趋势跟随 / Trend Following | `implemented` | `strategy.py` | `moving_average`, `moving_average_crossover`, `mean_reversion` | `todo` | P003, A008 | 价格 > 长均线且长均线上升。 |
-| `mean_reversion` | 均值回归 / Mean Reversion | `theory_only` | 无 | `trend_following`, `moving_average`, `autocorrelation_and_stationarity` | `todo` | A008, A020 | 当前未实现。 |
-| `lookahead_bias` | 前视偏差 / Lookahead Bias | `implemented` | `research.py`, `backtest.py`, `statistics.py` | `next_open_execution`, `data_leakage`, `data_quality_and_bias` | `todo` | P003, A016 | 引擎强制次日开盘；无自动检测器。 |
-| `next_open_execution` | 下一交易日开盘成交 / Next-Open Execution | `implemented` | `backtest.py`, `research.py` | `signal_position_order_trade`, `lookahead_bias`, `trading_costs` | `todo` | P003 | 信号 t−1，成交 t。 |
-| `lot_size_and_fractional_shares` | 整手与碎股 / Lot Size and Fractional Shares | `needs_code_review` | `backtest.py`, `ui_strategy.py` | `trading_costs`, `slippage_liquidity_market_impact`, `next_open_execution` | `todo` | S002, S003, P003 | 整手已实现；碎股未实现；复合词条需 Codex 决定文章分层，不拆分 ID。 |
-| `trading_costs` | 交易成本 / Trading Costs | `implemented` | `backtest.py`, `knowledge.py`, `ui_strategy.py` | `slippage_liquidity_market_impact`, `lot_size_and_fractional_shares`, `benchmark` | `todo` | S002, S003, P003 | 佣金+最低+附加费；参数可改。 |
-| `slippage_liquidity_market_impact` | 滑点、流动性与市场冲击 / Slippage, Liquidity, Market Impact | `needs_code_review` | `backtest.py`, `knowledge.py` | `trading_costs`, `lot_size_and_fractional_shares`, `next_open_execution` | `todo` | S002, S003, P003, A016 | 固定基点滑点已实现；流动性与市场冲击未实现；复合词条需 Codex 决定分层，不拆分 ID。 |
+| `signal_position_order_trade` | 信号、持仓、订单与成交 / Signal, Position, Order, Trade | `implemented` | `strategy.py`, `backtest.py`, `ui_strategy.py` | `moving_average_crossover`, `next_open_execution`, `cash_position_and_pnl` | `drafted` | P002, P003, P004 | 批次 3 已起草；信号、目标持仓、订单、成交和每日估值分层。 |
+| `moving_average` | 移动平均线 / Moving Average | `implemented` | `strategy.py`, `knowledge.py`, `learning.py` | `moving_average_crossover`, `trend_following`, `rolling_window` | `drafted` | P003, P005, A008 | 批次 3 已起草；SMA、`min_periods=N`、窗口 2–250。 |
+| `moving_average_crossover` | 均线交叉 / Moving Average Crossover | `implemented` | `strategy.py`, `ui_strategy.py` | `moving_average`, `trend_following`, `signal_position_order_trade` | `drafted` | P003, P005, A008 | 批次 3 已起草；`dual_ma` 短均线 > 长均线，严格大于。 |
+| `trend_following` | 趋势跟随 / Trend Following | `implemented` | `strategy.py` | `moving_average`, `moving_average_crossover`, `mean_reversion` | `drafted` | P003, P005, A008 | 批次 3 已起草；收盘价 > 长均线且长均线较前一日上升；短周期不参与条件。 |
+| `mean_reversion` | 均值回归 / Mean Reversion | `theory_only` | 无 | `trend_following`, `moving_average`, `autocorrelation_and_stationarity` | `drafted` | A008, A020 | 批次 3 已起草；`theory_only`；当前软件未实现均值回归。 |
+| `lookahead_bias` | 前视偏差 / Lookahead Bias | `implemented` | `research.py`, `backtest.py`, `statistics.py` | `next_open_execution`, `data_leakage`, `data_quality_and_bias` | `drafted` | P003, P004, A016 | 批次 3 已起草；引擎强制收盘信号/下一开盘；无自动检测器。 |
+| `next_open_execution` | 下一交易日开盘成交 / Next-Open Execution | `implemented` | `backtest.py`, `research.py` | `signal_position_order_trade`, `lookahead_bias`, `trading_costs` | `drafted` | P003, P004, S002, S003 | 批次 3 已起草；信号 t−1，成交 t；不强制末日平仓。 |
+| `lot_size_and_fractional_shares` | 整手与碎股 / Lot Size and Fractional Shares | `needs_code_review` | `backtest.py`, `ui_strategy.py` | `trading_costs`, `slippage_liquidity_market_impact`, `next_open_execution` | `drafted` | S002, S003, P003, P004 | 批次 3 已起草；整手已实现；碎股未实现；港股每手数量由用户输入，软件不自动验证。 |
+| `trading_costs` | 交易成本 / Trading Costs | `implemented` | `backtest.py`, `knowledge.py`, `ui_strategy.py` | `slippage_liquidity_market_impact`, `lot_size_and_fractional_shares`, `benchmark` | `drafted` | S002, S003, P003 | 批次 3 已起草；佣金+最低+附加费；默认值为可修改研究假设。 |
+| `slippage_liquidity_market_impact` | 滑点、流动性与市场冲击 / Slippage, Liquidity, Market Impact | `needs_code_review` | `backtest.py`, `knowledge.py` | `trading_costs`, `lot_size_and_fractional_shares`, `next_open_execution` | `drafted` | S002, S003, P003, A016 | 批次 3 已起草；固定基点滑点已实现；订单簿、容量和市场冲击未实现。 |
 
 ## 回测与研究（10）
 
 | ID | 中文标题 / English | 功能状态 | 关联模块 | 关联词条 | 文章状态 | 主要来源 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `benchmark` | 基准 / Benchmark | `implemented` | `backtest.py`, `research.py`, `ui_strategy.py` | `equity_curve`, `trading_costs`, `in_sample_out_of_sample` | `todo` | P003 | 同成本买入持有。 |
-| `equity_curve` | 净值曲线 / Equity Curve | `implemented` | `backtest.py`, `metrics.py`, `ui_strategy.py` | `cash_position_and_pnl`, `maximum_drawdown`, `benchmark` | `todo` | P003 | 现金+持股×收盘。 |
-| `cash_position_and_pnl` | 现金、持仓与盈亏 / Cash, Position, and PnL | `needs_code_review` | `backtest.py`, `storage.py` | `equity_curve`, `signal_position_order_trade`, `trading_costs` | `todo` | P003 | 现金/股数逐日记录；PnL 可推导但无单独列，文章需分层说明。 |
-| `in_sample_out_of_sample` | 样本内与样本外 / In-Sample and Out-of-Sample | `implemented` | `research.py`, `ui_strategy.py` | `temporal_split`, `overfitting`, `walk_forward_analysis` | `todo` | P003, A006 | 训练/测试切分。 |
-| `temporal_split` | 时间顺序切分 / Temporal Split | `implemented` | `research.py`, `statistics.py`, `portfolio.py` | `in_sample_out_of_sample`, `time_ordered_split`, `data_leakage` | `todo` | P003, A005 | 按日期，不随机。 |
-| `walk_forward_analysis` | 滚动前向分析 / Walk-Forward Analysis | `theory_only` | 无 | `temporal_split`, `parameter_sensitivity`, `overfitting` | `todo` | A006, A016 | 当前只有训练期 3 折 CV，不是完整 walk-forward。 |
-| `parameter_sensitivity` | 参数敏感性 / Parameter Sensitivity | `implemented` | `research.py`, `ui_strategy.py` | `overfitting`, `data_snooping_and_multiple_testing`, `in_sample_out_of_sample` | `todo` | P003, A006 | 仅样本内。 |
-| `overfitting` | 过拟合 / Overfitting | `academy_demo` | `learning.py`, `guidance.py`, `research.py` | `in_sample_out_of_sample`, `parameter_sensitivity`, `data_snooping_and_multiple_testing` | `todo` | A006, A018 | 学院固定模拟演示；无自动检测。 |
-| `data_snooping_and_multiple_testing` | 数据窥探与多重检验 / Data Snooping and Multiple Testing | `theory_only` | 无 | `overfitting`, `parameter_sensitivity`, `p_value` | `todo` | A007, A015 | 当前未做多重检验校正。 |
-| `reproducibility_and_audit` | 可复现性与审计 / Reproducibility and Audit | `implemented` | `research.py`, `storage.py`, `ui_research.py` | `hash_and_fingerprint`, `data_provenance`, `schema_migration` | `todo` | P002, P004, S011 | 指纹、快照、复算、ZIP。 |
+| `benchmark` | 基准 / Benchmark | `implemented` | `backtest.py`, `research.py`, `ui_strategy.py` | `equity_curve`, `trading_costs`, `in_sample_out_of_sample` | `drafted` | P003, A006 | 批次 3 已起草；同成本买入持有；第二个交易日开盘尝试买入；不强制末日平仓。 |
+| `equity_curve` | 净值曲线 / Equity Curve | `implemented` | `backtest.py`, `metrics.py`, `ui_strategy.py` | `cash_position_and_pnl`, `maximum_drawdown`, `benchmark` | `drafted` | P003, A026 | 批次 3 已起草；`equity=cash+shares×不复权收盘`；每日估值。 |
+| `cash_position_and_pnl` | 现金、持仓与盈亏 / Cash, Position, and PnL | `needs_code_review` | `backtest.py`, `storage.py` | `equity_curve`, `signal_position_order_trade`, `trading_costs` | `drafted` | P003, P004, A026 | 批次 3 已起草；每日 cash/shares/equity 已记录；独立 PnL/已实现/未实现盈亏列未提供。 |
+| `in_sample_out_of_sample` | 样本内与样本外 / In-Sample and Out-of-Sample | `implemented` | `research.py`, `ui_strategy.py` | `temporal_split`, `overfitting`, `walk_forward_analysis` | `drafted` | P003, A006, A016 | 批次 3 已起草；`split=int(N×train_fraction)`；测试从 `split−1` 净值起；`split_date=date[split]`。 |
+| `temporal_split` | 时间顺序切分 / Temporal Split | `implemented` | `research.py`, `statistics.py`, `portfolio.py` | `in_sample_out_of_sample`, `time_ordered_split`, `data_leakage` | `drafted` | P003, A005, A016 | 批次 3 已起草；按日期不随机；机器学习训练/测试留一行间隔。 |
+| `walk_forward_analysis` | 滚动前向分析 / Walk-Forward Analysis | `theory_only` | 无 | `temporal_split`, `parameter_sensitivity`, `overfitting` | `drafted` | P003, A005, A006, A016 | 批次 3 已起草；`theory_only`；当前只有单次切分和训练期 3 折 CV，不是完整 walk-forward。 |
+| `parameter_sensitivity` | 参数敏感性 / Parameter Sensitivity | `implemented` | `research.py`, `ui_strategy.py` | `overfitting`, `data_snooping_and_multiple_testing`, `in_sample_out_of_sample` | `drafted` | P003, A006, A016 | 批次 3 已起草；仅样本内 3×3 网格；跳过无效窗口。 |
+| `overfitting` | 过拟合 / Overfitting | `academy_demo` | `learning.py`, `guidance.py`, `research.py` | `in_sample_out_of_sample`, `parameter_sensitivity`, `data_snooping_and_multiple_testing` | `drafted` | P003, P005, A006, A018 | 批次 3 已起草；Academy 固定模拟；无自动过拟合检测器。 |
+| `data_snooping_and_multiple_testing` | 数据窥探与多重检验 / Data Snooping and Multiple Testing | `theory_only` | 无 | `overfitting`, `parameter_sensitivity`, `p_value` | `drafted` | P003, A007, A015, A016 | 批次 3 已起草；`theory_only`；当前未做多重检验校正。 |
+| `reproducibility_and_audit` | 可复现性与审计 / Reproducibility and Audit | `implemented` | `research.py`, `storage.py`, `ui_research.py` | `hash_and_fingerprint`, `data_provenance`, `schema_migration` | `drafted` | P002, P004, S011, A034 | 批次 3 已起草；`audit_id` 覆盖 raw/signal CSV、策略、成本、训练比例；未保存源码提交/输入契约版本。 |
 
 ## 组合分析（8）
 
@@ -210,12 +226,12 @@
 1. `simple_return` 与 `returns_and_pct_change`：前者是金融概念，后者是 pandas 实现；保留两篇，互相交叉引用，避免重复公式推导。
 2. `temporal_split` 与 `time_ordered_split`：前者用于回测/研究切分，后者用于机器学习；保留两篇，明确“回测样本内外”与“训练/测试/交叉验证”的区别。
 3. `variance`、`standard_deviation`、`volatility`：保留三篇；方差/标准差讲统计口径，波动率讲年化近似和金融解释。
-4. `moving_average`、`moving_average_crossover`、`trend_following`：保留三篇；信号条件只在 `strategy.md` 和 `moving_average_crossover` 中集中说明，其他文章引用而不重复。
+4. `moving_average`、`moving_average_crossover`、`trend_following`：保留三篇；批次 3 已分别成文，`moving_average_crossover` 集中说明双均线条件，其他文章引用而不重复。
 5. `correlation` 与 `covariance`：保留两篇；相关矩阵、协方差矩阵和组合权重的单位/解释分别说明。
 6. `overfitting` 与 `data_snooping_and_multiple_testing`：保留两篇；前者讲样本内拟合噪声，后者讲反复检验/多重比较。
-7. `lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`：两个 ID 都混合了“已实现的一部分”和“未实现的一部分”；建议正文分节，并明确标注整手/固定滑点 `implemented`、碎股/流动性/市场冲击 `theory_only`。是否在 2.3 拆分 ID，待 Codex 判断。
+7. `lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`：两个 ID 都混合了“已实现的一部分”和“未实现的一部分”；批次 3 已按三层写成，并明确整手/固定滑点已实现、碎股/订单簿/容量/市场冲击未实现。是否在后续版本拆分 ID，待 Codex 判断。
 8. `automated_testing_git_and_modular_monolith`：复合 ID，正文必须分成“自动化测试”“Git”“模块化单体”三节；首版保留 ID 以控制文章数量，未来可拆分。
-9. `mae_and_rmse`、`mean_and_median`、`sample_and_population`、`standard_error`、`cash_position_and_pnl`、`trading_calendar`、`timezone_and_session`：这些 ID 包含部分未显示或未建模的内容；文章必须明确“软件当前显示/计算什么”，不要把未显示的部分写成按钮或指标。
+9. `mae_and_rmse`、`mean_and_median`、`sample_and_population`、`standard_error`、`cash_position_and_pnl`、`trading_calendar`、`timezone_and_session`：这些 ID 包含部分未显示或未建模的内容；批次 3 已对 `cash_position_and_pnl` 分三层说明，其余文章在后续批次必须明确“软件当前显示/计算什么”，不要把未显示的部分写成按钮或指标。
 
 ### 内容缺口
 
@@ -233,22 +249,24 @@
 4. **DeepSeek 面板文案与按钮重命名**：`ui_ai.py` 提示“请在本页上方‘DeepSeek 连接设置’配置密钥”，但面板没有连接控件，实际在 `⚙` → DeepSeek；同时 `ui_deepseek.py` 的“保存选定回答到学习笔记”需按目标版本改为“保存选定回答到研究笔记”，并同步成功/错误提示。
 5. **Academy 过拟合课程知识解释**：第 8 课没有 `readings`，`render_knowledge("bias", None)` 会显示“没有足够计算值”。手册已说明以表格/结论为准；是否需要传入模拟结果，待 Codex 判断。
 6. **13 个 `needs_code_review` 专业词条**：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。不拆分 ID，总数保持 85。
-7. **复合词条文章分层规则**：批次 2 已对五个 `needs_code_review` 词条分节；后续文章必须继续分别写清“已实现/已显示”“未显示/未提供”“未实现”三部分；不得把整手、固定滑点、MAE、均值、样本方差、CNY/HKD 标注等已实现部分误写成 theory_only，也不得把碎股、市场冲击、RMSE、中位数、总体公式、汇率换算与跨币种组合等未实现部分写成按钮或指标。
+7. **复合词条文章分层规则**：批次 2 已对五个 `needs_code_review` 词条分节；批次 3 已对 `lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl` 分三层说明。后续文章必须继续分别写清“已实现/已显示”“未显示/未提供”“未实现”三部分；不得把整手、固定滑点、MAE、均值、样本方差、CNY/HKD 标注等已实现部分误写成 theory_only，也不得把碎股、市场冲击、RMSE、中位数、总体公式、汇率换算与跨币种组合等未实现部分写成按钮或指标。
 8. **港股代码位数**：`normalize_symbol` 接受 1–5 位并补足五位，但侧栏提示写“港股请输入 5 位”。手册已同时说明；是否统一提示，待 Codex 判断。
-9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S022 仍待核验；A032–A035 书目/DOI/ISBN 已于 2026-10-23 核验，A001–A031 仍待核验。批次 2 的 20 篇文章状态为 `drafted`，外部来源未逐条读取，不能标 `source_checked`；发布前更新 `official.md`、`academic.md` 和文章核验日期。
+9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S022 仍待核验；A032–A035 书目/DOI/ISBN 已于 2026-10-23 核验，A001–A031 仍待核验。批次 2–3 的 40 篇文章状态为 `drafted`，外部来源未逐条读取，不能标 `source_checked`；发布前更新 `official.md`、`academic.md` 和文章核验日期。
 10. **GUI 验收**：本批次只写文档，未启动 WebView，也未核对实际 DOM。Codex 接入手册内容后，必须按 AGENTS.md 做真实 WebView DOM/控件验收，不能把编译、健康检查或窗口显示当作通过。
+11. **批次 3 代码事实复核**：确认三种策略条件、`run_backtest` 的 `i` 与 `i-1` 信号索引、基准第二个交易日开盘买入、`split=int(N×train_fraction)`、样本外统计从 `split−1` 起、`split_date=date[split]`、参数敏感性跳过 `short>=long` 与 `long>=len(raw_train)`、`audit_id` 的五类输入，以及实验档案未保存源码提交/输入契约版本。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 
 ## 计数与验收
 
 | 项目 | 数量 | 状态 |
 | --- | --- | --- |
 | 使用手册 | 10 | 全部有草稿；8 篇 `source_checked`，2 篇 `review_needed`（`workspace`, `academy`） |
-| 专业词条 | 85 | 全部列入目录；20 篇 `drafted`，65 篇 `todo` |
+| 专业词条 | 85 | 全部列入目录；40 篇 `drafted`，45 篇 `todo` |
 | 合计内容项 | 95 | 与交接文档一致 |
-| `drafted` 专业文章 | 20 | `market_data` 10、`return_risk` 10 |
-| `todo` 专业文章 | 65 | 批次 3–5 待撰写 |
+| `drafted` 专业文章 | 40 | `market_data` 10、`return_risk` 10、`strategy_execution` 10、`backtest_research` 10 |
+| `todo` 专业文章 | 45 | 批次 4–5 待撰写 |
 | `source_checked` 专业文章 | 0 | 外部来源未逐条读取，不能标 `source_checked` |
 | 批次 2 专业文章状态 | 20 | `implemented` 13、`needs_code_review` 5、`theory_only` 2；全部 `drafted` |
+| 批次 3 专业文章状态 | 20 | `implemented` 13、`needs_code_review` 3、`theory_only` 3、`academy_demo` 1；全部 `drafted` |
 | `implemented` 专业词条 | 61 | 逐行统计；见各分类表 |
 | `theory_only` 专业词条 | 10 | `corporate_actions`, `log_return`, `mean_reversion`, `walk_forward_analysis`, `data_snooping_and_multiple_testing`, `diversification`, `multi_currency_portfolio`, `sampling_distribution`, `confidence_interval`, `autocorrelation_and_stationarity` |
 | `academy_demo` 专业词条 | 1 | `overfitting` |
