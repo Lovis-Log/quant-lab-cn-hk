@@ -1,10 +1,10 @@
 # 使用手册与专业知识库总目录
 
-状态：批次 1 手册已修订；批次 2–3 的 40 篇专业文章已完成；批次 4 的 25 篇专业文章已起草；85 个专业词条中其余 20 篇待批次 5
+状态：批次 1 手册已修订；批次 2–4 的 65 篇专业文章已完成；批次 5 的 Python 与工程 20 篇已起草；85 个专业词条全部有草稿
 日期：2026-10-23
 目标版本：Quant Lab CN/HK `2.2.0-rc.1` 的内容输入
-当前代码基线：`codex/learning-center-v2`，提交 `7275d71`（批次 4 起点；本批次未修改程序代码）
-文档基线：`7275d71`（批次 3 文档收尾）
+当前代码基线：`codex/learning-center-v2`，提交 `c10728b`（批次 5 起点；本批次未修改程序代码）
+文档基线：`c10728b`（批次 4 文档收尾）
 写作范围：仅 `docs/knowledge-drafts/`，未修改程序、测试、数据库、VERSION 或发行文件
 
 ## 状态与口径
@@ -33,7 +33,7 @@
 - 手册不使用复选框、任务状态、测验、打卡、完成度或“完成本章”措辞。Academy 手册只描述固定教学样本和参数实验，不描述测验或进度。
 - 手册中的“显示详细解释提示”对应产品决定中的新标签；当前 `ui_settings.py` 仍显示“新手模式（关闭为专业模式）”。
 - 所有 `implemented` 声明都以本地代码为依据；代码位置见 `references/source-map.md`。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问；S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问；具体接口字段、条款和生效口径仍待逐项核验，S008–S022 仍待核验。
-- 85 个专业词条中，批次 2–4 已起草 65 篇（`market_data` 10、`return_risk` 10、`strategy_execution` 10、`backtest_research` 10、`portfolio` 8、`statistics` 9、`machine_learning` 8），其余 20 篇为 `todo`；本目录同时记录文章状态、来源和关联文章。
+- 85 个专业词条中，批次 2–5 已起草 85 篇（`market_data` 10、`return_risk` 10、`strategy_execution` 10、`backtest_research` 10、`portfolio` 8、`statistics` 9、`machine_learning` 8、`programming_engineering` 20），`todo` 为 0；本目录同时记录文章状态、来源和关联文章。
 
 ### Codex 批次 1 复核调整（2026-10-22）
 
@@ -93,6 +93,34 @@
 - 不新增、删除或拆分 ID，专业词条总数仍为 85；未新增来源编号，沿用现有 S/P/A。外部来源未逐条读取，25 篇均保持 `drafted`，不标 `source_checked`。
 - 全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 4 为 `implemented` 15、`needs_code_review` 5、`theory_only` 5。
 - 批次 4 文章 frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
+
+### 批次 5 进展（2026-10-23）
+
+- 20 篇专业文章已写入 `articles/programming_engineering/`，全部文章状态为 `drafted`。
+- 20 篇全部保持 `implemented`：技术确实被项目代码使用，但不表示软件为用户提供独立的 Python、Git、数据库管理或编程教学工具。
+- `python_values_and_types`：区分 `int`、`float`、`str`、`bool`、`None`、日期时间和 pandas/NumPy 类型；说明 `bool` 是 `int` 子类、浮点舍入和 `1% = 0.01`。
+- `python_control_flow`：以 `build_signals` 的 `if/elif`、`run_backtest` 的逐日循环与 `while lots > 0`、`RefreshCache` 早返回和 `migrate` 版本分支为例。
+- `python_functions`：区分纯计算函数与带网络/文件/数据库副作用的函数；说明默认参数、`None` 返回和异常。
+- `python_collections`：`list`、`dict`、`tuple`、`set` 的顺序、可变性和唯一性；明确 `set` 不保留业务排序。
+- `python_exceptions`：`DataValidationError`、`DataUnavailableError`、`ValueError`；缓存和名称查询捕获较宽异常以保留旧值；名称失败不代表证券不存在。
+- `python_modules_and_packages`：`quant_lab` 模块化单体、核心模块不导入 Streamlit、未来 FastAPI 仅为计划。
+- `type_hints_and_dataclasses`：类型注解不自动运行时校验；`frozen=True` 不保证深度不可变；`MarketDataProvider` 为 Protocol。
+- `numpy_arrays`：`np.isfinite` 检查 NaN 和正负无穷；数组不是主要持久化格式；`np.sin`/`np.cos` 只用于 Academy 固定模拟。
+- `pandas_series_and_dataframe`：列、索引、dtype、复制、筛选和向量化；历史缓存返回深拷贝。
+- `datetime_and_index`：行情 `date` 为无时区交易日；`received_at`/`created_at` 为 UTC；界面显示北京时间 UTC+08:00；接收时间不是交易所报价时间。
+- `missing_data`：必需字段缺失显式报错；组合共同日期内连接并 `dropna`；机器学习零成交量转 NaN 后删除含缺失行；无通用插值。
+- `returns_and_pct_change`：简单收益率 `r_t=P_t/P_{t−1}−1`；首行 NaN；只有机器学习 `volume_change` 明确 `fill_method=None`。
+- `rolling_window`：`rolling(window=N,min_periods=N).mean()`、5/20 日均线和 10 日收益标准差；窗口按交易日行数。
+- `alignment_join_and_merge`：组合按日期 inner join；回测要求 raw/signal 日期完全一致；排序并拒绝重复日期。
+- `csv_and_json`：实验 CSV 为 UTF-8 字节、zlib 压缩 BLOB、读取核对 SHA-256 后 `parse_dates` 与 `float_precision="round_trip"`；JSON 不是加密或自动 schema 验证；部分界面下载使用 UTF-8 BOM。
+- `sqlite_and_transactions`：`timeout=15`、`row_factory=sqlite3.Row`、`PRAGMA foreign_keys=ON`；上下文 commit/rollback/close；无远程数据库、账户隔离、加密或防篡改保证。
+- `schema_migration`：`SCHEMA_VERSION=4`、`PRAGMA user_version`、高版本拒绝打开、升级前 backup API 备份、`BEGIN IMMEDIATE` 事务与失败回滚；`stage_library` 与迁移分开。
+- `hash_and_fingerprint`：完整 SHA-256 用于 raw/signal CSV 和附件；`audit_id` 为前 16 个十六进制字符（64 位）；哈希不是加密、签名或第三方存证。
+- `provider_api_cache_and_concurrency`：`MarketDataProvider` Protocol、AKShare 默认实现、历史缓存 15 分钟/64 条、快照 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、single-flight 与等待超时；缓存和锁只在当前进程。
+- `automated_testing_git_and_modular_monolith`：正文拆成自动化测试、Git、模块化单体三个独立部分；测试通过不等于真实 WebView、外部接口或安装包验收；Git 不是应用按钮；FastAPI 是未来计划。
+- 不新增、删除或拆分 ID，专业词条总数仍为 85；未新增来源编号，沿用 S008–S011、S017–S020、P001–P004、A011、A012 等现有来源。
+- 全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 5 为 `implemented` 20。
+- 批次 5 文章 frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
 
 ## 使用手册（10 篇）
 
@@ -213,26 +241,26 @@
 
 | ID | 中文标题 / English | 功能状态 | 关联模块 | 关联词条 | 文章状态 | 主要来源 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `python_values_and_types` | Python 值与类型 / Python Values and Types | `implemented` | `quant_lab/*.py` | `python_control_flow`, `python_functions`, `type_hints_and_dataclasses` | `todo` | S008 | 代码库基础。 |
-| `python_control_flow` | Python 控制流 / Python Control Flow | `implemented` | `quant_lab/*.py` | `python_values_and_types`, `python_functions`, `python_exceptions` | `todo` | S008 | 条件、循环。 |
-| `python_functions` | Python 函数 / Python Functions | `implemented` | `quant_lab/*.py` | `python_modules_and_packages`, `python_control_flow`, `type_hints_and_dataclasses` | `todo` | S008 | 计算函数。 |
-| `python_collections` | Python 容器 / Python Collections | `implemented` | `quant_lab/*.py` | `python_values_and_types`, `pandas_series_and_dataframe`, `csv_and_json` | `todo` | S008 | dict/list/tuple/set。 |
-| `python_exceptions` | Python 异常 / Python Exceptions | `implemented` | `data.py`, `processing.py`, `storage.py`, `notes.py` | `python_control_flow`, `python_functions`, `automated_testing_git_and_modular_monolith` | `todo` | S008 | 显式错误，不静默替换。 |
-| `python_modules_and_packages` | Python 模块与包 / Python Modules and Packages | `implemented` | `quant_lab/`, `tests/` | `python_functions`, `automated_testing_git_and_modular_monolith`, `type_hints_and_dataclasses` | `todo` | S008 | 模块化单体。 |
-| `type_hints_and_dataclasses` | 类型注解与数据类 / Type Hints and Dataclasses | `implemented` | `backtest.py`, `statistics.py`, `portfolio.py`, `market_data.py` | `python_functions`, `python_modules_and_packages`, `python_values_and_types` | `todo` | S008, S017 | 不可变配置/结果对象。 |
-| `numpy_arrays` | NumPy 数组 / NumPy Arrays | `implemented` | `backtest.py`, `statistics.py`, `learning.py` | `pandas_series_and_dataframe`, `returns_and_pct_change`, `rolling_window` | `todo` | S010, A012 | 向量化/有限值。 |
-| `pandas_series_and_dataframe` | pandas Series 与 DataFrame / pandas Series and DataFrame | `implemented` | `data.py`, `processing.py`, `metrics.py`, `statistics.py`, `portfolio.py` | `numpy_arrays`, `datetime_and_index`, `missing_data`, `rolling_window` | `todo` | S009, A011 | 核心数据表。 |
-| `datetime_and_index` | 日期时间与索引 / Datetime and Index | `implemented` | `data.py`, `storage.py`, `ui_updates.py`, `portfolio.py` | `pandas_series_and_dataframe`, `trading_calendar`, `timezone_and_session` | `todo` | S009, S008 | 日期解析/时区/索引。 |
-| `missing_data` | 缺失数据 / Missing Data | `implemented` | `processing.py`, `statistics.py`, `portfolio.py`, `notes.py` | `data_quality_and_bias`, `pandas_series_and_dataframe`, `alignment_join_and_merge` | `todo` | S009, P004 | `dropna`/校验/不静默。 |
-| `returns_and_pct_change` | 收益率与 pct_change / Returns and pct_change | `implemented` | `metrics.py`, `statistics.py`, `portfolio.py` | `simple_return`, `log_return`, `rolling_window` | `todo` | S009, P003 | 百分比变化。 |
-| `rolling_window` | 滚动窗口 / Rolling Window | `implemented` | `strategy.py`, `statistics.py`, `learning.py` | `moving_average`, `pandas_series_and_dataframe`, `returns_and_pct_change` | `todo` | S009, P003 | `rolling`/`min_periods`。 |
-| `alignment_join_and_merge` | 对齐、连接与合并 / Alignment, Join, and Merge | `implemented` | `portfolio.py`, `research.py`, `data.py` | `datetime_and_index`, `missing_data`, `trading_calendar` | `todo` | S009, P003 | 内连接共同日期。 |
-| `csv_and_json` | CSV 与 JSON / CSV and JSON | `implemented` | `storage.py`, `ui.py`, `ui_research.py`, `ai_context.py` | `pandas_series_and_dataframe`, `reproducibility_and_audit`, `sqlite_and_transactions` | `todo` | S008, S009 | CSV 快照/JSON 假设。 |
-| `sqlite_and_transactions` | SQLite 与事务 / SQLite and Transactions | `implemented` | `storage.py`, `notes.py`, `migrations.py` | `schema_migration`, `hash_and_fingerprint`, `automated_testing_git_and_modular_monolith` | `todo` | S011, S018 | 事务/回滚/备份。 |
-| `schema_migration` | Schema 迁移 / Schema Migration | `implemented` | `migrations.py`, `storage.py` | `sqlite_and_transactions`, `reproducibility_and_audit`, `hash_and_fingerprint` | `todo` | P002, S011 | `PRAGMA user_version`。 |
-| `hash_and_fingerprint` | 哈希与指纹 / Hash and Fingerprint | `implemented` | `research.py`, `storage.py`, `notes.py`, `ai_context.py` | `reproducibility_and_audit`, `schema_migration`, `data_provenance` | `todo` | S008, P002 | SHA-256/审计指纹。 |
-| `provider_api_cache_and_concurrency` | Provider、API、缓存与并发 / Provider, API, Cache, and Concurrency | `implemented` | `market_data.py`, `data.py`, `refresh.py`, `names.py`, `securities.py` | `cache_and_freshness`, `data_provenance`, `automated_testing_git_and_modular_monolith` | `todo` | P002, P004, S001 | 单飞、TTL、并发合并。 |
-| `automated_testing_git_and_modular_monolith` | 自动化测试、Git 与模块化单体 / Automated Testing, Git, and Modular Monolith | `implemented` | `tests/`, `ARCHITECTURE.md` | `python_modules_and_packages`, `schema_migration`, `provider_api_cache_and_concurrency` | `todo` | P001, P002, S019, S020 | 复合词条，正文必须分节；未来可考虑拆分。 |
+| `python_values_and_types` | Python 值与类型 / Python Values and Types | `implemented` | `quant_lab/*.py` | `python_control_flow`, `python_functions`, `type_hints_and_dataclasses` | `drafted` | S008, P003 | 批次 5 已起草；类型、单位、bool 子类、浮点舍入与百分数口径。 |
+| `python_control_flow` | Python 控制流 / Python Control Flow | `implemented` | `quant_lab/*.py` | `python_values_and_types`, `python_functions`, `python_exceptions` | `drafted` | S008, P003 | 批次 5 已起草；`if/elif`、逐日 `for`、`while` 手数与早返回。 |
+| `python_functions` | Python 函数 / Python Functions | `implemented` | `quant_lab/*.py` | `python_modules_and_packages`, `python_control_flow`, `type_hints_and_dataclasses` | `drafted` | S008, P003 | 批次 5 已起草；纯函数与网络/文件/数据库副作用分离。 |
+| `python_collections` | Python 容器 / Python Collections | `implemented` | `quant_lab/*.py` | `python_values_and_types`, `pandas_series_and_dataframe`, `csv_and_json` | `drafted` | S008, P003 | 批次 5 已起草；list/dict/tuple/set 的顺序、可变性和唯一性。 |
+| `python_exceptions` | Python 异常 / Python Exceptions | `implemented` | `data.py`, `processing.py`, `storage.py`, `notes.py` | `python_control_flow`, `python_functions`, `automated_testing_git_and_modular_monolith` | `drafted` | S008, P004 | 批次 5 已起草；显式错误、回滚、缓存保留旧值与名称失败边界。 |
+| `python_modules_and_packages` | Python 模块与包 / Python Modules and Packages | `implemented` | `quant_lab/`, `tests/` | `python_functions`, `automated_testing_git_and_modular_monolith`, `type_hints_and_dataclasses` | `drafted` | S008, P002 | 批次 5 已起草；模块化单体、核心模块不导入 Streamlit、FastAPI 未实现。 |
+| `type_hints_and_dataclasses` | 类型注解与数据类 / Type Hints and Dataclasses | `implemented` | `backtest.py`, `statistics.py`, `portfolio.py`, `market_data.py` | `python_functions`, `python_modules_and_packages`, `python_values_and_types` | `drafted` | S008, S017, P003 | 批次 5 已起草；注解不自动校验、frozen 非深度不可变、Provider Protocol。 |
+| `numpy_arrays` | NumPy 数组 / NumPy Arrays | `implemented` | `backtest.py`, `statistics.py`, `learning.py` | `pandas_series_and_dataframe`, `returns_and_pct_change`, `rolling_window` | `drafted` | S010, A012, P003 | 批次 5 已起草；`isfinite`、年化因子、方向一致率和教学模拟。 |
+| `pandas_series_and_dataframe` | pandas Series 与 DataFrame / pandas Series and DataFrame | `implemented` | `data.py`, `processing.py`, `metrics.py`, `statistics.py`, `portfolio.py` | `numpy_arrays`, `datetime_and_index`, `missing_data`, `rolling_window` | `drafted` | S009, A011, P003 | 批次 5 已起草；列/索引/dtype、深拷贝、筛选和向量化。 |
+| `datetime_and_index` | 日期时间与索引 / Datetime and Index | `implemented` | `data.py`, `storage.py`, `ui_updates.py`, `portfolio.py` | `pandas_series_and_dataframe`, `trading_calendar`, `timezone_and_session` | `drafted` | S009, S008, P002 | 批次 5 已起草；交易日无时区、UTC 接收时间、北京时间显示。 |
+| `missing_data` | 缺失数据 / Missing Data | `implemented` | `processing.py`, `statistics.py`, `portfolio.py`, `notes.py` | `data_quality_and_bias`, `pandas_series_and_dataframe`, `alignment_join_and_merge` | `drafted` | S009, P004, P003 | 批次 5 已起草；字段缺失报错、共同日期、零成交量与无插值。 |
+| `returns_and_pct_change` | 收益率与 pct_change / Returns and pct_change | `implemented` | `metrics.py`, `statistics.py`, `portfolio.py` | `simple_return`, `log_return`, `rolling_window` | `drafted` | S009, P003 | 批次 5 已起草；简单收益率、首行 NaN 与 `fill_method` 边界。 |
+| `rolling_window` | 滚动窗口 / Rolling Window | `implemented` | `strategy.py`, `statistics.py`, `learning.py` | `moving_average`, `pandas_series_and_dataframe`, `returns_and_pct_change` | `drafted` | S009, P003 | 批次 5 已起草；`min_periods=N`、5/20 日均线差、10 日波动率。 |
+| `alignment_join_and_merge` | 对齐、连接与合并 / Alignment, Join, and Merge | `implemented` | `portfolio.py`, `research.py`, `data.py` | `datetime_and_index`, `missing_data`, `trading_calendar` | `drafted` | S009, P003 | 批次 5 已起草；组合 inner join、回测日期完全一致、拒绝重复日期。 |
+| `csv_and_json` | CSV 与 JSON / CSV and JSON | `implemented` | `storage.py`, `ui.py`, `ui_research.py`, `ai_context.py` | `pandas_series_and_dataframe`, `reproducibility_and_audit`, `sqlite_and_transactions` | `drafted` | S008, S009, P004 | 批次 5 已起草；UTF-8 CSV、zlib BLOB、SHA-256、JSON 与 BOM 差异。 |
+| `sqlite_and_transactions` | SQLite 与事务 / SQLite and Transactions | `implemented` | `storage.py`, `notes.py`, `migrations.py` | `schema_migration`, `hash_and_fingerprint`, `automated_testing_git_and_modular_monolith` | `drafted` | S011, S018, P004 | 批次 5 已起草；连接参数、commit/rollback/close 与本地数据库边界。 |
+| `schema_migration` | Schema 迁移 / Schema Migration | `implemented` | `migrations.py`, `storage.py` | `sqlite_and_transactions`, `reproducibility_and_audit`, `hash_and_fingerprint` | `drafted` | P002, S011, S018 | 批次 5 已起草；`user_version=4`、备份、`BEGIN IMMEDIATE` 与 `stage_library` 区分。 |
+| `hash_and_fingerprint` | 哈希与指纹 / Hash and Fingerprint | `implemented` | `research.py`, `storage.py`, `notes.py`, `ai_context.py` | `reproducibility_and_audit`, `schema_migration`, `data_provenance` | `drafted` | S008, P002 | 批次 5 已起草；完整 SHA-256、16 位 `audit_id` 与技术边界。 |
+| `provider_api_cache_and_concurrency` | Provider、API、缓存与并发 / Provider, API, Cache, and Concurrency | `implemented` | `market_data.py`, `data.py`, `refresh.py`, `names.py`, `securities.py` | `cache_and_freshness`, `data_provenance`, `automated_testing_git_and_modular_monolith` | `drafted` | P002, P004, S001 | 批次 5 已起草；TTL、single-flight、深拷贝、等待超时与进程内边界。 |
+| `automated_testing_git_and_modular_monolith` | 自动化测试、Git 与模块化单体 / Automated Testing, Git, and Modular Monolith | `implemented` | `tests/`, `ARCHITECTURE.md` | `python_modules_and_packages`, `schema_migration`, `provider_api_cache_and_concurrency` | `drafted` | P001, P002, S019, S020 | 批次 5 已起草；正文分三个独立部分；Git 非应用按钮，FastAPI 未实现。 |
 
 ## 重复、合并、缺口与待 Codex 判断
 
@@ -245,8 +273,10 @@
 5. `correlation` 与 `covariance`：保留两篇；相关矩阵、协方差矩阵和组合权重的单位/解释分别说明。
 6. `overfitting` 与 `data_snooping_and_multiple_testing`：保留两篇；前者讲样本内拟合噪声，后者讲反复检验/多重比较。
 7. `lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`：两个 ID 都混合了“已实现的一部分”和“未实现的一部分”；批次 3 已按三层写成，并明确整手/固定滑点已实现、碎股/订单簿/容量/市场冲击未实现。是否在后续版本拆分 ID，待 Codex 判断。
-8. `automated_testing_git_and_modular_monolith`：复合 ID，正文必须分成“自动化测试”“Git”“模块化单体”三节；首版保留 ID 以控制文章数量，未来可拆分。
-9. `mae_and_rmse`、`mean_and_median`、`sample_and_population`、`standard_error`、`cash_position_and_pnl`、`trading_calendar`、`timezone_and_session`：这些 ID 包含部分未显示或未建模的内容；批次 3 已对 `cash_position_and_pnl` 分三层说明，其余文章在后续批次必须明确“软件当前显示/计算什么”，不要把未显示的部分写成按钮或指标。
+8. `automated_testing_git_and_modular_monolith`：复合 ID；批次 5 正文已分成“自动化测试”“Git”“模块化单体”三个独立部分，并明确测试、版本控制和架构是三个不同概念。首版保留 ID 以控制文章数量，未来仍可拆分。
+9. `mae_and_rmse`、`mean_and_median`、`sample_and_population`、`standard_error`、`cash_position_and_pnl`、`trading_calendar`、`timezone_and_session`：这些 ID 包含部分未显示或未建模的内容；批次 3–4 已对其中多数分层说明，其余文章在后续修订中必须明确“软件当前显示/计算什么”，不要把未显示的部分写成按钮或指标。
+10. `returns_and_pct_change` 与 `simple_return`：前者讲 pandas 实现和首行 NaN，后者讲金融概念和首尾价格；两篇交叉引用，不重复整篇公式推导。
+11. `provider_api_cache_and_concurrency` 与 `cache_and_freshness`：前者讲 Provider、single-flight 和并发边界，后者讲 TTL、来源与新鲜度；两篇都提缓存，但前者侧重实现机制，后者侧重数据状态解释。
 
 ### 内容缺口
 
@@ -254,7 +284,8 @@
 - 市场微观结构目前只有 `slippage_liquidity_market_impact` 一个入口；订单簿、队列、盘中停牌和 VCM 细节在回测边界中说明，未来可扩展。
 - 组合优化目前只有 `portfolio_weights_and_constraints`、`equal_weight`、`inverse_volatility`；均值-方差优化、风险平价和因子模型暂不设 ID。
 - 公司行动现金流目前归入 `corporate_actions` 和 `price_adjustment`；分红、拆股、供股等细分未来可扩展。
-- 数据库迁移目前只有 `schema_migration` 和 `sqlite_and_transactions`；备份/恢复流程在 `research_notes` 和后续工程文章中说明。
+- 数据库迁移目前只有 `schema_migration` 和 `sqlite_and_transactions`；备份/恢复流程在 `research_notes` 和工程文章中说明。
+- Python、数据处理与工程 20 篇已在批次 5 完成；后续缺口主要是全局术语统一、交叉链接、来源逐条核验，以及是否把复合词条拆成更细 ID。
 
 ### 待 Codex 复核（优先级从高到低）
 
@@ -266,25 +297,28 @@
 6. **13 个 `needs_code_review` 专业词条**：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。不拆分 ID，总数保持 85。
 7. **复合词条文章分层规则**：批次 2 已对五个 `needs_code_review` 词条分节；批次 3 已对 `lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl` 分三层说明；批次 4 已对 `rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse` 分三层说明。后续批次仍须分别写清“已实现/已显示”“只间接使用”“未实现/未建模”三部分；不得把整手、固定滑点、MAE、均值、样本方差、CNY/HKD 标注、固定权重数学曲线、t 检验内部标准误等已实现部分误写成 theory_only，也不得把碎股、市场冲击、RMSE、中位数、总体公式、汇率换算、跨币种组合、抽样分布图、置信区间、ACF/ADF 等未实现部分写成按钮或指标。
 8. **港股代码位数**：`normalize_symbol` 接受 1–5 位并补足五位，但侧栏提示写“港股请输入 5 位”。手册已同时说明；是否统一提示，待 Codex 判断。
-9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S022 仍待核验；A032–A035 书目/DOI/ISBN 已于 2026-10-23 核验，A001–A031 仍待核验。批次 2–4 的 65 篇文章状态为 `drafted`，外部来源未逐条读取，不能标 `source_checked`；批次 4 未新增来源编号；发布前更新 `official.md`、`academic.md` 和文章核验日期。
+9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S022 仍待核验；A032–A035 书目/DOI/ISBN 已于 2026-10-23 核验，A001–A031 仍待核验。批次 2–5 的 85 篇文章状态为 `drafted`，外部来源未逐条读取，不能标 `source_checked`；批次 5 未新增来源编号；发布前更新 `official.md`、`academic.md` 和文章核验日期。
 10. **GUI 验收**：本批次只写文档，未启动 WebView，也未核对实际 DOM。Codex 接入手册内容后，必须按 AGENTS.md 做真实 WebView DOM/控件验收，不能把编译、健康检查或窗口显示当作通过。
 11. **批次 3 代码事实复核**：确认三种策略条件、`run_backtest` 的 `i` 与 `i-1` 信号索引、基准第二个交易日开盘买入、`split=int(N×train_fraction)`、样本外统计从 `split−1` 起、`split_date=date[split]`、参数敏感性跳过 `short>=long` 与 `long>=len(raw_train)`、`audit_id` 的五类输入，以及实验档案未保存源码提交/输入契约版本。另确认 A 股 `i <= last_buy_index` 的 T+1 检查是防御性代码：当前日线每天最多一笔订单，正常流程不会同日买卖，不应把 T+1 与零成交量、涨跌停并列为当前可观察的 `blocked` 原因。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 12. **批次 4 代码事实复核**：确认组合页 `align_closes` 的 2–4 只、共同收盘日 ≥8 天、日期内连接；确认 `returns.cov()/corr()` 使用全部共同日期收益且样本口径 `ddof=1`；确认 `split=int(len(returns)×f)`、权重只用训练收益、`test @ equal`/`test @ inverse` 与样本外起点归一化；确认 `inverse_volatility_weights` 对零/负/NaN 波动率报错；确认 `analyze_portfolio` 不掌握币种、同币种限制只在界面。确认 `one_sample_return_test` 至少 3 个收益、`std(ddof=1)`、`ttest_1samp(popmean=0.0)` 默认双侧、零标准差返回 `None`、页面只显示 p 值。确认 `supervised_frame` 的五个特征、次日收盘标签、零成交量替换和 `dropna`；确认 `evaluate_linear_model` 的 60 行门槛、`split-1` 间隔、训练 30/测试 10 行门槛、`TimeSeriesSplit(3,gap=1)` 折内新 Pipeline、MAE/零收益基线/R²/方向一致率口径，以及 RMSE 未实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
+13. **批次 5 代码事实复核**：确认 `bool` 是 `int` 子类但金融参数校验不应把 `True` 当 `1`；确认 `HistoryCache` 15 分钟/64 条、`SnapshotCache` 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、`RefreshCache` 60 秒等待和 `NameCache` 30 秒等待；确认 `force=True` 绕过 TTL 但仍合并同键并发；确认缓存读取和页面重绘不更新上游成功时间；确认 `SCHEMA_VERSION=4`、高版本拒绝、backup API 和 `BEGIN IMMEDIATE`；确认 `stage_library` 的 `integrity_check` 与临时 bootstrap 文件替换；确认 `audit_id` 只取 SHA-256 前 16 个十六进制字符，完整 SHA-256 另存 `raw_sha256`/`signal_sha256`；确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 
 ## 计数与验收
 
 | 项目 | 数量 | 状态 |
 | --- | --- | --- |
 | 使用手册 | 10 | 全部有草稿；8 篇 `source_checked`，2 篇 `review_needed`（`workspace`, `academy`） |
-| 专业词条 | 85 | 全部列入目录；65 篇 `drafted`，20 篇 `todo` |
+| 专业词条 | 85 | 全部列入目录；85 篇 `drafted`，0 篇 `todo` |
 | 合计内容项 | 95 | 与交接文档一致 |
-| `drafted` 专业文章 | 65 | `market_data` 10、`return_risk` 10、`strategy_execution` 10、`backtest_research` 10、`portfolio` 8、`statistics` 9、`machine_learning` 8 |
-| `todo` 专业文章 | 20 | 批次 5 待撰写（Python 与工程） |
+| `drafted` 专业文章 | 85 | `market_data` 10、`return_risk` 10、`strategy_execution` 10、`backtest_research` 10、`portfolio` 8、`statistics` 9、`machine_learning` 8、`programming_engineering` 20 |
+| `todo` 专业文章 | 0 | 批次 5 已完成 Python 与工程 20 篇 |
 | `source_checked` 专业文章 | 0 | 外部来源未逐条读取，不能标 `source_checked` |
 | 批次 2 专业文章状态 | 20 | `implemented` 13、`needs_code_review` 5、`theory_only` 2；全部 `drafted` |
 | 批次 3 专业文章状态 | 20 | `implemented` 13、`needs_code_review` 3、`theory_only` 3、`academy_demo` 1；全部 `drafted` |
 | 批次 4 专业文章状态 | 25 | `implemented` 15、`needs_code_review` 5、`theory_only` 5；全部 `drafted` |
+| 批次 5 专业文章状态 | 20 | `implemented` 20；全部 `drafted`；不表示软件提供独立 Python/Git/数据库教学工具 |
 | 批次 4 新增来源 | 0 | 沿用现有 S/P/A；外部来源未逐条读取 |
+| 批次 5 新增来源 | 0 | 沿用 S008–S011、S017–S020、P001–P004、A011、A012 等现有来源 |
 | `implemented` 专业词条 | 61 | 逐行统计；见各分类表 |
 | `theory_only` 专业词条 | 10 | `corporate_actions`, `log_return`, `mean_reversion`, `walk_forward_analysis`, `data_snooping_and_multiple_testing`, `diversification`, `multi_currency_portfolio`, `sampling_distribution`, `confidence_interval`, `autocorrelation_and_stationarity` |
 | `academy_demo` 专业词条 | 1 | `overfitting` |

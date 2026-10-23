@@ -1,6 +1,6 @@
 # 来源映射与用途
 
-日期：2026-10-22；批次 2 修订来源状态更新：2026-10-23；批次 3 文章映射：2026-10-23；批次 4 文章映射：2026-10-23
+日期：2026-10-22；批次 2 修订来源状态更新：2026-10-23；批次 3 文章映射：2026-10-23；批次 4 文章映射：2026-10-23；批次 5 文章映射：2026-10-23
 
 ## 映射原则
 
@@ -205,9 +205,61 @@
 | `r_squared` | `statistics.py:125`, `ui_analysis.py:181` | `r2_score` 默认 `force_finite=True`、3 位小数显示、负值和常数目标说明 |
 | `time_series_cross_validation` | `statistics.py:98-107`, `ui_analysis.py:191-195` | `TimeSeriesSplit(n_splits=3, gap=1)`、三折 MAE 平均 |
 
+## 批次 5 文章来源映射
+
+| 文章 ID | 主要来源 | 支持的具体主张 |
+| --- | --- | --- |
+| `python_values_and_types` | S008, P003 | 内置类型、布尔子类、浮点表示、百分数与基点；项目中的价格/收益率/基点单位。 |
+| `python_control_flow` | S008, P003 | `if/elif`、`for`、`while`、早返回；回测逐日决策和买入手数循环。 |
+| `python_functions` | S008, P003 | 函数、参数、默认值、返回值；纯函数与网络/文件/数据库副作用。 |
+| `python_collections` | S008, P003 | list/dict/tuple/set 的顺序、可变性、唯一性和哈希性；缓存键与字段集合。 |
+| `python_exceptions` | S008, P004 | 异常层次、`try/except/else/finally`、异常链；数据校验失败与上游不可用。 |
+| `python_modules_and_packages` | S008, P002 | 模块、包、导入；`quant_lab` 模块化单体和依赖方向。 |
+| `type_hints_and_dataclasses` | S008, S017, P003 | 类型注解、`dataclass(frozen=True)`、`Protocol`；配置和结果对象。 |
+| `numpy_arrays` | S010, A012, P003 | `ndarray`、`isfinite`、向量化；有限值检查、年化因子和方向一致率。 |
+| `pandas_series_and_dataframe` | S009, A011, P003 | Series/DataFrame、索引、dtype、复制、筛选和向量化；行情表和缓存深拷贝。 |
+| `datetime_and_index` | S009, S008, P002 | 无时区交易日、UTC 接收时间、北京时间显示和日期索引对齐。 |
+| `missing_data` | S009, P004, P003 | NaN/None/NaT、`dropna`、共同日期、零成交量和机器学习样本删除。 |
+| `returns_and_pct_change` | S009, P003 | `pct_change`、首行 NaN、简单收益率和 `fill_method` 边界。 |
+| `rolling_window` | S009, P003 | `rolling`、`min_periods`、窗口按行、5/20 日均线和 10 日波动率。 |
+| `alignment_join_and_merge` | S009, P003 | 索引对齐、inner join、日期一致性和重复日期拒绝。 |
+| `csv_and_json` | S008, S009, P004 | CSV 编码/BOM、zlib BLOB、SHA-256、`read_csv` 参数和 JSON 边界。 |
+| `sqlite_and_transactions` | S011, S018, P004 | 连接参数、事务、commit/rollback/close、外键和本地数据库边界。 |
+| `schema_migration` | P002, S011, S018 | `PRAGMA user_version`、备份 API、`BEGIN IMMEDIATE` 和资料库复制区分。 |
+| `hash_and_fingerprint` | S008, P002 | SHA-256、截短指纹、完整性校验和非加密/非签名边界。 |
+| `provider_api_cache_and_concurrency` | P002, P004, S001 | Provider Protocol、TTL、single-flight、等待超时、失败保留和进程内缓存。 |
+| `automated_testing_git_and_modular_monolith` | P001, P002, S019, S020 | pytest、Git 版本控制、模块化单体；测试、Git 和架构三个独立概念。 |
+
+## 批次 5 代码依据
+
+行号以 2026-10-23 的 `codex/learning-center-v2` 工作树为准；复核时以符号名和测试为准。
+
+| 文章 ID | 代码位置 | 核对内容 |
+| --- | --- | --- |
+| `python_values_and_types` | `backtest.py:14-38`, `strategy.py:51`, `metrics.py:20-26`, `market_data.py:20-36` | 配置浮点/整数、信号 0/1、`float` 或 `None` 指标、字符串代码 |
+| `python_control_flow` | `strategy.py:43-51`, `backtest.py:96-160`, `refresh.py:28-67`, `migrations.py:90-118` | `if/elif`、逐日循环、`while lots`、早返回 |
+| `python_functions` | `metrics.py:30-79`, `backtest.py:62-65`, `data.py:71-111`, `storage.py:80-124` | 纯函数、网络副作用、数据库副作用、函数参数 |
+| `python_collections` | `processing.py:9-10`, `data.py:138-160`, `research.py:67-90`, `storage.py:90-124` | 元组字段、缓存键、列表订单行、字典缓存 |
+| `python_exceptions` | `processing.py:13-58`, `data.py:46-111`, `refresh.py:47-67`, `names.py:81-99`, `storage.py:31-46` | 自定义异常、失败保留、名称失败、回滚 |
+| `python_modules_and_packages` | `quant_lab/__init__.py`, `ARCHITECTURE.md:3-15`, `storage.py:157-160` | 包结构、模块边界、函数内延迟导入 |
+| `type_hints_and_dataclasses` | `backtest.py:14-60`, `market_data.py:39-64`, `data.py:25-39`, `portfolio.py:8-17` | frozen dataclass、Protocol、配置校验、结果对象 |
+| `numpy_arrays` | `processing.py:39-40`, `backtest.py:81`, `statistics.py:58`, `statistics.py:126`, `learning.py:106-107` | `isfinite`、`sqrt(252)`、方向一致率、sin/cos 教学模拟 |
+| `pandas_series_and_dataframe` | `processing.py:33-58`, `data.py:155-157`, `strategy.py:40-52`, `portfolio.py:32-35` | 列选择、深拷贝、信号列、日期索引 |
+| `datetime_and_index` | `processing.py:34`, `data.py:105-125`, `ui_updates.py:51-58`, `portfolio.py:28-35` | 日期解析、UTC 接收时间、北京时间显示、日期索引 |
+| `missing_data` | `processing.py:37-47`, `portfolio.py:32-34`, `statistics.py:63-80`, `backtest.py:107-108` | 缺失报错、共同日期、零成交量、空区间 |
+| `returns_and_pct_change` | `metrics.py:67-69`, `statistics.py:46`, `statistics.py:73-77`, `portfolio.py:54` | `pct_change().dropna()`、`return_5`、`fill_method=None` |
+| `rolling_window` | `strategy.py:28-31`, `statistics.py:75-77` | `min_periods=N`、5/20 均线差、10 日标准差 |
+| `alignment_join_and_merge` | `portfolio.py:19-35`, `research.py:38-41`, `processing.py:43-47` | inner join、日期完全一致、排序和重复拒绝 |
+| `csv_and_json` | `storage.py:76-77`, `storage.py:95-124`, `storage.py:144-154`, `storage.py:171-188`, `ui.py:683-685` | CSV 字节、SHA-256、zlib、读取参数、UTF-8 BOM |
+| `sqlite_and_transactions` | `storage.py:31-46`, `paths.py:37-52`, `migrations.py:110-118` | 连接参数、用户目录、提交/回滚/关闭 |
+| `schema_migration` | `migrations.py:10`, `migrations.py:90-118`, `paths.py:68-105` | `SCHEMA_VERSION`、备份、事务、`integrity_check` |
+| `hash_and_fingerprint` | `research.py:50-63`, `storage.py:120-121`, `storage.py:144-148`, `ai_context.py:33-35`, `ai_context.py:62-64` | 五类指纹输入、完整 SHA-256、附件校验、截短上下文哈希 |
+| `provider_api_cache_and_concurrency` | `market_data.py:56-64`, `data.py:66-198`, `refresh.py:19-67`, `names.py:42-99`, `securities.py:95-133` | Protocol、TTL、single-flight、深拷贝、等待超时、名称/目录缓存 |
+| `automated_testing_git_and_modular_monolith` | `tests/`, `ARCHITECTURE.md:3-15`, `README.md:101-105` | pytest、Git 工作流、模块边界和测试命令 |
+
 ## 专业词条来源分配
 
-`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2–4 已撰写市场与数据、收益与风险、策略与执行、回测与研究、组合分析、统计推断、机器学习共 65 篇；其余 20 篇（Python 与工程）仍为 `todo`。后续批次可按以下优先级补充来源：
+`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2–5 已撰写市场与数据、收益与风险、策略与执行、回测与研究、组合分析、统计推断、机器学习、Python 与工程共 85 篇；没有 `todo` 文章。后续统一修订可按以下优先级补充来源：
 
 1. **市场与数据**：S001、S013、P004；公司行动和交易规则需补充交易所/监管机构官方页面。
 2. **收益与风险**：A009、A014、A002、P003；年化交易日假设需在正文明确。
@@ -220,7 +272,9 @@
 
 ## 待复核与缺口
 
-- S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2–4 的 65 篇文章因此全部标 `drafted`，不标 `source_checked`。
+- S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2–5 的 85 篇文章因此全部标 `drafted`，不标 `source_checked`。
+- 批次 5 使用 S008（Python）、S009（pandas）、S010（NumPy）、S011（SQLite）、S017（dataclasses）、S018（sqlite3）、S019（Git）、S020（pytest），以及 P001–P004、A011、A012。来源库当前把 S019 登记为 Git 文档、S020 登记为 pytest 文档；本批次按来源库编号引用，没有交换编号。S008–S011、S017–S020 的页面内容仍未联网核验。
+- 批次 5 的软件事实以本地代码为准：`HistoryCache` 15 分钟/64 条、`SnapshotCache` 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、`RefreshCache` 60 秒等待、`NameCache` 30 秒等待；`SCHEMA_VERSION=4`；`audit_id` 为 SHA-256 前 16 个十六进制字符。文章不得把这些数字写成上游服务承诺或永久不变的能力。
 - 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）的官方入口已确认可访问，具体规则仍按文章需要核验；A032（Campbell 等）、A034（FAIR）书目/DOI 已核验；A033（Berk 与 DeMarzo）修正 ISBN 后书目已核验；A035（Bekaert 与 Hodrick）第三版、ISBN 和 2017 出版日期已核验。批次 3 和批次 4 均未新增来源编号。
 - 批次 4 的组合文章按 `portfolio.py`/`ui_analysis.py` 写成：`analyze_portfolio` 只接收历史表，不掌握币种；同市场/同币种限制由界面上下文保证。文章不得声称核心函数独立校验了币种，也不得把固定权重数学曲线写成真实可执行组合回测。
 - 批次 4 的统计文章按 `statistics.py`/`ui_analysis.py` 写成：样本方差/标准差使用 `n−1`；t 检验使用 `ttest_1samp(popmean=0.0)` 的默认双侧；页面只显示 p 值，不单独显示 t 值、自由度、标准误或置信区间。`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse` 必须继续分三层说明；`sampling_distribution`、`confidence_interval`、`autocorrelation_and_stationarity` 保持 `theory_only`。
@@ -231,4 +285,7 @@
 - 复合词条的状态必须按整体功能与已实现部分判断：`lot_size_and_fractional_shares` 的整手已实现、碎股未实现，保持 `needs_code_review`；`slippage_liquidity_market_impact` 的固定基点滑点已实现，流动性、容量、订单簿和市场冲击未实现，保持 `needs_code_review`。不得把包含已实现部分的复合词条整体改成 `theory_only`。
 - `multi_currency_portfolio` 与 `walk_forward_analysis` 当前整体未实现，保持 `theory_only`；不得把未实现的子概念写成已有功能或指标。
 - `S013` 候选目录只提供身份字段，不证明上市状态；文章不得把“目录中存在”写成“可交易”。
+- 批次 5 的 `automated_testing_git_and_modular_monolith` 是复合词条；正文已把自动化测试、Git 和模块化单体分成三个独立部分，不能把测试通过、源码提交和模块目录写成同一个概念。
+- 批次 5 的 `provider_api_cache_and_concurrency` 只描述当前进程内缓存和锁；不得写成跨进程、分布式缓存或数据库锁。等待有超时，不是无限等待。
+- 批次 5 的 `sqlite_and_transactions` 和 `schema_migration` 不提供远程数据库、用户隔离、加密或防篡改保证；备份不等于灾难恢复，`stage_library` 不等于 schema 迁移。
 - 代码行号会随开发变化；Codex 复核时应以符号名和测试为准，行号仅作定位辅助。

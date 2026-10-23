@@ -1,13 +1,32 @@
-# 批次 1 复核、批次 2–3 修订与批次 4 记录
+# 批次 1 复核、批次 2–4 修订与批次 5 记录
 
-日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23；批次 4 修订：2026-10-23
-批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇；批次 4 共 25 篇
-代码基线：`codex/learning-center-v2`，提交 `7275d71`（批次 4 起点；本批次未修改程序代码）
-恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）；批次 4 恢复分支：`codex/recovery-before-batch4-20261023`（指向 `7275d71`）
+日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23；批次 4 修订：2026-10-23；批次 5：2026-10-23
+批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇；批次 4 共 25 篇；批次 5 共 20 篇
+代码基线：`codex/learning-center-v2`，提交 `c10728b`（批次 5 起点；本批次未修改程序代码）
+恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）；批次 4 恢复分支：`codex/recovery-before-batch4-20261023`（指向 `7275d71`）；批次 5 恢复分支：`codex/recovery-before-batch5-20261023`（指向 `c10728b`）
 写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
-批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`；批次 4 基于 `7275d71`。
+批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`；批次 4 基于 `7275d71`；批次 5 基于 `c10728b`。
 
-## 0. 批次 4 摘要（2026-10-23）
+## 0. 批次 5 摘要（2026-10-23）
+
+1. 20 篇专业文章已写入 `articles/programming_engineering/`，全部文章状态为 `drafted`；外部来源未逐条读取，不标 `source_checked`。
+2. 20 篇全部为 `implemented`；这里表示技术确实被项目代码使用，不表示软件为用户提供独立的 Python、Git、数据库管理或编程教学工具。
+3. 不新增、删除或拆分 ID，专业词条总数仍为 85；全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13。
+4. 专业文章状态更新为 `drafted` 85、`todo` 0；使用手册仍为 10 篇。
+5. Python 口径：`bool` 是 `int` 子类，但金融参数校验不能因此把 `True` 当数值 1；浮点不承诺精确十进制；`1% = 0.01`、`1 bp = 0.0001`。
+6. 数据口径：`clean_stock_history` 对必需字段中的不可解析值、NaN、无穷值、负成交量和异常价格关系显式报错；组合按日期内连接并 `dropna`；机器学习把零成交量替换为 NaN，删除含缺失特征或标签的行；当前没有通用插值。
+7. 收益率口径：当前使用简单收益率 `r_t=P_t/P_{t−1}−1`，不是对数收益率；第一个收益率通常是 NaN；只有机器学习 `volume_change` 明确使用 `fill_method=None`，价格序列依赖已验证的完整输入。
+8. 滚动窗口：`moving_average` 使用 `rolling(window=N,min_periods=N).mean()`；5/20 日均线和 10 日收益标准差按观测行/交易日，不是自然日；前 N−1 行是预热。
+9. 日期口径：行情 `date` 是无时区交易日；`received_at`、`created_at` 是 UTC；界面显示北京时间 UTC+08:00；`received_at` 是本机收到响应的时间，不是交易所报价时间。
+10. 序列化与存储：实验 CSV 为 `to_csv(index=False)` 的 UTF-8 字节，SQLite 中为 zlib 压缩 BLOB；读取先解压、核对 SHA-256，再 `read_csv(parse_dates=["date"], float_precision="round_trip")`；JSON 不是加密、签名或自动 schema 验证；部分界面下载使用 UTF-8 BOM。
+11. SQLite 口径：`_connect` 使用 `timeout=15`、`sqlite3.Row`、`PRAGMA foreign_keys=ON`；上下文正常提交、异常回滚、最后关闭；当前没有远程数据库、账户隔离、加密或防篡改保证。
+12. 迁移口径：`SCHEMA_VERSION=4`、`PRAGMA user_version`；高版本拒绝打开；非空旧库升级前用 SQLite backup API 备份；`BEGIN IMMEDIATE` 事务，成功更新版本并提交，失败回滚；`stage_library` 是资料库复制流程，不与 schema 迁移混为一谈。
+13. 哈希口径：`raw_sha256`、`signal_sha256` 和附件保存完整 SHA-256；`audit_id` 是前 16 个十六进制字符（64 位）；哈希不是加密、数字签名、身份认证或第三方存证。
+14. Provider/缓存：`MarketDataProvider` 是 Protocol，默认实现是 `AKShareProvider`；历史缓存 15 分钟/64 条，快照 5 分钟且请求至少间隔 1 秒；名称成功缓存 24 小时、失败冷却 5 分钟；single-flight 只合并相同 key，等待有超时；缓存和锁只在当前进程。
+15. 复合词条 `automated_testing_git_and_modular_monolith` 已拆成三个独立部分：自动化测试、Git、模块化单体；测试通过不等于真实 WebView、外部接口或安装包验收；Git 不是应用按钮；FastAPI 是未来计划。
+16. 本批次只修改 `docs/knowledge-drafts/` 下的 Markdown；未改程序、测试、数据库、`VERSION`、构建或发行文件。使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）。
+
+## 0.1 批次 4 摘要（2026-10-23）
 
 1. 25 篇专业文章已写入 `articles/portfolio/`（8 篇）、`articles/statistics/`（9 篇）与 `articles/machine_learning/`（8 篇），全部文章状态为 `drafted`；外部来源未逐条读取，不标 `source_checked`。
 2. 软件状态为 `implemented` 15、`needs_code_review` 5、`theory_only` 5；不因文章已撰写而改变任何 `software_status`。
@@ -17,10 +36,10 @@
 6. 组合权重只有等权和训练期逆波动率；权重为正、合计 100%；没有做空、杠杆、权重上下限或优化器；样本外收益矩阵乘固定权重（`test @ equal`、`test @ inverse`）是每日固定权重数学曲线，不生成持仓、订单、成交、换手率或调仓成本。核心函数不掌握币种；同市场/同币种限制由界面上下文保证。
 7. 统计口径与 `statistics.py`/`ui_analysis.py` 一致：至少 3 个有效日收益；均值、样本方差/标准差使用 `n−1`；年化波动率为样本标准差 × `√252`；t 检验零假设为平均日收益率为 0，`ttest_1samp(popmean=0.0)` 默认双侧；零标准差时 t/p 返回 `None`；页面显示 p 值，不单独显示 t 值、自由度、标准误或置信区间。
 8. 机器学习口径与 `statistics.py` 一致：五个特征；标签 `next_return=close(t+1)/close(t)−1`；零成交量先替换为 NaN；至少 60 行；训练比例 0.55–0.85；`split=int(M×f)`；`train=samples[:split−1]`、索引 `split−1` 为一行间隔、`test=samples[split:]`；训练至少 30 行、测试至少 10 行；`Pipeline(StandardScaler(), LinearRegression())`；训练内 `TimeSeriesSplit(3,gap=1)`；MAE、零收益基线、样本外 R²、方向一致率；RMSE 未实现。
-9. 不新增、删除或拆分 ID，专业词条总数仍为 85；未新增来源编号。全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；专业文章状态更新为 `drafted` 65、`todo` 20。
+9. 不新增、删除或拆分 ID，专业词条总数仍为 85；未新增来源编号。全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 4 完成时专业文章状态为 `drafted` 65、`todo` 20，批次 5 完成后更新为 `drafted` 85、`todo` 0。
 10. 本批次只修改 `docs/knowledge-drafts/` 下的 Markdown；未改程序、测试、数据库、`VERSION`、构建或发行文件。使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）。
 
-## 0.1 批次 2 修订摘要（2026-10-23）
+## 0.2 批次 2 修订摘要（2026-10-23）
 
 1. `annualized_return`：修正 126 个间隔的表述，改为“年化是累计增长因子的平方再减一，即 `(1+R_cum)^2−1`”，不再写成平方根。
 2. `maximum_drawdown`：删除全部英文内部编辑批注；保留 `d=−25%` 对应恢复涨幅 33.33%、`d=−20%` 对应恢复涨幅 25%。
@@ -183,6 +202,8 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 14. `A001`–`A031` 论文、教材和课程：DOI、ISBN、页码、版次、作者列表和课程页面版本仍待复核。`A032`、`A034` 的书目/DOI 和 `A033`、`A035` 的书目/ISBN 已于 2026-10-23 核验；书目核验不等于已读取全文。
 15. 所有交易费用、税率、结算、申报单位和涨跌幅数字：不能从本软件默认值推断现行规则；正式内容发布前必须以交易所、监管机构或券商官方资料重新核验。
 16. 批次 3 使用的 `S002`、`S003`、`S004` 交易规则、费用、整手、涨跌停和 VCM 条款仍未逐项核验；文章只把它们作为研究假设，不能写成现行法定规则。
+17. 批次 5 使用 `S008`–`S011`、`S017`–`S020` 的 Python、pandas、NumPy、SQLite、dataclasses、sqlite3、Git 和 pytest 文档；页面内容未在 2026-10-23 前联网核验，文章只引用语言和库的通用行为，不引用具体版本条款。来源库当前把 `S019` 登记为 Git、`S020` 登记为 pytest；批次 5 按来源库编号引用，没有交换编号。
+18. 批次 5 的 `A011`（pandas）和 `A012`（NumPy）书目信息仍待复核；文章用它们作概念背景，不用来证明策略有效。
 
 ## 6. 来源统计
 
@@ -194,6 +215,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | 手册引用 | 10 篇 | 每篇至少引用 P 文档；关键页面引用 S/A |
 | 专业词条来源映射 | 85 条 | 见 `CATALOG.md` 各行“主要来源” |
 | 批次 3 新增来源 | 0 | 沿用现有 S/P/A；未新增来源编号 |
+| 批次 5 新增来源 | 0 | 沿用 S008–S011、S017–S020、P001–P004、A011、A012；未新增来源编号 |
 
 ## 7. 建议 Codex 优先复核（最多 10 项）
 
@@ -208,7 +230,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 9. 外部来源：S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 入口已由 Codex 于 2026-10-23 确认可访问，但字段/条款/生效口径待逐项核验；S008–S022 与 A001–A031 仍待核验；A032–A035 书目/DOI/ISBN 已核验。
 10. 接入手册后按 AGENTS.md 做真实 WebView DOM/控件验收；本批次未启动 GUI，不能把文档完成当成验收通过。
 
-批次 3 的代码事实复核问题见第 12.4 节；本节保持最多 10 项。
+批次 3 的代码事实复核问题见第 12.4 节，批次 4 的见第 13.7 节，批次 5 的见第 14.6 节；本节保持最多 10 项。
 
 ## 8. 未执行事项
 
@@ -223,14 +245,15 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 批次 3 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次仅新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
 - 批次 3 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只修改 `docs/knowledge-drafts/`。
 - 批次 4 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
+- 批次 5 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
 
 ## 9. 声明
 
-本轮（批次 1 修订、批次 2 起草与修订、批次 3 起草、批次 4 起草）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 65 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+本轮（批次 1 修订、批次 2 起草与修订、批次 3 起草、批次 4 起草、批次 5 起草）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 85 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
 
 ## 10. 下一批次建议
 
-批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订；批次 3 已完成 20 篇（策略与执行、回测与研究）草稿；批次 4 已完成 25 篇（组合分析、统计推断、机器学习）草稿；65 篇文章状态均为 `drafted`。下一批次（未开始）为批次 5：Python、数据处理与工程，共 20 篇；本次提交不进入批次 5。批次 5 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
+批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订；批次 3 已完成 20 篇（策略与执行、回测与研究）草稿；批次 4 已完成 25 篇（组合分析、统计推断、机器学习）草稿；批次 5 已完成 20 篇（Python、数据处理与工程）草稿；85 篇文章状态均为 `drafted`。下一批次（未开始）为批次 6：全局术语统一、交叉链接、来源复核和重复内容消除。批次 6 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
 
 ## 11. 批次 2：市场与数据、收益与风险（20 篇）
 
@@ -377,7 +400,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 15 篇 `implemented`：`covariance`、`correlation`、`portfolio_weights_and_constraints`、`equal_weight`、`inverse_volatility`、`null_and_alternative_hypothesis`、`t_test`、`p_value`、`features_and_targets`、`time_ordered_split`、`data_leakage`、`feature_scaling`、`prediction_baseline`、`r_squared`、`time_series_cross_validation`。
 - 5 篇 `needs_code_review`：`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；正文均分三层写“已计算/已显示、只间接使用、未提供/未建模”。
 - 5 篇 `theory_only`：`diversification`、`multi_currency_portfolio`、`sampling_distribution`、`confidence_interval`、`autocorrelation_and_stationarity`；正文明确写“当前软件未实现”。
-- 未新增或删除 ID，专业词条总数仍为 85；未新增来源编号；专业文章状态为 `drafted` 65、`todo` 20；全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13。
+- 未新增或删除 ID，专业词条总数仍为 85；未新增来源编号；批次 4 完成时专业文章状态为 `drafted` 65、`todo` 20；全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13。
 
 ### 13.2 公式与口径清单
 
@@ -441,7 +464,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 ### 13.6 自检结果
 
-- 85 个专业词条 ID 无缺失、无重复；手册仍为 10 篇；专业文章为 `drafted` 65、`todo` 20。
+- 85 个专业词条 ID 无缺失、无重复；手册仍为 10 篇；批次 4 完成时专业文章为 `drafted` 65、`todo` 20。
 - 批次 4 共 25 篇，目录和文件名准确：`portfolio` 8、`statistics` 9、`machine_learning` 8。
 - 所有 `prerequisites`、`related_articles`、`source_ids` 均指向现有 ID/来源；没有悬空引用。
 - 每篇文章包含完整 frontmatter 和“快速理解/软件实践/专业原理/相关知识/参考资料”模板，含手算例子、软件边界和参考资料。
@@ -477,6 +500,98 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 5. `prediction_baseline`：不再声称零收益基线经过训练期拟合或优化；它恒预测 0，不读取训练特征。分布漂移只改变其在不同测试区间的相对难度和 MAE。提及历史均值基线时明确当前软件未实现。
 6. `r_squared`：补充 `SS_tot=0` 时当前 `r2_score` 默认 `force_finite=True` 的实际行为：预测与常数真实值完全一致返回 1.0，否则返回 0.0；页面没有专门警告，不能把 0.0/1.0 当成普通非退化测试集的 R²。
 7. 同步更新 `CATALOG.md`、`REVIEW_NOTES.md` 和 `references/source-map.md` 中受影响的分散化和 R² 表述；`README.md` 无需修改。
-8. 状态与计数保持不变：批次 4 共 25 篇且全部 `drafted`；`implemented` 15、`needs_code_review` 5、`theory_only` 5；专业词条 85、`drafted` 65、`todo` 20；全目录 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；手册 10 篇。
+8. 状态与计数保持不变：批次 4 共 25 篇且全部 `drafted`；`implemented` 15、`needs_code_review` 5、`theory_only` 5；专业词条 85；批次 4 修订时 `drafted` 65、`todo` 20；全目录 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；手册 10 篇。
 9. 使用独立 `--basetemp=/tmp/qb4-revision-pytest-20261023` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；未跳过失败测试。
 10. 本次只修改 `docs/knowledge-drafts/` 下的 Markdown；未修改程序、测试、数据库、`VERSION`、构建或发行文件。
+
+## 14. 批次 5：Python、数据处理与工程（20 篇）
+
+### 14.1 完成状态
+
+- 20 篇专业文章已写入 `articles/programming_engineering/`：`python_values_and_types`、`python_control_flow`、`python_functions`、`python_collections`、`python_exceptions`、`python_modules_and_packages`、`type_hints_and_dataclasses`、`numpy_arrays`、`pandas_series_and_dataframe`、`datetime_and_index`、`missing_data`、`returns_and_pct_change`、`rolling_window`、`alignment_join_and_merge`、`csv_and_json`、`sqlite_and_transactions`、`schema_migration`、`hash_and_fingerprint`、`provider_api_cache_and_concurrency`、`automated_testing_git_and_modular_monolith`。
+- 文章状态全部为 `drafted`；外部来源内容未逐条读取，未标 `source_checked`。
+- 软件状态全部为 `implemented`（20 篇）；这里的含义是相关技术确实被项目代码使用，不表示软件为用户提供独立的 Python、Git、数据库管理或编程教学工具。
+- 未新增、删除或拆分 ID，专业词条总数仍为 85；全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13。
+- 专业文章状态更新为 `drafted` 85、`todo` 0；使用手册仍为 10 篇。
+- 未新增来源编号；沿用 `S008`–`S011`、`S017`–`S020`、`P001`–`P004`、`A011`、`A012` 等现有来源。
+
+### 14.2 关键口径与代码依据
+
+| 文章 ID | 核心口径 | 软件状态 | 主要代码依据 | 待复核/说明 |
+| --- | --- | --- | --- | --- |
+| `python_values_and_types` | `1% = 0.01`；`1 bp = 0.0001`；`bool` 是 `int` 子类 | `implemented` | `backtest.py:14-38`, `strategy.py:51`, `metrics.py:20-26` | 浮点不承诺精确十进制；金融参数校验应显式排除布尔值 |
+| `python_control_flow` | `decision_t = signal_{t−1}`；买入手数 `while lots > 0` | `implemented` | `strategy.py:43-51`, `backtest.py:96-160`, `refresh.py:28-67` | `while` 必须有终止推进；早返回不等于失败 |
+| `python_functions` | 纯函数 vs 网络/文件/数据库副作用 | `implemented` | `metrics.py:30-79`, `backtest.py:62-65`, `data.py:71-111`, `storage.py:80-124` | 默认参数在定义时求值；避免可变默认值 |
+| `python_collections` | 缓存键 `(market, symbol, start, end, adjustment)` | `implemented` | `processing.py:9-10`, `data.py:138-160`, `storage.py:90-124` | `set` 不保留业务排序；字典保留插入顺序 |
+| `python_exceptions` | `DataValidationError(ValueError)`；`DataUnavailableError(RuntimeError)` | `implemented` | `processing.py:13-58`, `data.py:46-111`, `refresh.py:47-67`, `names.py:81-99` | 缓存/名称查询捕获较宽异常；名称失败不代表不存在 |
+| `python_modules_and_packages` | 一个 `quant_lab` 包；核心模块不导入 Streamlit | `implemented` | `quant_lab/__init__.py`, `ARCHITECTURE.md:3-15` | FastAPI 只是未来计划 |
+| `type_hints_and_dataclasses` | 注解不自动运行时校验；`frozen=True` 非深度不可变 | `implemented` | `backtest.py:14-60`, `market_data.py:39-64`, `data.py:25-39` | `Protocol` 不自动鉴权或注册 Provider |
+| `numpy_arrays` | `isfinite` 检查 NaN/±inf；`√252 ≈ 15.8745` | `implemented` | `processing.py:39-40`, `backtest.py:81`, `statistics.py:58`, `statistics.py:126` | 数组不是主要持久化格式；sin/cos 仅教学模拟 |
+| `pandas_series_and_dataframe` | 列/索引/dtype；缓存返回 `copy(deep=True)` | `implemented` | `processing.py:33-58`, `data.py:155-157`, `strategy.py:40-52` | 索引对齐不是行号对齐 |
+| `datetime_and_index` | 交易日无时区；UTC 接收时间；北京时间 UTC+08:00 | `implemented` | `processing.py:34`, `data.py:105-125`, `ui_updates.py:51-58` | `received_at` 不是交易所报价时间；无盘中时段模型 |
+| `missing_data` | 必需字段缺失报错；组合共同日期 `dropna`；ML 零成交量→NaN | `implemented` | `processing.py:37-47`, `portfolio.py:32-34`, `statistics.py:63-80` | 无通用插值、均值填补或缺失机制模型 |
+| `returns_and_pct_change` | `r_t=P_t/P_{t−1}−1`；首行 NaN | `implemented` | `metrics.py:67-69`, `statistics.py:46`, `statistics.py:73-77`, `portfolio.py:54` | 只有 `volume_change` 明确 `fill_method=None` |
+| `rolling_window` | `rolling(window=N,min_periods=N).mean()`；5/20 与 10 日窗口 | `implemented` | `strategy.py:28-31`, `statistics.py:75-77` | 窗口按观测行/交易日，不补齐停牌日 |
+| `alignment_join_and_merge` | 组合日期 `inner` join；回测 raw/signal 日期完全一致 | `implemented` | `portfolio.py:19-35`, `research.py:38-41`, `processing.py:43-47` | 不是外连接，不自动填补 |
+| `csv_and_json` | CSV UTF-8 字节；zlib BLOB；SHA-256；JSON 假设 | `implemented` | `storage.py:76-77`, `storage.py:95-124`, `storage.py:144-154`, `storage.py:171-188` | JSON 不是加密/签名/自动 schema 验证；部分 UI 下载带 BOM |
+| `sqlite_and_transactions` | `timeout=15`、`Row`、`foreign_keys=ON`、commit/rollback/close | `implemented` | `storage.py:31-46`, `paths.py:37-52` | 无远程数据库、用户隔离、加密或防篡改保证 |
+| `schema_migration` | `SCHEMA_VERSION=4`；`user_version`；backup API；`BEGIN IMMEDIATE` | `implemented` | `migrations.py:10`, `migrations.py:90-118`, `paths.py:68-105` | 备份不是远程备份或灾难恢复；`stage_library` 是另一流程 |
+| `hash_and_fingerprint` | 完整 SHA-256；`audit_id` 前 16 个十六进制字符 | `implemented` | `research.py:50-63`, `storage.py:120-121`, `storage.py:144-148`, `ai_context.py:33-35` | 不是加密、签名、身份认证或第三方存证 |
+| `provider_api_cache_and_concurrency` | 历史 15 分钟/64 条；快照 5 分钟/1 秒；名称 24 小时/5 分钟 | `implemented` | `market_data.py:56-64`, `data.py:66-198`, `refresh.py:19-67`, `names.py:42-99` | 进程内缓存和锁；等待 60 秒/30 秒；single-flight 只合并同 key |
+| `automated_testing_git_and_modular_monolith` | pytest、Git、模块化单体三部分 | `implemented` | `tests/`, `ARCHITECTURE.md:3-15`, `README.md:101-105` | 测试通过不等于 WebView/外部接口/安装包验收；Git 不是应用按钮 |
+
+### 14.3 关键边界
+
+- Python：`bool` 是 `int` 子类；浮点不承诺精确十进制；`None`、`NaN` 和 `0` 不是同一件事；软件不是 Python 控制台。
+- 数据：必需行情字段中的不可解析值、NaN、无穷值、负成交量、非正价格和异常价格关系会显式报错；不使用演示数据替换真实行情。
+- 缺失：组合按共同日期内连接并 `dropna`；机器学习把零成交量替换为 NaN，最终删除含缺失特征或标签的行；当前没有通用插值、均值填补或缺失机制模型。
+- 收益率与窗口：简单收益率不是对数收益率；首行收益率通常为 NaN；滚动窗口按行/交易日，不按自然日，不补齐停牌日。
+- 日期：行情 `date` 是无时区交易日；`received_at`、`created_at` 是 UTC；界面显示北京时间；`received_at` 不是交易所报价时间。
+- 序列化：实验 CSV 是 UTF-8 字节，SQLite 中是 zlib 压缩 BLOB；读取先解压、核对 SHA-256，再 `read_csv(parse_dates=["date"], float_precision="round_trip")`；JSON 不是加密、签名或自动 schema 验证；部分界面下载使用 UTF-8 BOM。
+- 数据库：`_connect` 使用 `timeout=15`、`sqlite3.Row`、`PRAGMA foreign_keys=ON`；正常提交、异常回滚、最后关闭；没有远程数据库、用户隔离、加密或防篡改保证。
+- 迁移：`SCHEMA_VERSION=4`；高版本拒绝打开；非空旧库升级前用 SQLite backup API 备份；`BEGIN IMMEDIATE` 事务，成功更新版本并提交，失败回滚；迁移保留旧实验行情 BLOB 和指纹；备份不等于远程备份或灾难恢复。
+- 哈希：`raw_sha256`、`signal_sha256` 和附件保存完整 SHA-256；`audit_id` 是前 16 个十六进制字符（64 位）；哈希用于完整性检查和输入标识，不是加密、数字签名、身份认证或第三方存证。
+- Provider/缓存：`MarketDataProvider` 是 Protocol，默认实现是 `AKShareProvider`；快照是最近历史日线收盘参考，不是实时行情；缓存和锁只在当前进程；single-flight 只合并相同 key；等待有超时。
+- 名称与目录：名称成功缓存 24 小时、失败冷却 5 分钟；失败保留旧名称，无旧值显示“名称暂不可用”，不能断言退市或不存在；证券目录 24 小时缓存，内置目录只提供离线身份候选。
+- 复合词条：`automated_testing_git_and_modular_monolith` 的自动化测试、Git 和模块化单体是三个不同概念；Git 不是应用按钮；FastAPI 是未来计划；测试通过不代表所有外部环境都已验证。
+
+### 14.4 来源与核验
+
+- 批次 5 未新增来源编号；沿用 `S008`–`S011`、`S017`–`S020`、`P001`–`P004`、`A011`、`A012`。
+- `S008`–`S011`、`S017`–`S020` 的页面内容未在 2026-10-23 前联网核验；文章只引用语言/库的通用行为，不引用具体版本条款。
+- 来源库当前把 `S019` 登记为 Git 文档、`S020` 登记为 pytest 文档；本批次按来源库编号引用，没有交换编号。
+- `A011`（pandas）和 `A012`（NumPy）书目信息仍待复核；文章用它们作概念背景，不用来证明策略有效。
+- 文章状态全部 `drafted`；未把“入口可访问”写成“内容已核验”；frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期。
+- 未新增 `official.md` 或 `academic.md` 条目，因为本批次没有新增来源编号。
+
+### 14.5 自检结果
+
+- 20 篇批次 5 文章全部存在，文件名与计划一致，文章状态全部 `drafted`。
+- 专业文章 `drafted` 85、`todo` 0；85 个专业词条 ID 无缺失、无重复。
+- 使用手册仍为 10 篇；专业词条仍为 85 个。
+- 所有 `prerequisites`、`related_articles`、`source_ids` 均指向现有词条或来源编号；没有悬空引用。
+- 每篇文章包含完整 frontmatter 和“快速理解/软件实践/专业原理/相关知识/参考资料”模板；包含白话解释、项目内使用位置、输入输出单位、当前软件边界、正式定义、可复核小例子、前提假设、边界情况、前置/关联词条和来源编号。
+- 20 篇均保持 `implemented`；正文没有虚构用户界面、控制台、代码执行入口或独立 Python/Git/数据库教学工具。
+- `automated_testing_git_and_modular_monolith` 已拆成自动化测试、Git、模块化单体三个清晰部分（正文标题为“第一部分：自动化测试”“第二部分：Git”“第三部分：模块化单体”），没有把三者写成同一概念。
+- 全目录扫描未发现英文内部编辑批注或未完成标记；合法状态词 `todo` 仅出现在状态定义和“0 篇”计数中。
+- Markdown 表格列数检查通过；所有表格行与分隔行列数一致。
+- 所有手算示例已用独立脚本复核；关键数值包括 `0.1 + 0.2 = 0.30000000000000004`、佣金 `5/30`、卖出总费用 `80`、3 日均线 `12/13/14`、3 日样本标准差 `2/1/1`、共同日期 2 天、`dropna` 后 1 行、`isfinite` 结果 `[True, False, False, False, True]`、`√252 ≈ 15.874507866387544`、`SHA-256("abc")` 前 16 位 `ba7816bf8f01cfea`、SQLite 回滚 0 行/提交 1 行、北京时间 `2026-10-23T09:30:00+08:00`。
+- 使用独立 `--basetemp=/tmp/qb5-pytest-20261023` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；未跳过失败测试。
+- 修改范围仅为 `docs/knowledge-drafts/`；未修改程序、测试、数据库、`VERSION`、构建脚本或发行文件。
+
+### 14.6 需要 Codex 复核的问题（批次 5）
+
+1. 确认 `bool` 是 `int` 子类但在金融参数校验中不应把 `True` 当数值 `1`；当前文章说明了这一原则，没有声称所有配置字段都已显式拒绝布尔值。
+2. 确认 `HistoryCache` 的 15 分钟/64 条、`SnapshotCache` 的 5 分钟/1 秒间隔、`RefreshCache` 的 60 秒等待和 `NameCache` 的 30 秒等待与代码一致；确认等待有超时，不是无限等待。
+3. 确认 `force=True` 绕过 TTL/冷却但仍合并同键并发；确认缓存读取、页面重绘和失败尝试不更新上游成功时间。
+4. 确认名称失败保留旧名称、无旧值显示“名称暂不可用”、不据此断言退市或不存在；确认证券目录 24 小时缓存和原子替换。
+5. 确认 `SCHEMA_VERSION=4`、高版本拒绝打开、非空旧库升级前 backup API 备份、`BEGIN IMMEDIATE` 事务、成功更新 `user_version` 并提交、失败回滚；确认迁移保留旧实验 BLOB 和指纹。
+6. 确认 `stage_library` 的复制、`PRAGMA integrity_check`、临时 bootstrap 文件和 `os.replace` 激活流程与 schema 迁移是不同流程。
+7. 确认 `audit_id` 只取 SHA-256 前 16 个十六进制字符，完整 SHA-256 另存 `raw_sha256`/`signal_sha256`；确认附件完整哈希和 AI 上下文截短哈希的用途。
+8. 确认 CSV 归档使用 UTF-8 无 BOM、部分界面下载使用 UTF-8 BOM；确认读取顺序为解压、核对 SHA-256、`read_csv(parse_dates=["date"], float_precision="round_trip")`。
+9. 确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现；确认测试通过不等于真实 WebView/外部接口/安装包验收。
+10. 确认 20 篇文章的 `implemented` 只表示技术被代码使用，不表示软件提供独立的 Python、Git、数据库管理或编程教学工具；确认没有虚构按钮或控制台。
+
+### 14.7 声明
+
+批次 5 只新增/修改 `docs/knowledge-drafts/` 下的 Markdown。未修改程序代码、测试、数据库、`VERSION`、安装器、构建脚本或发行文件；未执行打包、标签或 Release；批次 5 完成后停止，不进入正式接入或程序改造。20 篇文章仍是草稿，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
