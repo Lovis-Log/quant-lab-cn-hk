@@ -34,6 +34,7 @@ def main():
     parser.add_argument("--research-fixes", action="store_true")
     parser.add_argument("--learning-center", action="store_true")
     parser.add_argument("--resume-learning", action="store_true")
+    parser.add_argument("--manual-preview", action="store_true")
     args = parser.parse_args()
     directory = (args.data_dir or ROOT / ".tools" / ("desktop-validation-" + uuid4().hex)).resolve()
     directory.relative_to((ROOT / ".tools").resolve())
@@ -92,8 +93,12 @@ def main():
                         time.sleep(.3)
                 page = browser.contexts[0].pages[0]
                 console_errors = []
+                console_warnings = []
                 ignored_scheme_errors = []
                 def record_console(message):
+                    if message.type == "warning":
+                        console_warnings.append(message.text)
+                        return
                     if message.type != "error":
                         return
                     if message.text == "Failed to load resource: net::ERR_UNKNOWN_URL_SCHEME":
@@ -102,7 +107,10 @@ def main():
                         console_errors.append(message.text)
                 page.on("console", record_console)
                 page.get_by_text("市场数据实验室", exact=True).wait_for(timeout=30000)
-                summary["actual_webview_dom_loaded"] = True
+                assert page.url.startswith("http://127.0.0.1:")
+                expect(page).to_have_title("Quant Lab CN/HK", timeout=10000)
+                summary.update({"actual_webview_dom_loaded": True,
+                                "page_identity": {"url": page.url, "title": page.title()}})
                 welcome = page.get_by_role("button", name="跳过首次引导", exact=True)
                 if welcome.count():
                     welcome.click()
@@ -119,8 +127,40 @@ def main():
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0
                 assert sidebar.get_by_text("新手使用指引", exact=True).count() == 0
                 assert sidebar.get_by_text("研究笔记", exact=True).count() == 0
+                assert sidebar.get_by_text("使用手册（预览）", exact=True).count() == 0
                 main = page.get_by_test_id("stMain")
                 main_before = main.bounding_box()
+                manual_panel = None
+                if args.manual_preview:
+                    manual_button = page.get_by_role("button", name="使用手册（预览）", exact=True)
+                    expect(manual_button).to_be_visible(timeout=10000)
+                    manual_button.click()
+                    settle(page)
+                    manual_panel = page.locator(".st-key-manual_side_panel")
+                    expect(manual_panel).to_be_visible(timeout=10000)
+                    manual_panel.get_by_text(
+                        "快速开始：从资料库到第一份可复现实验", exact=True
+                    ).wait_for(timeout=10000)
+                    preview_navigation = manual_panel.get_by_role(
+                        "radiogroup", name="使用手册预览分区", exact=True
+                    )
+                    preview_navigation.get_by_text("功能说明", exact=True).click()
+                    settle(page)
+                    manual_panel.get_by_text(
+                        "市场数据：代码、名称、区间、复权、来源与缓存", exact=True
+                    ).wait_for(timeout=10000)
+                    preview_navigation = manual_panel.get_by_role(
+                        "radiogroup", name="使用手册预览分区", exact=True
+                    )
+                    preview_navigation.get_by_text("专业知识库", exact=True).click()
+                    settle(page)
+                    manual_panel.get_by_text(
+                        "开高低收与成交量（OHLCV）", exact=True
+                    ).wait_for(timeout=10000)
+                    assert "市场与数据 · implemented" in manual_panel.inner_text()
+                    summary.update({"manual_preview_dom": True,
+                                    "manual_preview_three_entries": True,
+                                    "manual_preview_offline_content": True})
                 page.get_by_role("button", name="新手使用指引", exact=True).click()
                 settle(page)
                 guide_panel = page.locator(".st-key-guide_side_panel")
@@ -129,6 +169,19 @@ def main():
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
                 expect(panel).to_be_visible(timeout=10000)
+                if args.manual_preview:
+                    manual_panel = page.locator(".st-key-manual_side_panel")
+                    expect(manual_panel).to_be_visible(timeout=10000)
+                    manual_box = manual_panel.bounding_box()
+                    guide_preview_box = guide_panel.bounding_box()
+                    deepseek_preview_box = panel.bounding_box()
+                    assert manual_box and guide_preview_box and deepseek_preview_box
+                    assert guide_preview_box["x"] < manual_box["x"] < deepseek_preview_box["x"]
+                    page.screenshot(path=str(directory/"manual-preview-coexist.png"), full_page=False)
+                    summary["manual_preview_coexists_with_panels"] = True
+                    manual_panel.get_by_role("button", name="×", exact=True).click()
+                    settle(page)
+                    expect(manual_panel).not_to_be_visible(timeout=10000)
                 assert page.get_by_role("dialog").count() == 0
                 page.get_by_role("button", name="⚙", exact=True).click()
                 settle(page)
@@ -276,7 +329,7 @@ def main():
                 page.mouse.up()
                 page.wait_for_timeout(350)
                 stored_order = page.evaluate("JSON.parse(localStorage.getItem('quantlab.dock.panelOrder'))")
-                assert stored_order[0] == "deepseek" and set(stored_order) == {"guide","deepseek","notes"}
+                assert stored_order[0] == "deepseek" and set(stored_order) == {"guide","manual","deepseek","notes"}
                 guide_panel = page.locator(".st-key-guide_side_panel")
                 panel = page.locator(".st-key-deepseek_side_panel")
                 reordered_guide_button_box = guide_button.bounding_box()
@@ -350,6 +403,44 @@ def main():
                 panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 expect(panel).not_to_be_visible(timeout=10000)
+                if args.manual_preview:
+                    page.get_by_role("button", name="使用手册（预览）", exact=True).click()
+                    settle(page)
+                    manual_panel = page.locator(".st-key-manual_side_panel")
+                    expect(manual_panel).to_be_visible(timeout=10000)
+                    manual_resize = manual_panel.locator('.ql-resize-handle[data-panel="manual"]')
+                    assert manual_resize.get_attribute("data-bound") == "1"
+                    manual_before = manual_panel.bounding_box()
+                    manual_resize_box = manual_resize.bounding_box()
+                    assert manual_before and manual_resize_box
+                    page.mouse.move(manual_resize_box["x"] + 3, manual_resize_box["y"] + 100)
+                    page.mouse.down()
+                    page.mouse.move(manual_resize_box["x"] - 45, manual_resize_box["y"] + 100, steps=5)
+                    page.mouse.up()
+                    page.wait_for_timeout(300)
+                    manual_after = manual_panel.bounding_box()
+                    stored_manual_width = page.evaluate(
+                        "localStorage.getItem('quantlab.manual.panelWidth')"
+                    )
+                    assert manual_after and manual_after["width"] >= manual_before["width"] + 35
+                    assert stored_manual_width == str(round(manual_after["width"]))
+                    manual_panel.get_by_role("button", name="⛶", exact=True).click()
+                    settle(page)
+                    manual_panel = page.locator(".st-key-manual_side_panel")
+                    manual_maximized = manual_panel.bounding_box()
+                    current_sidebar = sidebar.bounding_box()
+                    assert manual_maximized and current_sidebar
+                    assert abs(manual_maximized["x"] - (current_sidebar["x"] + current_sidebar["width"])) <= 3
+                    expect(topbar).to_be_visible()
+                    page.screenshot(path=str(directory/"manual-preview-maximized.png"), full_page=False)
+                    manual_panel.get_by_role("button", name="⛶", exact=True).click()
+                    settle(page)
+                    manual_panel = page.locator(".st-key-manual_side_panel")
+                    manual_panel.get_by_role("button", name="×", exact=True).click()
+                    settle(page)
+                    summary.update({"manual_preview_resize": True,
+                                    "manual_preview_maximize_restore": True,
+                                    "manual_preview_close": True})
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()
@@ -581,7 +672,10 @@ def main():
                 page.screenshot(path=str(directory/"webview.png"), full_page=True)
                 assert not page.locator('[data-testid="stException"]').count()
                 assert not console_errors, console_errors
+                assert not console_warnings, console_warnings
                 summary["console_errors"] = []
+                summary["console_warnings"] = []
+                summary["framework_overlay_absent"] = True
                 summary["ignored_webview_scheme_warnings"] = len(ignored_scheme_errors)
                 try:
                     page.evaluate("() => { window.pywebview.api.close(); return true; }")

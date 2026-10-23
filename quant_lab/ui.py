@@ -37,6 +37,7 @@ from quant_lab.securities import security_directory
 from quant_lab.guidance import GUIDES
 from quant_lab.ui_guidance import (render_learning_panel, render_page_help,
     render_welcome, protect_research_widgets, complete_task, history_evidence)
+from quant_lab.ui_manual import render_manual_preview_panel
 from quant_lab.ui_settings import library_configured, render_library_setup, render_settings_panel
 
 
@@ -85,7 +86,7 @@ DOCK_RESIZE_JS = """
     const stored = Number.parseFloat(localStorage.getItem(storageKey));
 
     const applyWidth = (requested) => {
-      const otherWidth = ['guide','deepseek','notes'].filter(value => value !== kind)
+      const otherWidth = ['guide','manual','deepseek','notes'].filter(value => value !== kind)
         .map(value => document.querySelector(`.st-key-${value}_side_panel`))
         .reduce((total, other) => total + (other ? other.getBoundingClientRect().width : 0), 0);
       const sidebar = document.querySelector('[data-testid="stSidebar"]');
@@ -122,6 +123,7 @@ DOCK_RESIZE_JS = """
     });
   };
   setup("guide", 220);
+  setup("manual", 240);
   setup("deepseek", 240);
   setup("notes", 260);
 })();
@@ -133,7 +135,7 @@ TOPBAR_REORDER_JS = """
 (() => {
   const root = document.documentElement;
   const storageKey = "quantlab.dock.panelOrder";
-  const kinds = ['guide', 'deepseek', 'notes'];
+  const kinds = ['guide', 'manual', 'deepseek', 'notes'];
   const readOrder = () => {
     try {
       const value = JSON.parse(localStorage.getItem(storageKey));
@@ -158,6 +160,7 @@ TOPBAR_REORDER_JS = """
       right += panel.getBoundingClientRect().width;
     });
     root.dataset.qlDockOrder = order.join('-');
+    root.style.setProperty('--ql-dock-total-width', `${right}px`);
     localStorage.setItem(storageKey, JSON.stringify(order));
     if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       requestAnimationFrame(() => kinds.forEach(kind => {
@@ -177,7 +180,7 @@ TOPBAR_REORDER_JS = """
   const bind = (button, kind) => {
     if (button.dataset.reorderBound === '1') return;
     button.dataset.reorderBound = '1';
-    button.setAttribute('aria-description', '按住并左右拖动可调整三个面板的顺序');
+    button.setAttribute('aria-description', '按住并左右拖动可调整四个面板的顺序');
     button.addEventListener('click', (event) => {
       if (button.dataset.suppressClick !== '1') return;
       event.preventDefault();
@@ -396,6 +399,12 @@ def _toggle_guide_panel() -> None:
     )
 
 
+def _toggle_manual_panel() -> None:
+    st.session_state["manual_panel_open"] = not st.session_state.get(
+        "manual_panel_open", False
+    )
+
+
 def _toggle_notes_panel() -> None:
     st.session_state["notes_panel_open"] = not st.session_state.get("notes_panel_open", False)
 
@@ -413,13 +422,14 @@ def _toggle_settings() -> None:
 def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
     st.session_state.setdefault("guide_panel_open", False)
+    st.session_state.setdefault("manual_panel_open", False)
     st.session_state.setdefault("notes_panel_open", False)
     st.session_state.setdefault("left_sidebar_visible", True)
     st.session_state.setdefault("settings_open", False)
     st.session_state.setdefault("maximized_panel", None)
     with st.container(key="global_topbar"):
-        settings, sidebar_toggle, brand, workspace, guide, assistant, research = st.columns(
-            [.42, .42, 1.75, 2.9, 1.32, 1.28, 1.18],
+        settings, sidebar_toggle, brand, workspace, guide, manual, assistant, research = st.columns(
+            [.42, .42, 1.62, 1.7, 1.25, 1.38, 1.2, 1.08],
             vertical_alignment="center", gap="small"
         )
         with settings:
@@ -442,6 +452,12 @@ def _global_topbar() -> None:
                 on_click=_toggle_guide_panel,
                 help="打开或关闭右侧新手使用指引；按住并左右拖动可与 DeepSeek 调换顺序。",
             )
+        with manual:
+            st.button(
+                "使用手册（预览）", key="manual_panel_toggle", width="stretch",
+                on_click=_toggle_manual_panel,
+                help="打开或关闭右侧文字使用手册预览；按住并左右拖动可调整顺序。",
+            )
         with assistant:
             st.button(
                 "DeepSeek 助手", key="deepseek_panel_toggle", width="stretch",
@@ -460,14 +476,16 @@ def _global_topbar() -> None:
 
 def _render_right_dock(context: dict, bundle) -> None:
     guide_open = st.session_state.get("guide_panel_open", False)
+    manual_open = st.session_state.get("manual_panel_open", False)
     deepseek_open = st.session_state.get("deepseek_panel_open", False)
     notes_open = st.session_state.get("notes_panel_open", False)
     maximized = st.session_state.get("maximized_panel")
     if maximized:
         guide_open = maximized == "guide"
+        manual_open = maximized == "manual"
         deepseek_open = maximized == "deepseek"
         notes_open = maximized == "notes"
-    if not (guide_open or deepseek_open or notes_open):
+    if not (guide_open or manual_open or deepseek_open or notes_open):
         return
     with st.container(key="right_dock"):
         if maximized:
@@ -476,6 +494,8 @@ def _render_right_dock(context: dict, bundle) -> None:
             render_learning_panel()
             if st.session_state.get("active_learning_context"):
                 context["learning_context"] = st.session_state["active_learning_context"]
+        if manual_open:
+            render_manual_preview_panel()
         if deepseek_open:
             render_deepseek_panel(context, bundle)
         if notes_open:

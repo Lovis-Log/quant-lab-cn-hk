@@ -12,7 +12,7 @@
 | Manual Content | `manual_content.py`, `docs/knowledge-drafts/` | 只读发现、严格 frontmatter 校验、稳定 ID/分类/关联查询与离线纯文本搜索；不依赖 UI、SQLite 或网络 |
 | Storage | `storage.py`, `migrations.py`, `paths.py` | SQLite 版本迁移、备份、自选股、设置、实验和学习笔记 |
 | AI | `deepseek.py`, `ai_research.py`, `ai_context.py`, `credentials.py`, `security.py` | 共用 DeepSeek 连接、动态模型、流式问答与 JSON 假设/审阅、限定摘要、安全凭据和脱敏 |
-| UI | `ui*.py`, `charts.py`, `app.py` | Streamlit 页面与 Plotly 展示；不实现核心金融公式 |
+| UI | `ui*.py`, `charts.py`, `app.py` | Streamlit 页面、文字手册预览与 Plotly 展示；不实现核心金融公式 |
 | Desktop | `desktop_launcher.py`, `QuantLab.spec`, `installer/` | 本地服务、pywebview、PyInstaller 与 Inno Setup |
 
 ```mermaid
@@ -35,7 +35,7 @@ flowchart LR
 
 `manual_content.py` 从源码树或 PyInstaller 的资源根读取 `docs/knowledge-drafts/`，不依赖当前工作目录。它严格要求 10 篇登记手册和 85 篇专业文章，解析文章 frontmatter 与 Markdown 正文，并在启动查询前验证必填字段、软件状态、重复 ID、分类及全部前置/相关文章引用。搜索索引仅由中文标题、英文标题、别名和正文在本地生成，不联网、不写用户资料库，也不导入 Streamlit。
 
-当前只建立内容层，尚未连接 UI。旧 `learning.py`、`guidance.py`、`learning_store.py`、学习表和 schema v4 均保持不变。`QuantLab.spec` 只负责把同一份只读 Markdown 资源带入未来的冻结应用；内容不会复制到用户资料库作为唯一来源。
+阶段 2 通过独立 `ui_manual.py` 在顶栏加入“使用手册（预览）”面板，只接入快速开始、市场数据功能说明和 OHLCV 专业词条三个代表页面。它与旧新手指引、DeepSeek 和研究笔记共用四面板停靠、排序、拖宽和最大化外壳；完整目录、搜索及文章跳转仍未接入。旧 `learning.py`、`guidance.py`、`learning_store.py`、学习表和 schema v4 均保持不变。`QuantLab.spec` 只负责把同一份只读 Markdown 资源带入未来的冻结应用；内容不会复制到用户资料库作为唯一来源。
 
 ## 数据合同
 
@@ -59,7 +59,7 @@ V2 构建输出到 `dist/packages/<版本>/QuantLab`，manifest 保存 `payload_
 
 `PRAGMA user_version=4` 保留旧实验、行情 BLOB、自选股、名称、非敏感设置和学习记录，新增 `note_categories`、`note_drafts`、`note_attachments` 以及笔记/实验的分类和回收站字段。旧库先一致性备份，再在 `BEGIN IMMEDIATE` 事务中升级；失败回滚，原快照与指纹不重写。
 
-`global_topbar` 固定横跨窗口，并取代左栏中的 AI、新手指引和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；各面板外壳不滚动，固定头部下的 `*_panel_body` 独立滚动。`left_sidebar_visible` 控制左侧导航栏显示，完全独立于三个右侧面板状态；ResizeObserver 把左栏实测宽度同步到 `--ql-sidebar-width`。最大化时只渲染目标面板并清除主区让位宽度：左栏可见则从左栏右缘开始，左栏隐藏则覆盖完整应用宽度，垂直方向始终限制在全局顶栏下方。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
+`global_topbar` 固定横跨窗口，并提供新手指引、使用手册预览、DeepSeek 和研究笔记入口。四个独立面板支持 Pointer Events 调宽、四按钮拖拽排序与 FLIP 动画；各面板外壳不滚动，固定头部下的 `*_panel_body` 独立滚动。`left_sidebar_visible` 控制左侧导航栏显示，完全独立于四个右侧面板状态；ResizeObserver 把左栏实测宽度同步到 `--ql-sidebar-width`。最大化时只渲染目标面板并清除主区让位宽度：左栏可见则从左栏右缘开始，左栏隐藏则覆盖完整应用宽度，垂直方向始终限制在全局顶栏下方。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
 
 `notes.py` 负责分类树、草稿、统一笔记/实验检索、回收站、附件验证和 ZIP 导出。附件先写临时文件，再原子改名并记录相对路径、MIME、大小与 SHA-256；图片 `attachment://id` 标记在渲染前从 Markdown 中移除并由受控组件显示，避免浏览器请求未知协议。
 
