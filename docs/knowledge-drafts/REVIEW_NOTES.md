@@ -1,11 +1,11 @@
 # 批次 1 复核、批次 2–4 修订与批次 5 记录
 
-日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23；批次 4 修订：2026-10-23；批次 5：2026-10-23
+日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23；批次 4 修订：2026-10-23；批次 5：2026-10-23；批次 5 修订：2026-10-23
 批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇；批次 4 共 25 篇；批次 5 共 20 篇
 代码基线：`codex/learning-center-v2`，提交 `c10728b`（批次 5 起点；本批次未修改程序代码）
-恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）；批次 4 恢复分支：`codex/recovery-before-batch4-20261023`（指向 `7275d71`）；批次 5 恢复分支：`codex/recovery-before-batch5-20261023`（指向 `c10728b`）
+恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）；批次 4 恢复分支：`codex/recovery-before-batch4-20261023`（指向 `7275d71`）；批次 5 恢复分支：`codex/recovery-before-batch5-20261023`（指向 `c10728b`）；批次 5 修订恢复分支：`codex/recovery-before-batch5-revision-20261023`（指向 `78b9b74`）
 写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
-批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`；批次 4 基于 `7275d71`；批次 5 基于 `c10728b`。
+批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`；批次 4 基于 `7275d71`；批次 5 基于 `c10728b`；批次 5 草稿提交：`78b9b74`；批次 5 修订基于 `78b9b74`。
 
 ## 0. 批次 5 摘要（2026-10-23）
 
@@ -19,11 +19,11 @@
 8. 滚动窗口：`moving_average` 使用 `rolling(window=N,min_periods=N).mean()`；5/20 日均线和 10 日收益标准差按观测行/交易日，不是自然日；前 N−1 行是预热。
 9. 日期口径：行情 `date` 是无时区交易日；`received_at`、`created_at` 是 UTC；界面显示北京时间 UTC+08:00；`received_at` 是本机收到响应的时间，不是交易所报价时间。
 10. 序列化与存储：实验 CSV 为 `to_csv(index=False)` 的 UTF-8 字节，SQLite 中为 zlib 压缩 BLOB；读取先解压、核对 SHA-256，再 `read_csv(parse_dates=["date"], float_precision="round_trip")`；JSON 不是加密、签名或自动 schema 验证；部分界面下载使用 UTF-8 BOM。
-11. SQLite 口径：`_connect` 使用 `timeout=15`、`sqlite3.Row`、`PRAGMA foreign_keys=ON`；上下文正常提交、异常回滚、最后关闭；当前没有远程数据库、账户隔离、加密或防篡改保证。
+11. SQLite 口径：`_connect` 使用 `timeout=15`、`sqlite3.Row`、`PRAGMA foreign_keys=ON`；上下文正常提交、异常回滚、最后关闭；代码未显式执行 `PRAGMA journal_mode`，不能断言活动数据库固定使用 rollback journal 或 WAL；当前没有远程数据库、账户隔离、加密或防篡改保证。
 12. 迁移口径：`SCHEMA_VERSION=4`、`PRAGMA user_version`；高版本拒绝打开；非空旧库升级前用 SQLite backup API 备份；`BEGIN IMMEDIATE` 事务，成功更新版本并提交，失败回滚；`stage_library` 是资料库复制流程，不与 schema 迁移混为一谈。
-13. 哈希口径：`raw_sha256`、`signal_sha256` 和附件保存完整 SHA-256；`audit_id` 是前 16 个十六进制字符（64 位）；哈希不是加密、数字签名、身份认证或第三方存证。
+13. 哈希口径：`raw_sha256`、`signal_sha256` 和附件保存完整 SHA-256（64 个十六进制字符，对应 256 位）；`audit_id` 是前 16 个十六进制字符（对应 64 位）；哈希不是加密、数字签名、身份认证或第三方存证。
 14. Provider/缓存：`MarketDataProvider` 是 Protocol，默认实现是 `AKShareProvider`；历史缓存 15 分钟/64 条，快照 5 分钟且请求至少间隔 1 秒；名称成功缓存 24 小时、失败冷却 5 分钟；single-flight 只合并相同 key，等待有超时；缓存和锁只在当前进程。
-15. 复合词条 `automated_testing_git_and_modular_monolith` 已拆成三个独立部分：自动化测试、Git、模块化单体；测试通过不等于真实 WebView、外部接口或安装包验收；Git 不是应用按钮；FastAPI 是未来计划。
+15. 复合词条 `automated_testing_git_and_modular_monolith` 已拆成三个独立部分：自动化测试、Git、模块化单体；模块化单体按应用/代码库/部署与业务边界定义，不以进程数量定义；桌面父进程、Streamlit 子进程和 WebView2 附加进程仍共同构成一个应用；测试通过不等于真实 WebView、外部接口或安装包验收；Git 不是应用按钮；FastAPI 是未来计划。
 16. 本批次只修改 `docs/knowledge-drafts/` 下的 Markdown；未改程序、测试、数据库、`VERSION`、构建或发行文件。使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）。
 
 ## 0.1 批次 4 摘要（2026-10-23）
@@ -524,7 +524,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | `python_functions` | 纯函数 vs 网络/文件/数据库副作用 | `implemented` | `metrics.py:30-79`, `backtest.py:62-65`, `data.py:71-111`, `storage.py:80-124` | 默认参数在定义时求值；避免可变默认值 |
 | `python_collections` | 缓存键 `(market, symbol, start, end, adjustment)` | `implemented` | `processing.py:9-10`, `data.py:138-160`, `storage.py:90-124` | `set` 不保留业务排序；字典保留插入顺序 |
 | `python_exceptions` | `DataValidationError(ValueError)`；`DataUnavailableError(RuntimeError)` | `implemented` | `processing.py:13-58`, `data.py:46-111`, `refresh.py:47-67`, `names.py:81-99` | 缓存/名称查询捕获较宽异常；名称失败不代表不存在 |
-| `python_modules_and_packages` | 一个 `quant_lab` 包；核心模块不导入 Streamlit | `implemented` | `quant_lab/__init__.py`, `ARCHITECTURE.md:3-15` | FastAPI 只是未来计划 |
+| `python_modules_and_packages` | 一个 `quant_lab` 常规包；核心模块不导入 Streamlit | `implemented` | `quant_lab/__init__.py`, `ARCHITECTURE.md:3-15`, `desktop_launcher.py:171-209` | 常规包含 `__init__.py`，命名空间包可不含；单体不以进程数定义；FastAPI 只是未来计划 |
 | `type_hints_and_dataclasses` | 注解不自动运行时校验；`frozen=True` 非深度不可变 | `implemented` | `backtest.py:14-60`, `market_data.py:39-64`, `data.py:25-39` | `Protocol` 不自动鉴权或注册 Provider |
 | `numpy_arrays` | `isfinite` 检查 NaN/±inf；`√252 ≈ 15.8745` | `implemented` | `processing.py:39-40`, `backtest.py:81`, `statistics.py:58`, `statistics.py:126` | 数组不是主要持久化格式；sin/cos 仅教学模拟 |
 | `pandas_series_and_dataframe` | 列/索引/dtype；缓存返回 `copy(deep=True)` | `implemented` | `processing.py:33-58`, `data.py:155-157`, `strategy.py:40-52` | 索引对齐不是行号对齐 |
@@ -532,13 +532,13 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | `missing_data` | 必需字段缺失报错；组合共同日期 `dropna`；ML 零成交量→NaN | `implemented` | `processing.py:37-47`, `portfolio.py:32-34`, `statistics.py:63-80` | 无通用插值、均值填补或缺失机制模型 |
 | `returns_and_pct_change` | `r_t=P_t/P_{t−1}−1`；首行 NaN | `implemented` | `metrics.py:67-69`, `statistics.py:46`, `statistics.py:73-77`, `portfolio.py:54` | 只有 `volume_change` 明确 `fill_method=None` |
 | `rolling_window` | `rolling(window=N,min_periods=N).mean()`；5/20 与 10 日窗口 | `implemented` | `strategy.py:28-31`, `statistics.py:75-77` | 窗口按观测行/交易日，不补齐停牌日 |
-| `alignment_join_and_merge` | 组合日期 `inner` join；回测 raw/signal 日期完全一致 | `implemented` | `portfolio.py:19-35`, `research.py:38-41`, `processing.py:43-47` | 不是外连接，不自动填补 |
+| `alignment_join_and_merge` | 组合日期 `inner` join；回测 raw/signal 日期逐行完全一致 | `implemented` | `portfolio.py:19-35`, `research.py:38-41`, `processing.py:43-47` | 复权信号价与不复权成交价单位相同，但口径/尺度可不同；不是外连接，不自动填补 |
 | `csv_and_json` | CSV UTF-8 字节；zlib BLOB；SHA-256；JSON 假设 | `implemented` | `storage.py:76-77`, `storage.py:95-124`, `storage.py:144-154`, `storage.py:171-188` | JSON 不是加密/签名/自动 schema 验证；部分 UI 下载带 BOM |
-| `sqlite_and_transactions` | `timeout=15`、`Row`、`foreign_keys=ON`、commit/rollback/close | `implemented` | `storage.py:31-46`, `paths.py:37-52` | 无远程数据库、用户隔离、加密或防篡改保证 |
+| `sqlite_and_transactions` | `timeout=15`、`Row`、`foreign_keys=ON`、commit/rollback/close | `implemented` | `storage.py:31-46`, `paths.py:37-52` | 未显式设置 `journal_mode`，不能断言固定日志模式；无远程数据库、用户隔离、加密或防篡改保证 |
 | `schema_migration` | `SCHEMA_VERSION=4`；`user_version`；backup API；`BEGIN IMMEDIATE` | `implemented` | `migrations.py:10`, `migrations.py:90-118`, `paths.py:68-105` | 备份不是远程备份或灾难恢复；`stage_library` 是另一流程 |
 | `hash_and_fingerprint` | 完整 SHA-256；`audit_id` 前 16 个十六进制字符 | `implemented` | `research.py:50-63`, `storage.py:120-121`, `storage.py:144-148`, `ai_context.py:33-35` | 不是加密、签名、身份认证或第三方存证 |
 | `provider_api_cache_and_concurrency` | 历史 15 分钟/64 条；快照 5 分钟/1 秒；名称 24 小时/5 分钟 | `implemented` | `market_data.py:56-64`, `data.py:66-198`, `refresh.py:19-67`, `names.py:42-99` | 进程内缓存和锁；等待 60 秒/30 秒；single-flight 只合并同 key |
-| `automated_testing_git_and_modular_monolith` | pytest、Git、模块化单体三部分 | `implemented` | `tests/`, `ARCHITECTURE.md:3-15`, `README.md:101-105` | 测试通过不等于 WebView/外部接口/安装包验收；Git 不是应用按钮 |
+| `automated_testing_git_and_modular_monolith` | pytest、Git、模块化单体三部分 | `implemented` | `tests/`, `ARCHITECTURE.md:3-15`, `desktop_launcher.py:171-209`, `README.md:101-105` | 单体不以进程数定义；桌面父/子进程仍是一个应用；测试通过不等于 WebView/外部接口/安装包验收；Git 不是应用按钮 |
 
 ### 14.3 关键边界
 
@@ -548,12 +548,12 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 收益率与窗口：简单收益率不是对数收益率；首行收益率通常为 NaN；滚动窗口按行/交易日，不按自然日，不补齐停牌日。
 - 日期：行情 `date` 是无时区交易日；`received_at`、`created_at` 是 UTC；界面显示北京时间；`received_at` 不是交易所报价时间。
 - 序列化：实验 CSV 是 UTF-8 字节，SQLite 中是 zlib 压缩 BLOB；读取先解压、核对 SHA-256，再 `read_csv(parse_dates=["date"], float_precision="round_trip")`；JSON 不是加密、签名或自动 schema 验证；部分界面下载使用 UTF-8 BOM。
-- 数据库：`_connect` 使用 `timeout=15`、`sqlite3.Row`、`PRAGMA foreign_keys=ON`；正常提交、异常回滚、最后关闭；没有远程数据库、用户隔离、加密或防篡改保证。
+- 数据库：`_connect` 使用 `timeout=15`、`sqlite3.Row`、`PRAGMA foreign_keys=ON`；正常提交、异常回滚、最后关闭；代码没有显式执行 `PRAGMA journal_mode`，实际日志模式由 SQLite 初始设置和数据库已有状态决定；没有远程数据库、用户隔离、加密或防篡改保证。
 - 迁移：`SCHEMA_VERSION=4`；高版本拒绝打开；非空旧库升级前用 SQLite backup API 备份；`BEGIN IMMEDIATE` 事务，成功更新版本并提交，失败回滚；迁移保留旧实验行情 BLOB 和指纹；备份不等于远程备份或灾难恢复。
 - 哈希：`raw_sha256`、`signal_sha256` 和附件保存完整 SHA-256；`audit_id` 是前 16 个十六进制字符（64 位）；哈希用于完整性检查和输入标识，不是加密、数字签名、身份认证或第三方存证。
 - Provider/缓存：`MarketDataProvider` 是 Protocol，默认实现是 `AKShareProvider`；快照是最近历史日线收盘参考，不是实时行情；缓存和锁只在当前进程；single-flight 只合并相同 key；等待有超时。
 - 名称与目录：名称成功缓存 24 小时、失败冷却 5 分钟；失败保留旧名称，无旧值显示“名称暂不可用”，不能断言退市或不存在；证券目录 24 小时缓存，内置目录只提供离线身份候选。
-- 复合词条：`automated_testing_git_and_modular_monolith` 的自动化测试、Git 和模块化单体是三个不同概念；Git 不是应用按钮；FastAPI 是未来计划；测试通过不代表所有外部环境都已验证。
+- 复合词条：`automated_testing_git_and_modular_monolith` 的自动化测试、Git 和模块化单体是三个不同概念；模块化单体按应用/代码库/部署与业务边界定义，不以进程数量定义；桌面父进程、Streamlit 子进程和 WebView2 附加进程仍共同构成一个应用；Git 不是应用按钮；FastAPI 是未来计划；测试通过不代表所有外部环境都已验证。
 
 ### 14.4 来源与核验
 
@@ -575,7 +575,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - `automated_testing_git_and_modular_monolith` 已拆成自动化测试、Git、模块化单体三个清晰部分（正文标题为“第一部分：自动化测试”“第二部分：Git”“第三部分：模块化单体”），没有把三者写成同一概念。
 - 全目录扫描未发现英文内部编辑批注或未完成标记；合法状态词 `todo` 仅出现在状态定义和“0 篇”计数中。
 - Markdown 表格列数检查通过；所有表格行与分隔行列数一致。
-- 所有手算示例已用独立脚本复核；关键数值包括 `0.1 + 0.2 = 0.30000000000000004`、佣金 `5/30`、卖出总费用 `80`、3 日均线 `12/13/14`、3 日样本标准差 `2/1/1`、共同日期 2 天、`dropna` 后 1 行、`isfinite` 结果 `[True, False, False, False, True]`、`√252 ≈ 15.874507866387544`、`SHA-256("abc")` 前 16 位 `ba7816bf8f01cfea`、SQLite 回滚 0 行/提交 1 行、北京时间 `2026-10-23T09:30:00+08:00`。
+- 所有手算示例已用独立脚本复核；关键数值包括 `0.1 + 0.2 = 0.30000000000000004`、佣金 `5/30`、卖出总费用 `80`、3 日均线 `12/13/14`、3 日样本标准差 `2/1/1`、共同日期 2 天、`dropna` 后 1 行、`isfinite` 结果 `[True, False, False, False, True]`、`√252 ≈ 15.874507866387544`、`SHA-256("abc")` 前 16 个十六进制字符 `ba7816bf8f01cfea`、SQLite 回滚 0 行/提交 1 行、北京时间 `2026-10-23T09:30:00+08:00`。
 - 使用独立 `--basetemp=/tmp/qb5-pytest-20261023` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；未跳过失败测试。
 - 修改范围仅为 `docs/knowledge-drafts/`；未修改程序、测试、数据库、`VERSION`、构建脚本或发行文件。
 
@@ -589,9 +589,24 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 6. 确认 `stage_library` 的复制、`PRAGMA integrity_check`、临时 bootstrap 文件和 `os.replace` 激活流程与 schema 迁移是不同流程。
 7. 确认 `audit_id` 只取 SHA-256 前 16 个十六进制字符，完整 SHA-256 另存 `raw_sha256`/`signal_sha256`；确认附件完整哈希和 AI 上下文截短哈希的用途。
 8. 确认 CSV 归档使用 UTF-8 无 BOM、部分界面下载使用 UTF-8 BOM；确认读取顺序为解压、核对 SHA-256、`read_csv(parse_dates=["date"], float_precision="round_trip")`。
-9. 确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现；确认测试通过不等于真实 WebView/外部接口/安装包验收。
+9. 确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现；确认模块化单体不以进程数定义，桌面父进程、Streamlit 子进程和 WebView2 附加进程仍是一个应用；确认测试通过不等于真实 WebView/外部接口/安装包验收。
 10. 确认 20 篇文章的 `implemented` 只表示技术被代码使用，不表示软件提供独立的 Python、Git、数据库管理或编程教学工具；确认没有虚构按钮或控制台。
+11. 确认 `quant_lab` 是包含 `__init__.py` 的常规包；确认文章同时说明 Python 3 命名空间包可以没有 `__init__.py`，没有把常规包定义写成无例外的语言规则。
+12. 确认项目代码没有显式执行 `PRAGMA journal_mode`；文章不应断言活动数据库固定使用 rollback journal 或 WAL，实际模式由 SQLite 初始设置和数据库已有状态决定。
 
 ### 14.7 声明
 
 批次 5 只新增/修改 `docs/knowledge-drafts/` 下的 Markdown。未修改程序代码、测试、数据库、`VERSION`、安装器、构建脚本或发行文件；未执行打包、标签或 Release；批次 5 完成后停止，不进入正式接入或程序改造。20 篇文章仍是草稿，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+
+### 14.8 批次 5 修订（2026-10-23）
+
+1. `hash_and_fingerprint`、`csv_and_json`：统一 SHA-256 长度表述为“完整 SHA-256：64 个十六进制字符，对应 256 位；`audit_id`：前 16 个十六进制字符，对应 64 位”；删除把 64 个十六进制字符误写成 64-bit 摘要的表述；可能产生歧义的截短说法改为“前 16 个十六进制字符”。
+2. `alignment_join_and_merge`：删除“复权信号价与不复权成交价单位可以不同”的错误表述；改为两者单位相同（均为对应市场币种/股），但价格口径和数值尺度可能不同，日期序列必须逐行完全一致。
+3. `python_modules_and_packages`：明确传统/常规 Python 包通常包含 `__init__.py`，Python 3 也支持没有 `__init__.py` 的命名空间包；本项目 `quant_lab` 是包含 `__init__.py` 的常规包。不再把“包必须带 `__init__.py`”写成无例外的语言定义。
+4. `python_modules_and_packages`、`automated_testing_git_and_modular_monolith`：模块化单体改为按应用/代码库/部署与业务边界定义，不再定义为“只有一个操作系统进程”；明确它不要求运行时只有一个 OS 进程或线程，桌面父进程、独立 Streamlit 子进程和 WebView2 附加进程仍共同构成一个应用，不是可独立部署、通过远程业务 API 协作的微服务；核心计算模块与 UI 的依赖方向不变。
+5. `sqlite_and_transactions`：明确 SQLite 可以使用 rollback journal、WAL 等日志模式；当前项目代码没有显式执行 `PRAGMA journal_mode`，不能仅凭代码断言活动数据库固定采用某个模式；实际模式由 SQLite 初始设置和数据库已有状态决定；项目明确依赖事务、`commit`/`rollback`、`foreign_keys`、backup API 和 `BEGIN IMMEDIATE`，而不是某个固定 `journal_mode`。
+6. `automated_testing_git_and_modular_monolith`：删除正文中的当前分支名、当前测试数量和具体 `git push` 分支名；正文只说明测试数量会变化、具体分支和测试结果以当次 `git status`/`git log`/pytest 输出为准。精确分支、提交和测试数量保留在 `REVIEW_NOTES.md` 批次记录中。
+7. 同步更新 `CATALOG.md`、`REVIEW_NOTES.md`、`references/source-map.md` 中受影响的哈希长度、价格单位、包定义、模块化单体进程模型、SQLite 日志模式和过期开发状态表述；`README.md` 未发现需要同步的受影响表述，未修改。
+8. 状态与计数保持不变：批次 5 共 20 篇，全部 `implemented`、`drafted`；专业文章 `drafted` 85、`todo` 0；专业词条 85；使用手册 10 篇；全目录功能状态 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13。
+9. 使用独立 `--basetemp=/tmp/qb5-revision-pytest-20261023` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；未跳过失败测试。
+10. 本次只修改 `docs/knowledge-drafts/` 下的 Markdown；未修改程序、测试、数据库、`VERSION`、构建或发行文件；未打包、未创建标签、未发布 Release。

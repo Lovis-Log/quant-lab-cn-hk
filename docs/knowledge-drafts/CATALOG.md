@@ -103,7 +103,7 @@
 - `python_functions`：区分纯计算函数与带网络/文件/数据库副作用的函数；说明默认参数、`None` 返回和异常。
 - `python_collections`：`list`、`dict`、`tuple`、`set` 的顺序、可变性和唯一性；明确 `set` 不保留业务排序。
 - `python_exceptions`：`DataValidationError`、`DataUnavailableError`、`ValueError`；缓存和名称查询捕获较宽异常以保留旧值；名称失败不代表证券不存在。
-- `python_modules_and_packages`：`quant_lab` 模块化单体、核心模块不导入 Streamlit、未来 FastAPI 仅为计划。
+- `python_modules_and_packages`：`quant_lab` 是包含 `__init__.py` 的常规包；Python 3 也支持没有 `__init__.py` 的命名空间包。模块化单体按应用/代码库/部署与业务边界定义，不以进程数量定义；核心模块不导入 Streamlit，未来 FastAPI 仅为计划。
 - `type_hints_and_dataclasses`：类型注解不自动运行时校验；`frozen=True` 不保证深度不可变；`MarketDataProvider` 为 Protocol。
 - `numpy_arrays`：`np.isfinite` 检查 NaN 和正负无穷；数组不是主要持久化格式；`np.sin`/`np.cos` 只用于 Academy 固定模拟。
 - `pandas_series_and_dataframe`：列、索引、dtype、复制、筛选和向量化；历史缓存返回深拷贝。
@@ -111,13 +111,13 @@
 - `missing_data`：必需字段缺失显式报错；组合共同日期内连接并 `dropna`；机器学习零成交量转 NaN 后删除含缺失行；无通用插值。
 - `returns_and_pct_change`：简单收益率 `r_t=P_t/P_{t−1}−1`；首行 NaN；只有机器学习 `volume_change` 明确 `fill_method=None`。
 - `rolling_window`：`rolling(window=N,min_periods=N).mean()`、5/20 日均线和 10 日收益标准差；窗口按交易日行数。
-- `alignment_join_and_merge`：组合按日期 inner join；回测要求 raw/signal 日期完全一致；排序并拒绝重复日期。
+- `alignment_join_and_merge`：组合按日期 inner join；回测要求 raw/signal 日期逐行完全一致；复权信号价与不复权成交价单位相同，但价格口径和数值尺度可能不同；排序并拒绝重复日期。
 - `csv_and_json`：实验 CSV 为 UTF-8 字节、zlib 压缩 BLOB、读取核对 SHA-256 后 `parse_dates` 与 `float_precision="round_trip"`；JSON 不是加密或自动 schema 验证；部分界面下载使用 UTF-8 BOM。
-- `sqlite_and_transactions`：`timeout=15`、`row_factory=sqlite3.Row`、`PRAGMA foreign_keys=ON`；上下文 commit/rollback/close；无远程数据库、账户隔离、加密或防篡改保证。
+- `sqlite_and_transactions`：`timeout=15`、`row_factory=sqlite3.Row`、`PRAGMA foreign_keys=ON`；上下文 commit/rollback/close；代码未显式执行 `PRAGMA journal_mode`，不依赖固定日志模式；无远程数据库、账户隔离、加密或防篡改保证。
 - `schema_migration`：`SCHEMA_VERSION=4`、`PRAGMA user_version`、高版本拒绝打开、升级前 backup API 备份、`BEGIN IMMEDIATE` 事务与失败回滚；`stage_library` 与迁移分开。
-- `hash_and_fingerprint`：完整 SHA-256 用于 raw/signal CSV 和附件；`audit_id` 为前 16 个十六进制字符（64 位）；哈希不是加密、签名或第三方存证。
+- `hash_and_fingerprint`：完整 SHA-256 为 64 个十六进制字符、对应 256 位，用于 raw/signal CSV 和附件；`audit_id` 为前 16 个十六进制字符、对应 64 位；哈希不是加密、签名或第三方存证。
 - `provider_api_cache_and_concurrency`：`MarketDataProvider` Protocol、AKShare 默认实现、历史缓存 15 分钟/64 条、快照 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、single-flight 与等待超时；缓存和锁只在当前进程。
-- `automated_testing_git_and_modular_monolith`：正文拆成自动化测试、Git、模块化单体三个独立部分；测试通过不等于真实 WebView、外部接口或安装包验收；Git 不是应用按钮；FastAPI 是未来计划。
+- `automated_testing_git_and_modular_monolith`：正文拆成自动化测试、Git、模块化单体三个独立部分；模块化单体按应用/代码库/部署与业务边界定义，不以进程数量定义；桌面父进程、Streamlit 子进程和 WebView2 附加进程仍构成一个应用；测试通过不等于真实 WebView、外部接口或安装包验收；Git 不是应用按钮；FastAPI 是未来计划。
 - 不新增、删除或拆分 ID，专业词条总数仍为 85；未新增来源编号，沿用 S008–S011、S017–S020、P001–P004、A011、A012 等现有来源。
 - 全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 5 为 `implemented` 20。
 - 批次 5 文章 frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
@@ -246,7 +246,7 @@
 | `python_functions` | Python 函数 / Python Functions | `implemented` | `quant_lab/*.py` | `python_modules_and_packages`, `python_control_flow`, `type_hints_and_dataclasses` | `drafted` | S008, P003 | 批次 5 已起草；纯函数与网络/文件/数据库副作用分离。 |
 | `python_collections` | Python 容器 / Python Collections | `implemented` | `quant_lab/*.py` | `python_values_and_types`, `pandas_series_and_dataframe`, `csv_and_json` | `drafted` | S008, P003 | 批次 5 已起草；list/dict/tuple/set 的顺序、可变性和唯一性。 |
 | `python_exceptions` | Python 异常 / Python Exceptions | `implemented` | `data.py`, `processing.py`, `storage.py`, `notes.py` | `python_control_flow`, `python_functions`, `automated_testing_git_and_modular_monolith` | `drafted` | S008, P004 | 批次 5 已起草；显式错误、回滚、缓存保留旧值与名称失败边界。 |
-| `python_modules_and_packages` | Python 模块与包 / Python Modules and Packages | `implemented` | `quant_lab/`, `tests/` | `python_functions`, `automated_testing_git_and_modular_monolith`, `type_hints_and_dataclasses` | `drafted` | S008, P002 | 批次 5 已起草；模块化单体、核心模块不导入 Streamlit、FastAPI 未实现。 |
+| `python_modules_and_packages` | Python 模块与包 / Python Modules and Packages | `implemented` | `quant_lab/`, `tests/`, `desktop_launcher.py` | `python_functions`, `automated_testing_git_and_modular_monolith`, `type_hints_and_dataclasses` | `drafted` | S008, P002 | 批次 5 已起草；常规包含 `__init__.py`、命名空间包可不含；模块化单体不以进程数定义；核心模块不导入 Streamlit；FastAPI 未实现。 |
 | `type_hints_and_dataclasses` | 类型注解与数据类 / Type Hints and Dataclasses | `implemented` | `backtest.py`, `statistics.py`, `portfolio.py`, `market_data.py` | `python_functions`, `python_modules_and_packages`, `python_values_and_types` | `drafted` | S008, S017, P003 | 批次 5 已起草；注解不自动校验、frozen 非深度不可变、Provider Protocol。 |
 | `numpy_arrays` | NumPy 数组 / NumPy Arrays | `implemented` | `backtest.py`, `statistics.py`, `learning.py` | `pandas_series_and_dataframe`, `returns_and_pct_change`, `rolling_window` | `drafted` | S010, A012, P003 | 批次 5 已起草；`isfinite`、年化因子、方向一致率和教学模拟。 |
 | `pandas_series_and_dataframe` | pandas Series 与 DataFrame / pandas Series and DataFrame | `implemented` | `data.py`, `processing.py`, `metrics.py`, `statistics.py`, `portfolio.py` | `numpy_arrays`, `datetime_and_index`, `missing_data`, `rolling_window` | `drafted` | S009, A011, P003 | 批次 5 已起草；列/索引/dtype、深拷贝、筛选和向量化。 |
@@ -254,13 +254,13 @@
 | `missing_data` | 缺失数据 / Missing Data | `implemented` | `processing.py`, `statistics.py`, `portfolio.py`, `notes.py` | `data_quality_and_bias`, `pandas_series_and_dataframe`, `alignment_join_and_merge` | `drafted` | S009, P004, P003 | 批次 5 已起草；字段缺失报错、共同日期、零成交量与无插值。 |
 | `returns_and_pct_change` | 收益率与 pct_change / Returns and pct_change | `implemented` | `metrics.py`, `statistics.py`, `portfolio.py` | `simple_return`, `log_return`, `rolling_window` | `drafted` | S009, P003 | 批次 5 已起草；简单收益率、首行 NaN 与 `fill_method` 边界。 |
 | `rolling_window` | 滚动窗口 / Rolling Window | `implemented` | `strategy.py`, `statistics.py`, `learning.py` | `moving_average`, `pandas_series_and_dataframe`, `returns_and_pct_change` | `drafted` | S009, P003 | 批次 5 已起草；`min_periods=N`、5/20 日均线差、10 日波动率。 |
-| `alignment_join_and_merge` | 对齐、连接与合并 / Alignment, Join, and Merge | `implemented` | `portfolio.py`, `research.py`, `data.py` | `datetime_and_index`, `missing_data`, `trading_calendar` | `drafted` | S009, P003 | 批次 5 已起草；组合 inner join、回测日期完全一致、拒绝重复日期。 |
+| `alignment_join_and_merge` | 对齐、连接与合并 / Alignment, Join, and Merge | `implemented` | `portfolio.py`, `research.py`, `data.py` | `datetime_and_index`, `missing_data`, `trading_calendar` | `drafted` | S009, P003 | 批次 5 已起草；组合 inner join、回测日期逐行一致；复权/不复权价格单位相同但口径/尺度可不同；拒绝重复日期。 |
 | `csv_and_json` | CSV 与 JSON / CSV and JSON | `implemented` | `storage.py`, `ui.py`, `ui_research.py`, `ai_context.py` | `pandas_series_and_dataframe`, `reproducibility_and_audit`, `sqlite_and_transactions` | `drafted` | S008, S009, P004 | 批次 5 已起草；UTF-8 CSV、zlib BLOB、SHA-256、JSON 与 BOM 差异。 |
-| `sqlite_and_transactions` | SQLite 与事务 / SQLite and Transactions | `implemented` | `storage.py`, `notes.py`, `migrations.py` | `schema_migration`, `hash_and_fingerprint`, `automated_testing_git_and_modular_monolith` | `drafted` | S011, S018, P004 | 批次 5 已起草；连接参数、commit/rollback/close 与本地数据库边界。 |
+| `sqlite_and_transactions` | SQLite 与事务 / SQLite and Transactions | `implemented` | `storage.py`, `notes.py`, `migrations.py` | `schema_migration`, `hash_and_fingerprint`, `automated_testing_git_and_modular_monolith` | `drafted` | S011, S018, P004 | 批次 5 已起草；连接参数、commit/rollback/close；未显式设置 `journal_mode`；本地数据库边界。 |
 | `schema_migration` | Schema 迁移 / Schema Migration | `implemented` | `migrations.py`, `storage.py` | `sqlite_and_transactions`, `reproducibility_and_audit`, `hash_and_fingerprint` | `drafted` | P002, S011, S018 | 批次 5 已起草；`user_version=4`、备份、`BEGIN IMMEDIATE` 与 `stage_library` 区分。 |
-| `hash_and_fingerprint` | 哈希与指纹 / Hash and Fingerprint | `implemented` | `research.py`, `storage.py`, `notes.py`, `ai_context.py` | `reproducibility_and_audit`, `schema_migration`, `data_provenance` | `drafted` | S008, P002 | 批次 5 已起草；完整 SHA-256、16 位 `audit_id` 与技术边界。 |
+| `hash_and_fingerprint` | 哈希与指纹 / Hash and Fingerprint | `implemented` | `research.py`, `storage.py`, `notes.py`, `ai_context.py` | `reproducibility_and_audit`, `schema_migration`, `data_provenance` | `drafted` | S008, P002 | 批次 5 已起草；完整 SHA-256（64 个十六进制字符）与前 16 个十六进制字符的 `audit_id`；哈希非加密/签名。 |
 | `provider_api_cache_and_concurrency` | Provider、API、缓存与并发 / Provider, API, Cache, and Concurrency | `implemented` | `market_data.py`, `data.py`, `refresh.py`, `names.py`, `securities.py` | `cache_and_freshness`, `data_provenance`, `automated_testing_git_and_modular_monolith` | `drafted` | P002, P004, S001 | 批次 5 已起草；TTL、single-flight、深拷贝、等待超时与进程内边界。 |
-| `automated_testing_git_and_modular_monolith` | 自动化测试、Git 与模块化单体 / Automated Testing, Git, and Modular Monolith | `implemented` | `tests/`, `ARCHITECTURE.md` | `python_modules_and_packages`, `schema_migration`, `provider_api_cache_and_concurrency` | `drafted` | P001, P002, S019, S020 | 批次 5 已起草；正文分三个独立部分；Git 非应用按钮，FastAPI 未实现。 |
+| `automated_testing_git_and_modular_monolith` | 自动化测试、Git 与模块化单体 / Automated Testing, Git, and Modular Monolith | `implemented` | `tests/`, `ARCHITECTURE.md`, `desktop_launcher.py` | `python_modules_and_packages`, `schema_migration`, `provider_api_cache_and_concurrency` | `drafted` | P001, P002, S019, S020 | 批次 5 已起草；正文分三个独立部分；单体不以进程数定义，桌面父/子进程仍是一个应用；Git 非应用按钮，FastAPI 未实现。 |
 
 ## 重复、合并、缺口与待 Codex 判断
 
@@ -301,7 +301,7 @@
 10. **GUI 验收**：本批次只写文档，未启动 WebView，也未核对实际 DOM。Codex 接入手册内容后，必须按 AGENTS.md 做真实 WebView DOM/控件验收，不能把编译、健康检查或窗口显示当作通过。
 11. **批次 3 代码事实复核**：确认三种策略条件、`run_backtest` 的 `i` 与 `i-1` 信号索引、基准第二个交易日开盘买入、`split=int(N×train_fraction)`、样本外统计从 `split−1` 起、`split_date=date[split]`、参数敏感性跳过 `short>=long` 与 `long>=len(raw_train)`、`audit_id` 的五类输入，以及实验档案未保存源码提交/输入契约版本。另确认 A 股 `i <= last_buy_index` 的 T+1 检查是防御性代码：当前日线每天最多一笔订单，正常流程不会同日买卖，不应把 T+1 与零成交量、涨跌停并列为当前可观察的 `blocked` 原因。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 12. **批次 4 代码事实复核**：确认组合页 `align_closes` 的 2–4 只、共同收盘日 ≥8 天、日期内连接；确认 `returns.cov()/corr()` 使用全部共同日期收益且样本口径 `ddof=1`；确认 `split=int(len(returns)×f)`、权重只用训练收益、`test @ equal`/`test @ inverse` 与样本外起点归一化；确认 `inverse_volatility_weights` 对零/负/NaN 波动率报错；确认 `analyze_portfolio` 不掌握币种、同币种限制只在界面。确认 `one_sample_return_test` 至少 3 个收益、`std(ddof=1)`、`ttest_1samp(popmean=0.0)` 默认双侧、零标准差返回 `None`、页面只显示 p 值。确认 `supervised_frame` 的五个特征、次日收盘标签、零成交量替换和 `dropna`；确认 `evaluate_linear_model` 的 60 行门槛、`split-1` 间隔、训练 30/测试 10 行门槛、`TimeSeriesSplit(3,gap=1)` 折内新 Pipeline、MAE/零收益基线/R²/方向一致率口径，以及 RMSE 未实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
-13. **批次 5 代码事实复核**：确认 `bool` 是 `int` 子类但金融参数校验不应把 `True` 当 `1`；确认 `HistoryCache` 15 分钟/64 条、`SnapshotCache` 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、`RefreshCache` 60 秒等待和 `NameCache` 30 秒等待；确认 `force=True` 绕过 TTL 但仍合并同键并发；确认缓存读取和页面重绘不更新上游成功时间；确认 `SCHEMA_VERSION=4`、高版本拒绝、backup API 和 `BEGIN IMMEDIATE`；确认 `stage_library` 的 `integrity_check` 与临时 bootstrap 文件替换；确认 `audit_id` 只取 SHA-256 前 16 个十六进制字符，完整 SHA-256 另存 `raw_sha256`/`signal_sha256`；确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
+13. **批次 5 代码事实复核**：确认 `bool` 是 `int` 子类但金融参数校验不应把 `True` 当 `1`；确认 `HistoryCache` 15 分钟/64 条、`SnapshotCache` 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、`RefreshCache` 60 秒等待和 `NameCache` 30 秒等待；确认 `force=True` 绕过 TTL 但仍合并同键并发；确认缓存读取和页面重绘不更新上游成功时间；确认 `SCHEMA_VERSION=4`、高版本拒绝、backup API 和 `BEGIN IMMEDIATE`；确认 `stage_library` 的 `integrity_check` 与临时 bootstrap 文件替换；确认 `audit_id` 只取 SHA-256 前 16 个十六进制字符，完整 SHA-256 另存 `raw_sha256`/`signal_sha256`；确认 `quant_lab` 是含 `__init__.py` 的常规包，Python 3 命名空间包可不含；确认模块化单体不以进程数定义，桌面父进程、Streamlit 子进程和 WebView2 附加进程仍是一个应用；确认项目代码未显式设置 `journal_mode`；确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 
 ## 计数与验收
 

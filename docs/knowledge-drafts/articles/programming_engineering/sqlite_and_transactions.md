@@ -83,7 +83,7 @@ SQLite 是嵌入式关系数据库，数据存储在单个文件中。事务是�
 - 隔离性（Isolation）：并发事务的可见性规则；
 - 持久性（Durability）：提交后的修改在崩溃后仍应存在（取决于日志和文件系统）。
 
-SQLite 使用回滚日志（默认）或 WAL 模式实现事务；当前项目没有显式切换日志模式，使用默认配置。
+SQLite 可以使用 rollback journal、WAL 等日志模式实现事务。当前项目代码没有显式执行 `PRAGMA journal_mode`，因此不能仅凭项目代码断言活动数据库一定采用某个固定模式；实际模式由 SQLite 的初始设置和数据库已有状态决定。本项目明确依赖的是事务、`commit`/`rollback`、`foreign_keys`、backup API 和 `BEGIN IMMEDIATE`，而不是某个固定 `journal_mode`。
 
 ### 公式与符号
 

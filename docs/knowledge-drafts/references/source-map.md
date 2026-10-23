@@ -214,7 +214,7 @@
 | `python_functions` | S008, P003 | 函数、参数、默认值、返回值；纯函数与网络/文件/数据库副作用。 |
 | `python_collections` | S008, P003 | list/dict/tuple/set 的顺序、可变性、唯一性和哈希性；缓存键与字段集合。 |
 | `python_exceptions` | S008, P004 | 异常层次、`try/except/else/finally`、异常链；数据校验失败与上游不可用。 |
-| `python_modules_and_packages` | S008, P002 | 模块、包、导入；`quant_lab` 模块化单体和依赖方向。 |
+| `python_modules_and_packages` | S008, P002 | 模块、常规包与命名空间包、导入；`quant_lab` 模块化单体和依赖方向；单体不以进程数量定义。 |
 | `type_hints_and_dataclasses` | S008, S017, P003 | 类型注解、`dataclass(frozen=True)`、`Protocol`；配置和结果对象。 |
 | `numpy_arrays` | S010, A012, P003 | `ndarray`、`isfinite`、向量化；有限值检查、年化因子和方向一致率。 |
 | `pandas_series_and_dataframe` | S009, A011, P003 | Series/DataFrame、索引、dtype、复制、筛选和向量化；行情表和缓存深拷贝。 |
@@ -222,13 +222,13 @@
 | `missing_data` | S009, P004, P003 | NaN/None/NaT、`dropna`、共同日期、零成交量和机器学习样本删除。 |
 | `returns_and_pct_change` | S009, P003 | `pct_change`、首行 NaN、简单收益率和 `fill_method` 边界。 |
 | `rolling_window` | S009, P003 | `rolling`、`min_periods`、窗口按行、5/20 日均线和 10 日波动率。 |
-| `alignment_join_and_merge` | S009, P003 | 索引对齐、inner join、日期一致性和重复日期拒绝。 |
+| `alignment_join_and_merge` | S009, P003 | 索引对齐、inner join、日期逐行一致性；复权信号价与不复权成交价单位相同但口径/尺度可不同。 |
 | `csv_and_json` | S008, S009, P004 | CSV 编码/BOM、zlib BLOB、SHA-256、`read_csv` 参数和 JSON 边界。 |
-| `sqlite_and_transactions` | S011, S018, P004 | 连接参数、事务、commit/rollback/close、外键和本地数据库边界。 |
+| `sqlite_and_transactions` | S011, S018, P004 | 连接参数、事务、commit/rollback/close、外键和本地数据库边界；代码未显式设置 `journal_mode`。 |
 | `schema_migration` | P002, S011, S018 | `PRAGMA user_version`、备份 API、`BEGIN IMMEDIATE` 和资料库复制区分。 |
-| `hash_and_fingerprint` | S008, P002 | SHA-256、截短指纹、完整性校验和非加密/非签名边界。 |
+| `hash_and_fingerprint` | S008, P002 | 完整 SHA-256（64 个十六进制字符、256 位）、前 16 个十六进制字符的 `audit_id`、完整性校验和非加密/非签名边界。 |
 | `provider_api_cache_and_concurrency` | P002, P004, S001 | Provider Protocol、TTL、single-flight、等待超时、失败保留和进程内缓存。 |
-| `automated_testing_git_and_modular_monolith` | P001, P002, S019, S020 | pytest、Git 版本控制、模块化单体；测试、Git 和架构三个独立概念。 |
+| `automated_testing_git_and_modular_monolith` | P001, P002, S019, S020 | pytest、Git 版本控制、模块化单体；测试、Git 和架构三个独立概念；单体不以进程数量定义。 |
 
 ## 批次 5 代码依据
 
@@ -241,7 +241,7 @@
 | `python_functions` | `metrics.py:30-79`, `backtest.py:62-65`, `data.py:71-111`, `storage.py:80-124` | 纯函数、网络副作用、数据库副作用、函数参数 |
 | `python_collections` | `processing.py:9-10`, `data.py:138-160`, `research.py:67-90`, `storage.py:90-124` | 元组字段、缓存键、列表订单行、字典缓存 |
 | `python_exceptions` | `processing.py:13-58`, `data.py:46-111`, `refresh.py:47-67`, `names.py:81-99`, `storage.py:31-46` | 自定义异常、失败保留、名称失败、回滚 |
-| `python_modules_and_packages` | `quant_lab/__init__.py`, `ARCHITECTURE.md:3-15`, `storage.py:157-160` | 包结构、模块边界、函数内延迟导入 |
+| `python_modules_and_packages` | `quant_lab/__init__.py`, `ARCHITECTURE.md:3-15`, `desktop_launcher.py:171-209`, `storage.py:157-160` | 常规包与命名空间包区别、模块边界、桌面父/子进程、函数内延迟导入 |
 | `type_hints_and_dataclasses` | `backtest.py:14-60`, `market_data.py:39-64`, `data.py:25-39`, `portfolio.py:8-17` | frozen dataclass、Protocol、配置校验、结果对象 |
 | `numpy_arrays` | `processing.py:39-40`, `backtest.py:81`, `statistics.py:58`, `statistics.py:126`, `learning.py:106-107` | `isfinite`、`sqrt(252)`、方向一致率、sin/cos 教学模拟 |
 | `pandas_series_and_dataframe` | `processing.py:33-58`, `data.py:155-157`, `strategy.py:40-52`, `portfolio.py:32-35` | 列选择、深拷贝、信号列、日期索引 |
@@ -249,13 +249,13 @@
 | `missing_data` | `processing.py:37-47`, `portfolio.py:32-34`, `statistics.py:63-80`, `backtest.py:107-108` | 缺失报错、共同日期、零成交量、空区间 |
 | `returns_and_pct_change` | `metrics.py:67-69`, `statistics.py:46`, `statistics.py:73-77`, `portfolio.py:54` | `pct_change().dropna()`、`return_5`、`fill_method=None` |
 | `rolling_window` | `strategy.py:28-31`, `statistics.py:75-77` | `min_periods=N`、5/20 均线差、10 日标准差 |
-| `alignment_join_and_merge` | `portfolio.py:19-35`, `research.py:38-41`, `processing.py:43-47` | inner join、日期完全一致、排序和重复拒绝 |
+| `alignment_join_and_merge` | `portfolio.py:19-35`, `research.py:38-41`, `processing.py:43-47` | inner join、日期逐行一致、复权/不复权价格口径、排序和重复拒绝 |
 | `csv_and_json` | `storage.py:76-77`, `storage.py:95-124`, `storage.py:144-154`, `storage.py:171-188`, `ui.py:683-685` | CSV 字节、SHA-256、zlib、读取参数、UTF-8 BOM |
-| `sqlite_and_transactions` | `storage.py:31-46`, `paths.py:37-52`, `migrations.py:110-118` | 连接参数、用户目录、提交/回滚/关闭 |
+| `sqlite_and_transactions` | `storage.py:31-46`, `paths.py:37-52`, `migrations.py:110-118` | 连接参数、用户目录、提交/回滚/关闭；无显式 `PRAGMA journal_mode` |
 | `schema_migration` | `migrations.py:10`, `migrations.py:90-118`, `paths.py:68-105` | `SCHEMA_VERSION`、备份、事务、`integrity_check` |
-| `hash_and_fingerprint` | `research.py:50-63`, `storage.py:120-121`, `storage.py:144-148`, `ai_context.py:33-35`, `ai_context.py:62-64` | 五类指纹输入、完整 SHA-256、附件校验、截短上下文哈希 |
+| `hash_and_fingerprint` | `research.py:50-63`, `storage.py:120-121`, `storage.py:144-148`, `ai_context.py:33-35`, `ai_context.py:62-64` | 五类指纹输入、完整 SHA-256、附件校验、前 16 个十六进制字符的上下文哈希 |
 | `provider_api_cache_and_concurrency` | `market_data.py:56-64`, `data.py:66-198`, `refresh.py:19-67`, `names.py:42-99`, `securities.py:95-133` | Protocol、TTL、single-flight、深拷贝、等待超时、名称/目录缓存 |
-| `automated_testing_git_and_modular_monolith` | `tests/`, `ARCHITECTURE.md:3-15`, `README.md:101-105` | pytest、Git 工作流、模块边界和测试命令 |
+| `automated_testing_git_and_modular_monolith` | `tests/`, `ARCHITECTURE.md:3-15`, `desktop_launcher.py:171-209`, `README.md:101-105` | pytest、Git 工作流、模块边界、桌面父/子进程和测试命令 |
 
 ## 专业词条来源分配
 
@@ -286,6 +286,7 @@
 - `multi_currency_portfolio` 与 `walk_forward_analysis` 当前整体未实现，保持 `theory_only`；不得把未实现的子概念写成已有功能或指标。
 - `S013` 候选目录只提供身份字段，不证明上市状态；文章不得把“目录中存在”写成“可交易”。
 - 批次 5 的 `automated_testing_git_and_modular_monolith` 是复合词条；正文已把自动化测试、Git 和模块化单体分成三个独立部分，不能把测试通过、源码提交和模块目录写成同一个概念。
+- 批次 5 的模块化单体按应用/代码库/部署与业务边界定义，不以进程或线程数量定义；桌面父进程、Streamlit 子进程和 WebView2 附加进程仍共同构成一个应用，不是微服务。
 - 批次 5 的 `provider_api_cache_and_concurrency` 只描述当前进程内缓存和锁；不得写成跨进程、分布式缓存或数据库锁。等待有超时，不是无限等待。
-- 批次 5 的 `sqlite_and_transactions` 和 `schema_migration` 不提供远程数据库、用户隔离、加密或防篡改保证；备份不等于灾难恢复，`stage_library` 不等于 schema 迁移。
+- 批次 5 的 `sqlite_and_transactions` 和 `schema_migration` 不提供远程数据库、用户隔离、加密或防篡改保证；备份不等于灾难恢复，`stage_library` 不等于 schema 迁移。项目代码没有显式执行 `PRAGMA journal_mode`，不能断言活动数据库固定使用 rollback journal 或 WAL。
 - 代码行号会随开发变化；Codex 复核时应以符号名和测试为准，行号仅作定位辅助。
