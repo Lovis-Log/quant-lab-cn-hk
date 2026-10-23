@@ -149,7 +149,7 @@
 | --- | --- | --- |
 | `covariance` | P003, A001, A009 | 共同日期同日收益率协方差；样本分母 `n−1`；协方差有单位、不是相关系数；不证明因果。 |
 | `correlation` | P003, A001, A009 | Pearson 同日收益率相关；范围 `[−1,1]`；全部共同日期；不是价格相关或因果。 |
-| `diversification` | A001, A013, A027 | 两资产组合方差分解；分散化收益取决于相关性；软件无单独指标或优化器。 |
+| `diversification` | A001, A013, A027 | 两资产组合方差分解；分散化收益取决于相关性；页面已显示组合样本外收益/波动/回撤，但无独立分散化指标或优化器。 |
 | `portfolio_weights_and_constraints` | P003, A001, A013 | 2–4 只同市场；界面限制币种；权重为正、合计 100%；无做空/杠杆/上下限/优化器；核心不校验币种。 |
 | `equal_weight` | P003, A001, A013 | `1/n`；组合日收益为资产收益算术平均；不等于风险平价。 |
 | `inverse_volatility` | P003, A013, A027 | 训练期日标准差倒数归一化；年化因子约掉；零/负/NaN 波动率报错；不考虑相关性。 |
@@ -170,7 +170,7 @@
 | `feature_scaling` | A010, S014, P003 | `StandardScaler` 只用训练集拟合；scikit-learn 默认总体口径标准差；每折新建 Pipeline；零方差尺度为 1。 |
 | `prediction_baseline` | P003, A010 | 零收益基线 `MAE=(1/n)Σ\|y\|`；只实现这一基线；MAE 低不等于盈利。 |
 | `mae_and_rmse` | P003, A010, A029 | MAE 公式和收益率误差单位；RMSE 公式但软件未计算/显示；MAE/RMSE 对大误差敏感度不同。 |
-| `r_squared` | P003, A010 | 样本外 `R²=1−SS_res/SS_tot`；分母为测试均值；可为负；不是相关系数平方或盈利概率。 |
+| `r_squared` | P003, A010 | 样本外 `R²=1−SS_res/SS_tot`；分母为测试均值；可为负；常数目标按 `force_finite` 返回 0/1；不是相关系数平方或盈利概率。 |
 | `time_series_cross_validation` | P003, S015, A005, A016 | 训练内 `TimeSeriesSplit(3,gap=1)`；扩展窗口；每折新 Pipeline；`cv_mae` 为三折平均；不是完整 walk-forward。 |
 
 ## 批次 4 代码依据
@@ -181,7 +181,7 @@
 | --- | --- | --- |
 | `covariance` | `portfolio.py:19-78`, `ui_analysis.py:92-100` | 共同日期内连接、`returns.cov()`、样本协方差表和协方差解释 |
 | `correlation` | `portfolio.py:53-76`, `ui_analysis.py:92-100` | `returns.corr()`、相关矩阵、知识解释 |
-| `diversification` | `portfolio.py:53-76`, `ui_analysis.py:101-115` | 相关矩阵、等权/逆波动率曲线；无单独分散化指标 |
+| `diversification` | `portfolio.py:53-76`, `ui_analysis.py:101-115` | 相关矩阵、等权/逆波动率曲线及样本外统计；无独立分散化指标 |
 | `portfolio_weights_and_constraints` | `portfolio.py:19-78`, `ui_analysis.py:44-100` | 2–4 只校验、共同日期、训练比例、权重表 |
 | `equal_weight` | `portfolio.py:60-66` | `1/n` 权重和组合日收益 |
 | `inverse_volatility` | `portfolio.py:38-44`, `portfolio.py:60-66` | 训练期 `std(ddof=1)`、倒数归一化、零/负/NaN 报错 |
@@ -202,7 +202,7 @@
 | `feature_scaling` | `statistics.py:98-108` | `Pipeline(StandardScaler(), LinearRegression())`、每折新 Pipeline |
 | `prediction_baseline` | `statistics.py:119-128`, `ui_analysis.py:178-186` | 零收益基线 MAE 和页面比较提示 |
 | `mae_and_rmse` | `statistics.py:123-125`, `ui_analysis.py:178-186` | MAE 计算和 4 位百分比显示；无 RMSE |
-| `r_squared` | `statistics.py:125`, `ui_analysis.py:181` | `r2_score`、3 位小数显示、负值说明 |
+| `r_squared` | `statistics.py:125`, `ui_analysis.py:181` | `r2_score` 默认 `force_finite=True`、3 位小数显示、负值和常数目标说明 |
 | `time_series_cross_validation` | `statistics.py:98-107`, `ui_analysis.py:191-195` | `TimeSeriesSplit(n_splits=3, gap=1)`、三折 MAE 平均 |
 
 ## 专业词条来源分配

@@ -1,6 +1,6 @@
 # 批次 1 复核、批次 2–3 修订与批次 4 记录
 
-日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23
+日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23；批次 4 修订：2026-10-23
 批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇；批次 4 共 25 篇
 代码基线：`codex/learning-center-v2`，提交 `7275d71`（批次 4 起点；本批次未修改程序代码）
 恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）；批次 4 恢复分支：`codex/recovery-before-batch4-20261023`（指向 `7275d71`）
@@ -385,7 +385,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | --- | --- | --- | --- | --- |
 | `covariance` | `cov=Σ(x−x̄)(y−ȳ)/(n−1)`；矩阵对角线为方差 | `implemented` | `portfolio.py:53-76`, `ui_analysis.py:92-100` | 全部共同日期同日收益率；不是价格协方差 |
 | `correlation` | `ρ=cov/(s_x s_y)`；`[−1,1]` | `implemented` | `portfolio.py:53-76`, `ui_analysis.py:92-100` | Pearson；不证明因果或未来分散 |
-| `diversification` | `σ_p²=w₁²σ₁²+w₂²σ₂²+2w₁w₂ρσ₁σ₂` | `theory_only` | 无独立实现 | 只有相关矩阵和曲线辅助讨论 |
+| `diversification` | `σ_p²=w₁²σ₁²+w₂²σ₂²+2w₁w₂ρσ₁σ₂` | `theory_only` | 无独立实现 | 页面已显示样本外收益/波动/回撤；无独立分散化指标 |
 | `portfolio_weights_and_constraints` | `w_i≥0`，`Σw_i=1`；等权或逆波动率 | `implemented` | `portfolio.py:19-78`, `ui_analysis.py:44-100` | 核心不掌握币种；界面限制同市场 |
 | `equal_weight` | `w_i=1/n`；`r_p=(1/n)Σr_i` | `implemented` | `portfolio.py:60-66` | 不等于风险平价 |
 | `inverse_volatility` | `w_i=(1/s_i)/Σ(1/s_j)` | `implemented` | `portfolio.py:38-44`, `portfolio.py:60-66` | 训练期日标准差；零/负/NaN 报错 |
@@ -406,7 +406,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | `feature_scaling` | `z=(x−μ_train)/σ_train` | `implemented` | `statistics.py:98-108` | 只用训练集；scikit-learn 默认总体口径 |
 | `prediction_baseline` | `MAE_0=(1/n)Σ\|y_t\|` | `implemented` | `statistics.py:119-128`, `ui_analysis.py:178-186` | 只实现零收益基线 |
 | `mae_and_rmse` | `MAE=(1/n)Σ\|y−ŷ\|`；`RMSE=√(1/nΣ(y−ŷ)²)` | `needs_code_review` | `statistics.py:123-125`, `ui_analysis.py:178-186` | MAE 已显示；RMSE 未显示 |
-| `r_squared` | `R²=1−SS_res/SS_tot`；分母为测试均值 | `implemented` | `statistics.py:125`, `ui_analysis.py:181` | 样本外可为负；不是相关系数平方 |
+| `r_squared` | `R²=1−SS_res/SS_tot`；分母为测试均值 | `implemented` | `statistics.py:125`, `ui_analysis.py:181` | 样本外可为负；常数目标按 `force_finite` 返回 0/1；不是相关系数平方 |
 | `time_series_cross_validation` | `TimeSeriesSplit(3,gap=1)`；`cv_mae=mean(MAE_k)` | `implemented` | `statistics.py:98-107`, `ui_analysis.py:191-195` | 训练内 3 折；不是完整 walk-forward |
 
 ### 13.3 来源与核验
@@ -431,7 +431,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 | 文章 ID | 当前软件明确没有提供的功能 |
 | --- | --- |
-| `diversification` | 无分散化比率、风险贡献、有效前沿或优化器；只有相关矩阵和等权/逆波动率曲线辅助讨论 |
+| `diversification` | 无独立分散化比率、风险贡献、有效前沿或优化器；页面已显示等权/逆波动率组合的样本外累计收益、年化波动率和最大回撤，可用相关矩阵和曲线辅助讨论 |
 | `multi_currency_portfolio` | 无汇率数据、换算、对冲、跨币种加总或跨币种净值；界面限制同市场同币种 |
 | `sampling_distribution` | 无重采样、bootstrap、Monte Carlo 或抽样分布图；t 检验只用理论 t 分布 |
 | `confidence_interval` | 无均值、波动率、相关系数、权重、MAE、R² 的置信区间；无预测区间 |
@@ -467,3 +467,16 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 ### 13.8 声明
 
 批次 4 只新增/修改 `docs/knowledge-drafts/` 下的 Markdown。未修改程序代码、测试、数据库、`VERSION`、安装器、构建脚本或发行文件；未执行打包、标签或 Release；未进入批次 5。25 篇文章仍是草稿，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+
+### 13.9 批次 4 修订（2026-10-23）
+
+1. `diversification`：明确记录组合页已显示等权/逆波动率组合的样本外累计收益率、年化波动率和最大回撤；未实现的是独立分散化比率、风险贡献、边际风险贡献、有效前沿、优化器和“风险降低百分比”。删除关于页面显示范围的过窄表述；组合曲线差异改为归因于权重、样本区间或资产波动结构不同，不再使用未投资现金权重的解释。文章保持 `theory_only`。
+2. `rebalancing_and_turnover`：明确标准单边换手率 `0.5×Σ|w_target−w_drift|` 由权重变化决定；单边调仓金额 = 组合市值 × 单边换手率；市值只影响金额，买卖方向影响费用类型，费用参数决定调仓成本。明确等权/逆波动率曲线使用同一组样本外资产收益，差异来自权重不同。手算例子改为“每日再平衡的累计换手不一定高于一次换手”，累计换手取决于完整收益路径、相对价格变化和观察期间，当前软件未计算，不能判断高低。文章保持 `needs_code_review`。
+3. `mean_and_median`：把均值/中位数接近条件改为“对称分布中通常接近；偏斜和极端值常使二者分离；非对称样本也可能偶然相同或接近”。文章状态不变。
+4. `feature_scaling`：修正标准化系数解释：`z_j` 增加 1 个单位（原特征增加一个训练集标准差）时，在其他特征不变条件下，预测的 `next_return` 改变 `β_j`；`β_j` 的单位是目标收益率单位，不是“目标变量每变化一个单位对应的特征变化”。保留相关特征导致系数不稳定、不能解释为因果的限制。
+5. `prediction_baseline`：不再声称零收益基线经过训练期拟合或优化；它恒预测 0，不读取训练特征。分布漂移只改变其在不同测试区间的相对难度和 MAE。提及历史均值基线时明确当前软件未实现。
+6. `r_squared`：补充 `SS_tot=0` 时当前 `r2_score` 默认 `force_finite=True` 的实际行为：预测与常数真实值完全一致返回 1.0，否则返回 0.0；页面没有专门警告，不能把 0.0/1.0 当成普通非退化测试集的 R²。
+7. 同步更新 `CATALOG.md`、`REVIEW_NOTES.md` 和 `references/source-map.md` 中受影响的分散化和 R² 表述；`README.md` 无需修改。
+8. 状态与计数保持不变：批次 4 共 25 篇且全部 `drafted`；`implemented` 15、`needs_code_review` 5、`theory_only` 5；专业词条 85、`drafted` 65、`todo` 20；全目录 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；手册 10 篇。
+9. 使用独立 `--basetemp=/tmp/qb4-revision-pytest-20261023` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；未跳过失败测试。
+10. 本次只修改 `docs/knowledge-drafts/` 下的 Markdown；未修改程序、测试、数据库、`VERSION`、构建或发行文件。

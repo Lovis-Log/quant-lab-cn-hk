@@ -175,7 +175,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `covariance` | 协方差 / Covariance | `implemented` | `portfolio.py`, `knowledge.py`, `ui_analysis.py` | `correlation`, `variance`, `portfolio_weights_and_constraints` | `drafted` | P003, A001, A009 | 批次 4 已起草；全部共同日期同日收益率；样本分母 `n−1`；不是价格协方差。 |
 | `correlation` | 相关系数 / Correlation | `implemented` | `portfolio.py`, `knowledge.py`, `ui_analysis.py` | `covariance`, `diversification`, `multi_currency_portfolio` | `drafted` | P003, A001, A009 | 批次 4 已起草；Pearson 同日收益率相关；不证明因果或未来分散。 |
-| `diversification` | 分散化 / Diversification | `theory_only` | `portfolio.py`, `ui_analysis.py`（仅相关/曲线支持讨论） | `correlation`, `equal_weight`, `inverse_volatility` | `drafted` | A001, A013, A027 | 批次 4 已起草；`theory_only`；无单独分散化指标或优化器。 |
+| `diversification` | 分散化 / Diversification | `theory_only` | `portfolio.py`, `ui_analysis.py`（仅相关/曲线支持讨论） | `correlation`, `equal_weight`, `inverse_volatility` | `drafted` | A001, A013, A027 | 批次 4 已起草；`theory_only`；已显示组合样本外收益/波动/回撤；无独立分散化指标或优化器。 |
 | `portfolio_weights_and_constraints` | 组合权重与约束 / Portfolio Weights and Constraints | `implemented` | `portfolio.py`, `ui_analysis.py` | `equal_weight`, `inverse_volatility`, `rebalancing_and_turnover` | `drafted` | P003, A001, A013 | 批次 4 已起草；2–4 只同市场；界面限制币种；权重为正、合计 100%。 |
 | `equal_weight` | 等权 / Equal Weight | `implemented` | `portfolio.py`, `ui_analysis.py` | `inverse_volatility`, `portfolio_weights_and_constraints`, `diversification` | `drafted` | P003, A001, A013 | 批次 4 已起草；`1/n`；不估计收益或波动。 |
 | `inverse_volatility` | 逆波动率 / Inverse Volatility | `implemented` | `portfolio.py`, `ui_analysis.py` | `volatility`, `equal_weight`, `portfolio_weights_and_constraints` | `drafted` | P003, A013, A027 | 批次 4 已起草；训练期日标准差倒数归一化；零/负/NaN 波动率报错。 |
@@ -206,7 +206,7 @@
 | `feature_scaling` | 特征标准化 / Feature Scaling | `implemented` | `statistics.py` | `data_leakage`, `features_and_targets`, `time_ordered_split` | `drafted` | A010, S014, P003 | 批次 4 已起草；`StandardScaler` 只在训练集拟合；折内 Pipeline。 |
 | `prediction_baseline` | 预测基线 / Prediction Baseline | `implemented` | `statistics.py`, `ui_analysis.py` | `mae_and_rmse`, `r_squared`, `features_and_targets` | `drafted` | P003, A010 | 批次 4 已起草；只实现零收益基线；不是随机森林或交易策略基准。 |
 | `mae_and_rmse` | 平均绝对误差与均方根误差 / MAE and RMSE | `needs_code_review` | `statistics.py`, `ui_analysis.py` | `prediction_baseline`, `r_squared` | `drafted` | P003, A010, A029 | 批次 4 已起草；MAE 已显示；RMSE 未计算/显示；已分三层，不拆分 ID。 |
-| `r_squared` | 决定系数 R² / R-squared | `implemented` | `statistics.py`, `knowledge.py`, `ui_analysis.py` | `mae_and_rmse`, `prediction_baseline`, `overfitting` | `drafted` | P003, A010 | 批次 4 已起草；样本外 R² 可为负；分母是测试均值。 |
+| `r_squared` | 决定系数 R² / R-squared | `implemented` | `statistics.py`, `knowledge.py`, `ui_analysis.py` | `mae_and_rmse`, `prediction_baseline`, `overfitting` | `drafted` | P003, A010 | 批次 4 已起草；样本外 R² 可为负；分母是测试均值；常数目标按 `force_finite` 返回 0/1。 |
 | `time_series_cross_validation` | 时间序列交叉验证 / Time Series Cross-Validation | `implemented` | `statistics.py` | `time_ordered_split`, `temporal_split`, `data_leakage` | `drafted` | P003, S015, A005, A016 | 批次 4 已起草；训练内 3 折、`gap=1`；每折新 Pipeline；不是完整 walk-forward。 |
 
 ## Python、数据处理与工程（20）
