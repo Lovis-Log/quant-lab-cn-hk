@@ -96,11 +96,10 @@ last_verified: 2026-10-22
 
 `recovery = 1/(1+d) − 1`
 
-例如 `d=−0.25`，`recovery=1/0.75−1=0.3333=33.33%`？Wait, 1/0.75 = 1.3333, minus 1 = 33.33%. But earlier we said 25% recovery for a 20% drawdown. For 25% drawdown, recovery is 33.33%. For 20% drawdown, recovery 25%. Correct. Need to use correct examples:
-- 100 -> 80: d=-20%; recovery=1/0.8-1=25%.
-- 100 -> 50: d=-50%; recovery=1/0.5-1=100%.
-- 120 -> 90: d=-25%; recovery=1/0.75-1=33.33%.
-Use these.
+例如：
+
+- `d=−0.25`：`recovery=1/0.75−1=0.3333=33.33%`；
+- `d=−0.20`：`recovery=1/0.80−1=0.25=25%`。
 
 ### 可手算的小例子
 

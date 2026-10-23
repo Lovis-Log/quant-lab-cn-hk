@@ -1,11 +1,24 @@
-# 批次 1 复核记录
+# 批次 1 复核记录与批次 2 修订记录
 
-日期：2026-10-22
-批次：使用手册 10 篇
+日期：2026-10-22；批次 2 修订：2026-10-23
+批次：使用手册 10 篇；专业文章批次 2 共 20 篇
 代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
-恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）
+恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）
 写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
-批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 基于 `99c70aa`。
+批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订基于 `0ada6fd`。
+
+## 0. 批次 2 修订摘要（2026-10-23）
+
+1. `annualized_return`：修正 126 个间隔的表述，改为“年化是累计增长因子的平方再减一，即 `(1+R_cum)^2−1`”，不再写成平方根。
+2. `maximum_drawdown`：删除全部英文内部编辑批注；保留 `d=−25%` 对应恢复涨幅 33.33%、`d=−20%` 对应恢复涨幅 25%。
+3. `corporate_actions`、`price_adjustment`：全部“2 拆 1”统一改为“1 股拆成 2 股（2-for-1 stock split）”。
+4. `A033`：ISBN 修正为 ISBN-10 `0135161088`、ISBN-13 `9780135161081`，书目已核验。
+5. `A035`：按 Cambridge 官方页面改为 2017 年（第 3 版），ISBN `978-1107111820` 不变，书目已核验。
+6. `currency_and_fx`：功能状态从 `implemented` 改为 `needs_code_review`；正文明确 CNY/HKD 标注与同币种限制已实现，汇率数据、换算、对冲和跨币种组合未实现。
+7. 统计更新：专业词条 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 2 为 `implemented` 13、`needs_code_review` 5、`theory_only` 2。
+8. 来源状态：S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，具体规则仍按文章需要核验；A032、A034 书目/DOI 已核验；A033 修正 ISBN 后书目已核验；A035 第三版、ISBN 和 2017 出版日期已核验。
+9. 全目录扫描确认除合法状态词 `todo` 外，不存在英文内部编辑批注、未完成标记或其他内部自我校对文字。
+10. 手册仍为 10 篇，专业词条仍为 85 个，批次 2 仍为 20 篇且全部 `drafted`；本次不进入批次 3。
 
 ## 1. 本轮完成内容
 
@@ -23,7 +36,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 1. `CATALOG.md` 中 12 个复合或部分实现词条统一改为 `needs_code_review`：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。不拆分 ID，专业词条总数保持 85。
 2. `manual/research_notes.md` 已修正草稿丢失说明：SQLite 已保存草稿不会因清除 WebView 本地存储而删除；只有尚未同步的输入可能丢失；只有“放弃草稿”会删除数据库草稿和草稿附件。
 3. `manual/deepseek.md` 中目标版本的“学习笔记”已统一改为“研究笔记”。当前程序按钮“保存选定回答到学习笔记”仍需同步重命名，见第 4.2 节。
-4. `CATALOG.md` 与 `REVIEW_NOTES.md` 的状态统计已按逐行状态更新：`implemented` 62、`theory_only` 10、`academy_demo` 1、`needs_code_review` 12 个专业词条，另有 1 个手册章节 `workspace` 为 `needs_code_review`。
+4. `CATALOG.md` 与 `REVIEW_NOTES.md` 的状态统计已按逐行状态更新：`implemented` 62、`theory_only` 10、`academy_demo` 1、`needs_code_review` 12 个专业词条，另有 1 个手册章节 `workspace` 为 `needs_code_review`。批次 2 修订后（2026-10-23）为 `implemented` 61、`needs_code_review` 13。
 5. `references/official.md` 中 S001–S007 已改为“官方入口已由 Codex 于 2026-10-22 确认可访问，具体接口字段、条款和生效口径仍待逐项核验”；没有把入口可访问写成全部内容已经核验。
 6. 已重新核对：手册 10 篇、专业词条 85 个、手册相关术语 ID 均存在、修改范围仅限 `docs/knowledge-drafts/`。
 
@@ -103,12 +116,15 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 ## 4. `needs_code_review` 清单
 
-### 4.1 专业词条（12）
+### 4.1 专业词条（13）
+
+> 批次 1 复核时列出 12 个；批次 2 修订（2026-10-23）新增 `currency_and_fx`，当前共 13 个。
 
 | ID | 部分实现/待复核内容 | 建议 |
 | --- | --- | --- |
 | `trading_calendar` | 实际交易日用于对齐；无独立日历服务 | 文章分层：已使用日期 vs 未提供日历接口 |
 | `timezone_and_session` | 接收时间存 UTC、显示北京时间；不建模盘中交易时段 | 文章分层：时间戳 vs 交易时段 |
+| `currency_and_fx` | CNY/HKD 标注与同币种限制已实现；汇率数据、换算、对冲和跨币种组合未实现 | 文章分三层说明；不把汇率换算或跨币种组合写成按钮或指标 |
 | `data_quality_and_bias` | 字段校验已实现；幸存者/前视偏差未完全控制 | 逐项区分缺失、停牌、重复、异常值和偏差 |
 | `arithmetic_vs_geometric_mean` | 算术均值用于夏普分子、几何年化用于收益换算；无并列比较 UI | 文章并列解释，不虚构比较指标 |
 | `lot_size_and_fractional_shares` | 整手已实现；碎股未实现 | 不拆 ID；文章分节说明 |
@@ -134,9 +150,9 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 ## 5. `NEEDS_REVIEW` 清单
 
-以下项目仍需逐项核验。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但入口可访问不等于全部内容已经核验；S008–S024 未联网核验：
+以下项目仍需逐项核验。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但入口可访问不等于全部内容已经核验；S008–S022 未联网核验：
 
-1. `S001`–`S007` 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款、版本号、生效日期和生效口径仍需逐项核验；`S008`–`S024` 的页面内容未在 2026-10-22 联网核验。发布前必须重新访问原始页面。
+1. `S001`–`S007` 的官方入口已由 Codex 于 2026-10-22 确认可访问，`S023`、`S024` 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款、版本号、生效日期和生效口径仍需逐项核验；`S008`–`S022` 的页面内容未在 2026-10-23 前联网核验。发布前必须重新访问原始页面。
 2. `S001` AKShare 股票数据文档：入口可访问；接口名、字段、复权参数、上游来源待逐项核验。
 3. `S002` 上海证券交易所交易规则：入口可访问；具体条款、生效日期、申报单位和涨跌幅口径待逐项核验。
 4. `S003` 香港交易所交易运作常见问题：入口可访问；交易单位/每手股数的具体表述待核验。
@@ -147,18 +163,18 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 9. `S013` 巨潮资讯 A 股基础目录：端点、字段、公开访问状态。
 10. `S014`–`S020` scikit-learn、SciPy、dataclasses、sqlite3、Git、pytest 文档：版本和示例行为。
 11. `S021`–`S022` Windows 凭据管理器：API 行为和权限要求。
-12. `S023` IANA Time Zone Database：时区标识、偏移和夏令时规则；页面内容待核验。
-13. `S024` ISO 4217 Currency Codes：货币代码标准；页面内容待核验。
-14. `A001`–`A035` 论文、教材和课程：DOI、ISBN、页码、版次、作者列表和课程页面版本；A032–A035 为批次 2 新增。
+12. `S023` IANA Time Zone Database：官方入口已由 Codex 于 2026-10-23 确认可访问；时区标识、偏移和夏令时规则仍按文章需要核验。
+13. `S024` ISO 4217 Currency Codes：官方入口已由 Codex 于 2026-10-23 确认可访问；货币代码标准和适用范围仍按文章需要核验。
+14. `A001`–`A031` 论文、教材和课程：DOI、ISBN、页码、版次、作者列表和课程页面版本仍待复核。`A032`、`A034` 的书目/DOI 和 `A033`、`A035` 的书目/ISBN 已于 2026-10-23 核验；书目核验不等于已读取全文。
 15. 所有交易费用、税率、结算、申报单位和涨跌幅数字：不能从本软件默认值推断现行规则；正式内容发布前必须以交易所、监管机构或券商官方资料重新核验。
 
 ## 6. 来源统计
 
 | 类型 | 数量 | 说明 |
 | --- | --- | --- |
-| 外部官方 `S` | 24 | S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，字段/条款待逐项核验；S008–S024 待核验 |
+| 外部官方 `S` | 24 | S001–S007 入口已由 Codex 于 2026-10-22 确认可访问；S023、S024 入口已由 Codex 于 2026-10-23 确认可访问；S008–S022 待核验；字段/条款按文章需要核验 |
 | 项目内 `P` | 6 | P001–P006；2026-10-22 已读 |
-| 学术 `A` | 35 | A001–A035；书目信息待复核 |
+| 学术 `A` | 35 | A032–A035 书目/DOI/ISBN 已核验；A001–A031 书目信息待复核 |
 | 手册引用 | 10 篇 | 每篇至少引用 P 文档；关键页面引用 S/A |
 | 专业词条来源映射 | 85 条 | 见 `CATALOG.md` 各行“主要来源” |
 
@@ -169,29 +185,30 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 3. Academy 移除“保存实验与测验”入口，保留固定教学样本和参数实验。
 4. DeepSeek 面板“本页上方配置”文案与 `⚙` → DeepSeek 实际位置不一致；同时把“保存选定回答到学习笔记”改为“保存选定回答到研究笔记”，同步成功/错误提示和测试。
 5. Academy 第 8 课知识解释无当前值，确认是否需要传入模拟结果。
-6. 12 个 `needs_code_review` 专业词条：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；不拆分 ID。
+6. 13 个 `needs_code_review` 专业词条：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；不拆分 ID。
 7. 后续文章对上述复合词条分节写明“已实现/已显示”“未显示/未提供”“未实现”，不得把整手、固定滑点、MAE、均值等已实现部分误写成 `theory_only`。
 8. 港股 1–5 位补足与界面“5 位”提示是否统一。
-9. 外部来源：S001–S007 入口已由 Codex 确认可访问，但字段/条款/生效口径待逐项核验；S008–S024 与 A001–A035 仍待核验。
+9. 外部来源：S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 入口已由 Codex 于 2026-10-23 确认可访问，但字段/条款/生效口径待逐项核验；S008–S022 与 A001–A031 仍待核验；A032–A035 书目/DOI/ISBN 已核验。
 10. 接入手册后按 AGENTS.md 做真实 WebView DOM/控件验收；本批次未启动 GUI，不能把文档完成当成验收通过。
 
 ## 8. 未执行事项
 
 - 未启动 Streamlit 或桌面 WebView；未核对实际 DOM。手册中的控件名称来自代码 `st.button`/`st.selectbox`/`st.text_input` 等定义，但实际渲染仍需 GUI 验收。
-- 未逐项核验外部页面内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，但接口字段、条款和生效口径仍需逐项核验；S008–S024 未联网核验。
+- 未逐项核验外部页面内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验；S008–S022 未联网核验；A032–A035 仅核验书目/DOI/ISBN，未读取全文。
 - 批次 2 的 20 篇文章状态均为 `drafted`，未标 `source_checked`；外部来源内容未逐条读取。
 - 未运行付费 DeepSeek 请求；手册中的请求边界来自代码和现有文档。
 - 未修改或迁移 SQLite 数据库；未写入任何 Key；未创建安装包、标签或 Release。
 - 本次修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只改文档。
 - 批次 2 后再次使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning；未修改程序代码。
+- 批次 2 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；首次使用默认临时目录运行时，Windows 拒绝访问 `pytest-of-LENOVO` 目录，属于环境权限问题，不是测试断言失败。本次仅修改 `docs/knowledge-drafts/`。
 
 ## 9. 声明
 
-本轮（批次 1 修订与批次 2）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 20 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+本轮（批次 1 修订、批次 2 起草与批次 2 修订）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 20 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
 
 ## 10. 下一批次建议
 
-批次 2 已完成 20 篇（市场与数据、收益与风险），文章状态均为 `drafted`。下一批次（未开始）为批次 3：策略与执行、回测与研究，共 20 篇；本次提交不进入批次 3。批次 3 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
+批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订，文章状态均为 `drafted`。下一批次（未开始）为批次 3：策略与执行、回测与研究，共 20 篇；本次提交不进入批次 3。批次 3 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
 
 ## 11. 批次 2：市场与数据、收益与风险（20 篇）
 
@@ -199,8 +216,8 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 - 20 篇文章已写入 `articles/market_data/`（10 篇）和 `articles/return_risk/`（10 篇）。
 - 文章状态全部为 `drafted`；外部来源内容未逐条读取，未标 `source_checked`。
-- 软件状态：`implemented` 14 篇、`needs_code_review` 4 篇、`theory_only` 2 篇。
-- 四个 `needs_code_review`：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`；正文均分三层写“已计算/显示、只间接使用、未提供/未建模”。
+- 软件状态：`implemented` 13 篇、`needs_code_review` 5 篇、`theory_only` 2 篇。
+- 五个 `needs_code_review`：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`；正文均分三层写“已计算/显示、只间接使用、未提供/未建模”。
 - 两个 `theory_only`：`corporate_actions`、`log_return`；正文明确写“当前软件未实现”。
 - 未新增或删除内容 ID，专业词条总数仍为 85；新增来源编号 S023、S024、A032–A035。
 
@@ -212,7 +229,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | `ohlcv` | `r_t=close_t/close_{t-1}−1`；`range=high−low`；`amount/volume≈平均价` | `implemented` | S001, P004, A032 | 字段/单位/复权接口 NEEDS_REVIEW |
 | `trading_calendar` | `D_common=∩D_i`；`R_ann=(P_n/P_1)^(252/(n−1))−1` | `needs_code_review` | S001, S002, S003, P004 | 实际交易日 vs 独立日历服务分层 |
 | `timezone_and_session` | `t_Beijing=t_UTC+8h`；`age=now−received_at` | `needs_code_review` | S023, S001, S002, S003, P002 | 接收时间不是交易所报价时间 |
-| `currency_and_fx` | `r_investor=(1+r_local)(1+r_fx)−1` | `implemented` | S024, S001, P004, A035 | 软件只标注币种，不做汇率换算 |
+| `currency_and_fx` | `r_investor=(1+r_local)(1+r_fx)−1` | `needs_code_review` | S024, S001, P004, A035 | CNY/HKD 标注与同币种限制已实现；汇率数据、换算、对冲和跨币种组合未实现 |
 | `price_adjustment` | `P_adj=P×f`；`r_total≈(P_ex+D)/P_cum−1` | `implemented` | S001, P003, P004, A033 | 复权价非成交价；上游复权行为待核验 |
 | `corporate_actions` | `r_total=(P_ex+D)/P_cum−1`；拆股价值不变 | `theory_only` | S001, P004, A033, A032 | 软件未实现分红现金流/公司行动表 |
 | `data_provenance` | `prov=(source,...,received_at,...)`；`fingerprint=H(...)` | `implemented` | S001, P002, P004, A034 | 本地溯源非不可篡改审计 |
@@ -231,16 +248,16 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 
 ### 11.3 来源与核验
 
-- 批次 2 新增来源：S023 IANA Time Zone Database、S024 ISO 4217 Currency Codes、A032 Campbell/Lo/MacKinlay（1997）、A033 Berk/DeMarzo（2020）、A034 Wilkinson 等（2016）、A035 Bekaert/Hodrick（2018）。
-- S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，但具体字段/条款/口径未逐条核验；S008–S024 未联网核验。
-- A001–A035 的 DOI、ISBN、页码、版次和作者列表均待复核；A032–A035 是批次 2 新增书目。
+- 批次 2 新增来源：S023 IANA Time Zone Database、S024 ISO 4217 Currency Codes、A032 Campbell/Lo/MacKinlay（1997）、A033 Berk/DeMarzo（2020）、A034 Wilkinson 等（2016）、A035 Bekaert/Hodrick（2017）。
+- S001–S007 入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 入口已由 Codex 于 2026-10-23 确认可访问，但具体字段/条款/口径未逐条核验；S008–S022 未联网核验。
+- A032、A034 书目/DOI 已核验；A033 修正 ISBN 后书目已核验（ISBN-10 `0135161088`、ISBN-13 `9780135161081`）；A035 第三版、ISBN `978-1107111820` 和 2017 出版日期已核验。A001–A031 的 DOI、ISBN、页码、版次和作者列表仍待复核；书目核验不等于全文已读。
 - 交易规则、接口字段、复权行为、时区和货币代码均标记 NEEDS_REVIEW（核验日期：2026-10-22）。
 - 文章状态全部 `drafted`；未把“入口可访问”写成“内容已核验”。
 - frontmatter 的 `last_verified: 2026-10-22` 仅表示本地代码/项目文档核对日期，不表示外部来源内容已核验。
 
 ### 11.4 需要 Codex 复核的问题（批次 2）
 
-1. 确认四个 `needs_code_review` 词条的三层写法准确：`trading_calendar`、`timezone_and_session`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`；不拆分 ID。
+1. 确认五个 `needs_code_review` 词条的三层写法准确：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`；不拆分 ID。
 2. 确认 `corporate_actions`、`log_return` 保持 `theory_only`，正文“当前软件未实现”没有暗示按钮或指标。
 3. 确认 252 个年交易日近似、`n` 为收益间隔数、年化公式与 `docs/METHODOLOGY.md` 和 `metrics.py` 一致。
 4. 确认算术平均/几何平均文章只解释现有口径，不要求新增并列指标或 UI。
@@ -248,5 +265,5 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 6. 确认 `corporate_actions` 的“仅复权间接体现、无分红现金流”描述与当前回测/估值边界一致。
 7. 确认数据质量文章对缺失自然日/缺失交易日/停牌/重复/异常值/幸存者偏差/前视偏差的区分没有过度声称控制。
 8. 确认 `cache_and_freshness` 的 TTL、失败保留、手动绕过和 `received_at` 语义与 `data.py`/`refresh.py` 一致。
-9. 确认新增来源 S023/S024、A032–A035 的书目/页面信息和 NEEDS_REVIEW 标注；正式发布前重新核验。
+9. 确认新增来源 S023/S024 的官方入口状态、A032–A035 的书目/DOI/ISBN 核验结果和仍需逐项核验的文章规则；正式发布前重新核验。
 10. 确认 20 篇文章状态保持 `drafted`；只有逐条读取外部资料后才能升级为 `source_checked`。

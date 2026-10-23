@@ -163,5 +163,5 @@ OHLCV 是一根日线记录里的开盘价（Open）、最高价（High）、最
 
 - `S001` AKShare 股票数据文档：A 股/港股历史日线字段与接口；接口和字段可能变化，NEEDS_REVIEW（核验日期：2026-10-22）。
 - `P004` docs/DATA.md：字段、币种、成交量、成交额、复权和验证规则。
-- `A032` Campbell、Lo 与 MacKinlay（1997）：金融市场价格与收益率数据的计量背景；书目信息待复核。
+- `A032` Campbell、Lo 与 MacKinlay（1997）：金融市场价格与收益率数据的计量背景；书目/ISBN 已核验。
 - 外部来源内容未逐条读取；本文状态为 `drafted`，不标 `source_checked`。

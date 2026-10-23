@@ -195,6 +195,6 @@ last_verified: 2026-10-22
 
 - `P003` docs/METHODOLOGY.md：年化收益、夏普比率和样本标准差口径。
 - `A009` Casella 与 Berger：均值、方差和统计推断；书目信息待复核。
-- `A032` Campbell、Lo 与 MacKinlay（1997）：多期收益和几何增长；书目信息待复核。
+- `A032` Campbell、Lo 与 MacKinlay（1997）：多期收益和几何增长；书目/ISBN 已核验。
 - `A013` Elton 等：组合收益与风险调整指标；书目信息待复核。
 - 外部来源内容未逐条读取；本文状态为 `drafted`，不标 `source_checked`。

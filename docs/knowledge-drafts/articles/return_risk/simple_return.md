@@ -162,6 +162,6 @@ last_verified: 2026-10-22
 
 - `P003` docs/METHODOLOGY.md：简单价格收益率、累计净值收益率和年化口径。
 - `A009` Casella 与 Berger：比例、样本和统计推断基础；书目信息待复核。
-- `A032` Campbell、Lo 与 MacKinlay（1997）：金融资产收益的定义与计量；书目信息待复核。
+- `A032` Campbell、Lo 与 MacKinlay（1997）：金融资产收益的定义与计量；书目/ISBN 已核验。
 - 复权行为和数据接口可能变化；NEEDS_REVIEW（核验日期：2026-10-22）。
 - 外部来源内容未逐条读取；本文状态为 `drafted`，不标 `source_checked`。

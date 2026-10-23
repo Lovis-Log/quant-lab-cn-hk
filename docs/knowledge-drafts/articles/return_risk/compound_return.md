@@ -173,5 +173,5 @@ last_verified: 2026-10-22
 - `P003` docs/METHODOLOGY.md：累计净值收益率和年化口径。
 - `P005` LEARNING.md：复利、先涨后跌和回本例子。
 - `A009` Casella 与 Berger：比例、乘积和统计基础；书目信息待复核。
-- `A032` Campbell、Lo 与 MacKinlay（1997）：多期收益与复合；书目信息待复核。
+- `A032` Campbell、Lo 与 MacKinlay（1997）：多期收益与复合；书目/ISBN 已核验。
 - 外部来源内容未逐条读取；本文状态为 `drafted`，不标 `source_checked`。

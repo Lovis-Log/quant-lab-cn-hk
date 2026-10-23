@@ -1,11 +1,11 @@
 # 学术与教材来源库
 
-整理日期：2026-10-22
+整理日期：2026-10-22；批次 2 来源状态更新：2026-10-23
 
 ## 使用说明
 
 - `A` 编号用于论文、教材、专著和大学公开课程资料。
-- 书目信息按通行出版信息整理；2026-10-22 未能联网逐条核验 DOI、页码和版本，标记 `NEEDS_REVIEW`。正式发布前应通过出版社、DOI 或大学课程页面复核。
+- 书目信息按通行出版信息整理；A032、A034 的书目/DOI，以及 A033、A035 的书目/ISBN 已于 2026-10-23 核验。其余 A 编号的书目信息尚未逐条核验，仍标记 `NEEDS_REVIEW`；正式发布前应通过出版社、DOI 或大学课程页面复核。
 - 学术来源用于定义、公式、假设和边界的背景说明，不用于证明某个策略未来有效，也不构成投资建议。
 - 引用时优先指向原始论文、出版社页面或课程原始页面；不使用搜索结果链接、聚合转载或内容农场。
 
@@ -42,10 +42,10 @@
 | A027 | Ang, A. (2014) | Asset Management: A Systematic Approach to Factor Investing | Oxford University Press | ISBN: 978-0199959327 | 资产配置、因子和组合风险 | 后续批次 |
 | A028 | Hamilton, J. D. (1994) | Time Series Analysis | Princeton University Press | ISBN: 978-0691042893 | 时间序列、自相关、平稳性和模型 | 后续批次 |
 | A029 | Wasserman, L. (2004) | All of Statistics: A Concise Course in Statistical Inference | Springer | ISBN: 978-0387402727 | 统计推断、抽样分布、假设检验和置信区间 | 后续批次 |
-| A032 | Campbell, J. Y., Lo, A. W., & MacKinlay, A. C. (1997) | The Econometrics of Financial Markets | Princeton University Press | ISBN: 978-0691043012 | 金融资产收益、对数收益、事件研究和时间序列计量 | 批次 2：return_risk |
-| A033 | Berk, J., & DeMarzo, P. (2020) | Corporate Finance (5th ed.) | Pearson | ISBN: 978-0135161088 | 股利、拆股、配股和公司行动 | 批次 2：market_data |
-| A034 | Wilkinson, M. D., et al. (2016) | The FAIR Guiding Principles for scientific data management and stewardship | Scientific Data, 3, 160018 | DOI: 10.1038/sdata.2016.18 | 数据溯源、元数据、可发现/可访问/可互操作/可复用 | 批次 2：market_data |
-| A035 | Bekaert, G., & Hodrick, R. (2018) | International Financial Management (3rd ed.) | Cambridge University Press | ISBN: 978-1107111820 | 汇率、货币风险和跨境投资组合 | 批次 2：market_data |
+| A032 | Campbell, J. Y., Lo, A. W., & MacKinlay, A. C. (1997) | The Econometrics of Financial Markets | Princeton University Press | ISBN: 978-0691043012（书目/ISBN 已核验） | 金融资产收益、对数收益、事件研究和时间序列计量 | 批次 2：return_risk |
+| A033 | Berk, J., & DeMarzo, P. (2020) | Corporate Finance (5th ed.) | Pearson | ISBN-10: 0135161088；ISBN-13: 9780135161081（书目/ISBN 已核验） | 股利、拆股、配股和公司行动 | 批次 2：market_data |
+| A034 | Wilkinson, M. D., et al. (2016) | The FAIR Guiding Principles for scientific data management and stewardship | Scientific Data, 3, 160018 | DOI: 10.1038/sdata.2016.18（书目/DOI 已核验） | 数据溯源、元数据、可发现/可访问/可互操作/可复用 | 批次 2：market_data |
+| A035 | Bekaert, G., & Hodrick, R. (2017) | International Financial Management (3rd ed.) | Cambridge University Press | ISBN: 978-1107111820（第三版、ISBN 与 2017 出版日期已核验） | 汇率、货币风险和跨境投资组合 | 批次 2：market_data |
 
 ## 大学公开课程
 
@@ -53,6 +53,14 @@
 | --- | --- | --- | --- | --- | --- |
 | A030 | 18.05 Introduction to Probability and Statistics | MIT OpenCourseWare | [MIT OCW 18.05](https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2014/) | 概率、抽样分布、假设检验、置信区间 | NEEDS_REVIEW：页面未联网复核 |
 | A031 | CS229 Machine Learning | Stanford University | [CS229](https://cs229.stanford.edu/) | 监督学习、线性回归、模型评估和过拟合 | NEEDS_REVIEW：页面未联网复核 |
+
+## 批次 2 来源核验状态（2026-10-23）
+
+- `A032` Campbell、Lo 与 MacKinlay（1997）《The Econometrics of Financial Markets》：书目和 ISBN 已核验。
+- `A033` Berk 与 DeMarzo（2020）《Corporate Finance》（第 5 版）：ISBN-10 `0135161088`、ISBN-13 `9780135161081`；书目已核验。
+- `A034` Wilkinson 等（2016）FAIR 原则：书目和 DOI `10.1038/sdata.2016.18` 已核验。
+- `A035` Bekaert 与 Hodrick（2017）《International Financial Management》（第 3 版，Cambridge University Press）：ISBN `978-1107111820` 已核验。
+- 以上核验只覆盖书目/DOI/ISBN，不表示文章已逐条读取来源全文；文章状态仍为 `drafted`。
 
 ## 批次 2 引用说明
 
@@ -78,7 +86,7 @@
 
 ## 待复核事项
 
-1. 所有 DOI、ISBN、页码、版次和作者列表需在正式发布前通过出版社、DOI 或图书馆目录复核；A032–A035 为批次 2 新增书目，尚未逐条核验。
+1. 所有 DOI、ISBN、页码、版次和作者列表需在正式发布前通过出版社、DOI 或图书馆目录复核；A032–A035 的书目/DOI/ISBN 已于 2026-10-23 核验，其余 A 编号尚未逐条核验。
 2. `A014` 的《Maximum Drawdown》是 Risk Magazine 文章，引用格式和页码需确认；如无法核实，正式文章应改用教材中的最大回撤定义并标记来源。
 3. `A030`、`A031` 的课程页面和讲义版本需确认；公开课程链接可能随学期调整。
 4. 教材中的公式和符号可能与本项目实现不同（例如样本/总体分母、年化交易日数、无风险利率口径）；文章必须明确采用哪一种，并与 `docs/METHODOLOGY.md` 对齐。
