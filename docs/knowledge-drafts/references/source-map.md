@@ -17,7 +17,7 @@
 | `workspace` | P001, P002, P005, S012, S022 | 顶栏、左侧导航、三个停靠面板、设置标签、资料库路径、WebView2、Windows 凭据管理器；面板布局只存本机 WebView |
 | `market_data` | S001, S013, P002, P003, P004 | A 股/港股接口与回退；字段和币种；复权口径；15 分钟历史缓存、5 分钟快照缓存；名称 24 小时缓存/5 分钟冷却；候选目录；自选股 10 只上限 |
 | `strategy` | P003, P002, A008 | 三种均线规则的条件；`min_periods=N` 预热；信号变化标记；收盘信号最早下一开盘成交；只做多、不加杠杆 |
-| `backtest` | P003, P002, S002, S003, S004, A006, A007 | 下一开盘成交；买卖滑点公式；费用公式；A 股 T+1 与简化涨跌停；港股交易单位用户输入且未模拟 VCM；同成本基准；样本内外切分；参数敏感性仅样本内；过拟合和数据窥探 |
+| `backtest` | P003, P002, S002, S003, S004, A006, A007 | 下一开盘成交；买卖滑点公式；费用公式；A 股简化 T+1 防御性检查与简化涨跌停；港股交易单位用户输入且未模拟 VCM；同成本基准；样本内外切分；参数敏感性仅样本内；过拟合和数据窥探 |
 | `risk_portfolio` | P003, P002, A001, A013, A009 | 样本方差/标准差；年化 `√252`；最大回撤；2–4 只同市场同币种；共同交易日内连接；等权/逆波动率；固定权重每日再平衡且未计调仓成本；不处理汇率 |
 | `statistics_ml` | P003, S015, S016, A003, A004, A005, A010 | 单样本 t 检验零假设；p 值解释；五个特征和次日标签；训练/测试按时间排序并留一行间隔；训练集内 3 折 `TimeSeriesSplit(gap=1)`；标准化只在训练集；MAE/零收益基线/R²/方向一致率 |
 | `academy` | P003, P005, A002, A009 | 八节固定教学样本；参数范围和默认值；方差分母 `n−1`；最大回撤路径；夏普年化；相关系数；过拟合模拟；教学样本不是行情 |
@@ -34,7 +34,7 @@
 | `workspace` | `quant_lab/ui.py:48-243`, `quant_lab/ui.py:413-484`, `quant_lab/ui_settings.py:67-92` | 顶栏按钮、面板拖宽/排序/最大化、左侧导航开关、设置标签 |
 | `market_data` | `quant_lab/ui.py:256-366`, `quant_lab/ui.py:510-695`, `quant_lab/ui_updates.py:61-93`, `quant_lab/data.py:61-198`, `quant_lab/names.py:42-121`, `quant_lab/ui_terminal.py:16-84` | 加载与校验、来源/缓存状态、复权、自选股、名称缓存 |
 | `strategy` | `quant_lab/strategy.py:8-52`, `quant_lab/ui_strategy.py:21-91` | 三种策略条件、窗口校验、预热、信号变化标记、最近 30 行表格 |
-| `backtest` | `quant_lab/backtest.py:14-169`, `quant_lab/research.py:26-90`, `quant_lab/ui_strategy.py:94-264`, `quant_lab/storage.py:80-124` | 成交、费用、滑点、T+1、涨跌停、基准、样本切分、敏感性、保存实验 |
+| `backtest` | `quant_lab/backtest.py:14-169`, `quant_lab/research.py:26-90`, `quant_lab/ui_strategy.py:94-264`, `quant_lab/storage.py:80-124` | 成交、费用、滑点、T+1 防御性检查、涨跌停、基准、样本切分、敏感性、保存实验 |
 | `risk_portfolio` | `quant_lab/portfolio.py:19-78`, `quant_lab/ui_analysis.py:19-115`, `quant_lab/metrics.py:58-79` | 共同日期、权重、相关/协方差、样本外曲线、单资产风险 |
 | `statistics_ml` | `quant_lab/statistics.py:44-128`, `quant_lab/ui_analysis.py:118-207` | t 检验、特征/标签、切分/间隔、交叉验证、标准化、MAE/R²/方向一致率 |
 | `academy` | `quant_lab/learning.py:25-109`, `quant_lab/ui_learning.py:11-54` | 八节课程、参数范围、固定教学数据、知识解释 |
@@ -101,13 +101,13 @@
 | `trend_following` | P003, P005, A008 | 收盘价 > 长均线且长均线较前一日上升 |
 | `mean_reversion` | A008, A020 | 均值回归假说、z 分数和自相关/非平稳性背景；当前未实现 |
 | `lookahead_bias` | P003, P004, A016 | 收盘信号、下一开盘成交、复权信号与原始成交、时间切分 |
-| `next_open_execution` | P003, P004, S002, S003 | 信号 t、成交 t+1 开盘；交易规则和交易日背景 |
+| `next_open_execution` | P003, P004, S002, S003 | 信号 t、成交 t+1 开盘；A 股 T+1 为防御性检查，当前日线正常流程不会同日买卖 |
 | `lot_size_and_fractional_shares` | S002, S003, P003, P004 | 整数交易单位、碎股未实现、港股每手数量用户输入 |
 | `trading_costs` | S002, S003, P003 | 佣金、最低佣金、附加费和滑点公式；默认值为研究假设 |
 | `slippage_liquidity_market_impact` | S002, S003, P003, A016 | 固定基点滑点；订单簿、容量和市场冲击未实现 |
 | `benchmark` | P003, A006 | 同成本买入持有；第二个交易日开盘尝试买入；不强制末日平仓 |
 | `equity_curve` | P003, A026 | `equity=cash+shares×不复权收盘`；每日估值和回撤基础 |
-| `cash_position_and_pnl` | P003, P004, A026 | 每日 cash/shares/equity；独立 PnL 列未提供 |
+| `cash_position_and_pnl` | P003, P004, A026 | 每日 cash/shares/equity；`cash_after` 等于当日 `cash`，不是净值；独立 PnL 列未提供 |
 | `in_sample_out_of_sample` | P003, A006, A016 | `split=int(N×train_fraction)`；测试从 `split−1` 净值起；`split_date=date[split]` |
 | `temporal_split` | P003, A005, A016 | 按时间切分；机器学习训练/测试一行间隔 |
 | `walk_forward_analysis` | P003, A005, A006, A016 | 滚动训练/测试概念；当前只有单次切分和训练期 3 折 CV |
@@ -128,7 +128,7 @@
 | `trend_following` | `strategy.py:47-50` | 收盘价 > 长均线且长均线 `diff()>0` |
 | `mean_reversion` | 无独立实现；`strategy.py` 仅三种策略 | 当前软件未实现均值回归 |
 | `lookahead_bias` | `strategy.py:34-52`, `research.py:42-63`, `backtest.py:96-99`, `statistics.py:63-80` | 信号时序、下一开盘决策、特征/标签时序 |
-| `next_open_execution` | `backtest.py:96-99`, `backtest.py:146-149`, `research.py:42-44` | `i` 日使用 `i-1` 信号；`decision_date` 与 `date` |
+| `next_open_execution` | `backtest.py:96-99`, `backtest.py:109-110`, `backtest.py:146-149`, `research.py:42-44` | `i` 日使用 `i-1` 信号；`decision_date` 与 `date`；A 股 T+1 为防御性检查 |
 | `lot_size_and_fractional_shares` | `backtest.py:118-141`, `ui_strategy.py:99-102` | 整数手数、资金递减、卖出全部持股和交易单位输入 |
 | `trading_costs` | `backtest.py:14-65`, `backtest.py:118-141`, `ui_strategy.py:94-128` | 默认参数、费用公式和 UI 输入 |
 | `slippage_liquidity_market_impact` | `backtest.py:14-38`, `backtest.py:118-141`, `ui_strategy.py:115-118` | 固定基点滑点、零成交量阻止和参数范围 |
@@ -160,7 +160,8 @@
 
 - S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2–3 的 40 篇文章因此全部标 `drafted`，不标 `source_checked`。
 - 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）的官方入口已确认可访问，具体规则仍按文章需要核验；A032（Campbell 等）、A034（FAIR）书目/DOI 已核验；A033（Berk 与 DeMarzo）修正 ISBN 后书目已核验；A035（Bekaert 与 Hodrick）第三版、ISBN 和 2017 出版日期已核验。批次 3 未新增来源编号。
-- 批次 3 的交易费用、整手、涨跌停、T+1、零成交量和 VCM 仍按简化研究假设写作；S002、S003、S004 的具体条款未逐项核验。
+- 批次 3 的交易费用、整手、涨跌停、零成交量和 VCM 仍按简化研究假设写作；S002、S003、S004 的具体条款未逐项核验。
+- 批次 3 的 A 股 T+1 检查是日线引擎的防御性代码：当前每天最多一笔订单，正常流程不会同日买卖；文章不得把 T+1 写成当前可观察的 `blocked` 原因，也不得声称软件完整模拟交易所级 T+1。
 - 交易费用、税率、结算、申报单位和涨跌幅规则不能只靠本项目默认值推断；当前手册只把它们写成可修改假设。
 - 市场冲击、流动性、碎股、多币种组合和滚动前向分析当前没有实现；相关文章必须标记 `theory_only`，不得虚构按钮或指标。
 - `S013` 候选目录只提供身份字段，不证明上市状态；文章不得把“目录中存在”写成“可交易”。

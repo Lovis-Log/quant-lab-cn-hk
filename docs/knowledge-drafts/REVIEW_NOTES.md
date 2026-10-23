@@ -72,7 +72,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 名称缓存 24 小时、失败冷却 5 分钟；手动“重新获取证券名称”绕过缓存和冷却。
 - 证券目录内置快照接收于 2026-10-14：A 股 6,181 条、港股 3,033 条；联网更新写入用户目录。
 - 策略只有单均线、双均线、趋势过滤；窗口约束 `2 ≤ 短周期 < 长周期 ≤ 250`；`min_periods=N`；信号最早下一交易日开盘成交。
-- 回测只做多；A 股模拟 T+1、用户设定的整手和简化涨跌停；港股交易单位用户输入，未模拟 VCM。
+- 回测只做多；A 股有简化 T+1 防御性检查（当前日线每天最多一笔订单，正常流程不会同日买卖）；用户设定的整手和简化涨跌停；港股交易单位用户输入，未模拟 VCM。
 - 成交价与费用公式与 `docs/METHODOLOGY.md` 和 `backtest.py` 一致；复权价格只生成信号，成交/估值使用不复权价格。
 - 样本内比例 0.50–0.85；测试统计以分割日前一交易日净值为起点；参数敏感性只计算样本内。
 - 组合要求 2–4 只同市场同币种，共同交易日内连接；等权/训练期逆波动率；固定权重每日再平衡，未计调仓成本、股息或汇率。
@@ -206,6 +206,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 批次 2 后再次使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning；未修改程序代码。
 - 批次 2 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；首次使用默认临时目录运行时，Windows 拒绝访问 `pytest-of-LENOVO` 目录，属于环境权限问题，不是测试断言失败。本次仅修改 `docs/knowledge-drafts/`。
 - 批次 3 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次仅新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
+- 批次 3 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只修改 `docs/knowledge-drafts/`。
 
 ## 9. 声明
 
@@ -302,7 +303,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 | `trend_following` | `S_t=1[close_t>MA_l(t)]×1[MA_l(t)>MA_l(t−1)]` | `implemented` | P003, P005, A008 | 短周期不参与条件 |
 | `mean_reversion` | `z_t=(P_t−μ_t)/σ_t`；`z≤−k` 入场，`z≥0` 退出 | `theory_only` | A008, A020 | 当前软件未实现 |
 | `lookahead_bias` | `S_t=f(I_t)`；成交在 `t+1` 开盘 | `implemented` | P003, P004, A016 | 无通用自动检测器 |
-| `next_open_execution` | `decision_{t+1}=S_t`；`fill=open×(1±s/10000)` | `implemented` | P003, P004, S002, S003 | 零成交量/涨跌停/T+1 可阻止成交 |
+| `next_open_execution` | `decision_{t+1}=S_t`；`fill=open×(1±s/10000)` | `implemented` | P003, P004, S002, S003 | 零成交量/涨跌停可阻止；T+1 为防御性检查，当前日线正常流程不触发 |
 | `lot_size_and_fractional_shares` | `max_lots=floor(cash/(fill×lot))`；卖出全部 | `needs_code_review` | S002, S003, P003, P004 | 整手已实现；碎股未实现；港股每手用户输入 |
 | `trading_costs` | `fee=max(min_comm,N×c_bps/10000)+N×t_bps/10000` | `implemented` | S002, S003, P003 | 默认值为可修改研究假设 |
 | `slippage_liquidity_market_impact` | `fill_buy=open×(1+s/10000)`；`fill_sell=open×(1−s/10000)` | `needs_code_review` | S002, S003, P003, A016 | 固定滑点已实现；订单簿/容量/冲击未实现 |
@@ -328,7 +329,7 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 ### 12.4 需要 Codex 复核的问题（批次 3）
 
 1. 确认三种策略条件与 `strategy.py` 完全一致：`single_ma` 只用长均线；`dual_ma` 严格短 > 长；`trend` 要求价格 > 长均线且长均线 `diff()>0`。
-2. 确认 `run_backtest` 使用 `close_signals.iloc[i-1]` 决策、t+1 开盘成交、卖出全部持股、只做多；确认基准在第二个交易日开盘尝试买入且不强制末日平仓。
+2. 确认 `run_backtest` 使用 `close_signals.iloc[i-1]` 决策、t+1 开盘成交、卖出全部持股、只做多；确认基准在第二个交易日开盘尝试买入且不强制末日平仓。确认 A 股 `i <= last_buy_index` 的 T+1 检查是防御性代码：当前日线每天最多一笔订单，正常流程不会同日买卖，不应把 T+1 与零成交量、涨跌停并列为当前可观察的 `blocked` 原因。
 3. 确认 `split=int(N×train_fraction)`、样本外统计 `equity[split-1:]`、`split_date=raw_history["date"].iloc[split]` 的 off-by-one 口径与 `research.py` 一致。
 4. 确认参数敏感性仅使用 `raw_train`/`signal_train`，并跳过 `short>=long` 与 `long>=len(raw_train)`；确认“成交次数”只统计 `filled` 订单。
 5. 确认交易成本默认值、UI 标签“佣金/最低佣金/买入附加费用/卖出附加费用/单边滑点”和“研究假设”声明与 `backtest.py`/`ui_strategy.py` 一致。
@@ -337,3 +338,13 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 8. 确认 `cash_position_and_pnl` 分层：每日 cash/shares/equity 已记录；独立 PnL/已实现/未实现盈亏列未提供。
 9. 确认 `audit_id` 的五类输入和实验档案字段：来源、接收时间、市场、代码、名称、复权保存在档案，但不全部进入 `audit_id`；当前未保存源码提交或输入契约版本。
 10. 确认 `mean_reversion`、`walk_forward_analysis`、`data_snooping_and_multiple_testing` 保持 `theory_only`，`overfitting` 保持 `academy_demo`；不要把 3 折训练期 CV 写成完整 walk-forward，也不要把 Academy 演示写成自动检测器。
+
+### 12.5 批次 3 修订（2026-10-23）
+
+1. `cash_after` 口径已修正：当前回测每天最多一笔订单，且没有其他盘中现金流，因此订单表的 `cash_after` 与该交易日净值记录中的 `cash` 相同；`cash_after`/`cash` 只是现金余额，不是账户净值，账户净值还要加上 `shares × close`。已同步修改 `signal_position_order_trade` 和 `cash_position_and_pnl`。
+2. `reproducibility_and_audit` 的训练比例与指纹说明已修正：Python float 中 `0.7` 和 `0.70` 是同一个值，`str()` 都得到 `"0.7"`，不会仅因书写尾零产生不同指纹；真正不同的浮点值（如 `0.7` 与 `0.7000000000000001`）才会改变哈希输入。
+3. `parameter_sensitivity` 的边界已统一为代码条件 `long >= len(raw_train)`，正文表述改为“长周期不小于训练样本数”；保留 `long=40`、`N_train=35` 的 6 行示例。
+4. T+1 实现边界已修正：`backtest.py` 有 `i <= last_buy_index` 的简化 A 股 T+1 防御性检查，但当前日线引擎每天最多一笔订单，买入后下一交易日 `i` 已大于 `last_buy_index`，正常流程不会同日买卖；因此 T+1 通常不是当前可观察到的 `blocked` 原因，不能与零成交量、涨跌停并列写成当前可触发的拒单条件。软件没有完整模拟可用持仓、历史持仓、盘中多订单或交易所级 T+1 制度。涉及 `signal_position_order_trade`、`next_open_execution`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`lot_size_and_fractional_shares`。
+5. 文章 `software_status` 保持不变：`signal_position_order_trade`、`next_open_execution` 仍为 `implemented`；`slippage_liquidity_market_impact`、`cash_position_and_pnl` 仍为 `needs_code_review`；`lot_size_and_fractional_shares` 仍为 `needs_code_review`。T+1 是防御性实现边界，不改变文章主体功能状态。
+6. 状态统计不变：专业词条 85；`drafted` 40、`todo` 45；全目录 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 3 为 `implemented` 13、`needs_code_review` 3、`theory_only` 3、`academy_demo` 1。
+7. 本次只修改 `docs/knowledge-drafts/` 下的 Markdown；未修改程序、测试、数据库、`VERSION`、构建或发行文件。
