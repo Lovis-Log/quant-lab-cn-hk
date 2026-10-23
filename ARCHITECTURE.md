@@ -9,6 +9,7 @@
 | Backtest | `backtest.py` | 下一开盘模拟成交、费用、滑点、交易限制与订单记录 |
 | Analytics | `metrics.py`, `statistics.py`, `portfolio.py`, `research.py` | 风险收益、统计、组合、样本内外实验与指纹 |
 | Learning | `learning.py`, `knowledge.py`, `guidance.py`, `learning_store.py` | 八节参数实验、七层课程、四条路径、真实指南、任务证据、进度与测验 |
+| Manual Content | `manual_content.py`, `docs/knowledge-drafts/` | 只读发现、严格 frontmatter 校验、稳定 ID/分类/关联查询与离线纯文本搜索；不依赖 UI、SQLite 或网络 |
 | Storage | `storage.py`, `migrations.py`, `paths.py` | SQLite 版本迁移、备份、自选股、设置、实验和学习笔记 |
 | AI | `deepseek.py`, `ai_research.py`, `ai_context.py`, `credentials.py`, `security.py` | 共用 DeepSeek 连接、动态模型、流式问答与 JSON 假设/审阅、限定摘要、安全凭据和脱敏 |
 | UI | `ui*.py`, `charts.py`, `app.py` | Streamlit 页面与 Plotly 展示；不实现核心金融公式 |
@@ -27,7 +28,14 @@ flowchart LR
     A --> DB[SQLite 实验档案]
     DB --> R[复算与报告 ZIP]
     L[Quant Academy] --> U
+    M[Markdown 手册与专业文章] --> MC[只读内容运行时]
 ```
+
+## 文字手册内容运行时
+
+`manual_content.py` 从源码树或 PyInstaller 的资源根读取 `docs/knowledge-drafts/`，不依赖当前工作目录。它严格要求 10 篇登记手册和 85 篇专业文章，解析文章 frontmatter 与 Markdown 正文，并在启动查询前验证必填字段、软件状态、重复 ID、分类及全部前置/相关文章引用。搜索索引仅由中文标题、英文标题、别名和正文在本地生成，不联网、不写用户资料库，也不导入 Streamlit。
+
+当前只建立内容层，尚未连接 UI。旧 `learning.py`、`guidance.py`、`learning_store.py`、学习表和 schema v4 均保持不变。`QuantLab.spec` 只负责把同一份只读 Markdown 资源带入未来的冻结应用；内容不会复制到用户资料库作为唯一来源。
 
 ## 数据合同
 

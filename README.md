@@ -16,6 +16,7 @@ quant_lab/learning.py    八节金融数学课程
 quant_lab/guidance.py    九页指南、四条路径、八步任务与课程引用
 quant_lab/learning_store.py SQLite 学习进度、测验、目标与恢复位置
 quant_lab/ui_guidance.py 新手学习中心与统一帮助导航
+quant_lab/manual_content.py 只读手册与专业文章的离线发现、校验和查询
 quant_lab/processing.py  数据清洗与字段验证
 quant_lab/metrics.py     价格收益与风险指标
 quant_lab/strategy.py    均线与趋势信号
@@ -39,6 +40,8 @@ CHANGELOG.md             里程碑记录
 ```
 
 `demo_data.py` 只为页面预览服务，不参与金融计算。真实数据按“获取 → 验证 → 缓存 → 策略/统计计算 → 展示或归档”流动。模块边界详见 [ARCHITECTURE.md](ARCHITECTURE.md)。
+
+`codex/manual-reading-v1` 当前只完成文字手册版的阶段 1 内容运行时：源码可离线发现、解析、校验并查询 `docs/knowledge-drafts/` 中的 10 篇手册和 85 篇专业文章，PyInstaller 配置也会携带这组只读资源。此阶段没有新增或替换任何界面入口；现有任务、测验、进度、Academy 和学习中心保持原样。
 
 ## Windows 启动
 
