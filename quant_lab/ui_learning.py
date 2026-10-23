@@ -4,7 +4,7 @@ import streamlit as st
 
 from quant_lab.learning import LESSONS, lesson_experiment
 from quant_lab.knowledge import LESSON_TOPICS
-from quant_lab.ui_knowledge import render_knowledge
+from quant_lab.ui_knowledge import ARTICLE_BY_TOPIC, render_knowledge
 import math
 
 
@@ -49,6 +49,10 @@ def render_academy() -> None:
         render_knowledge(topic, readings.get(topic), key="academy", period="当前固定教学样本（不是行情）", expanded=True)
     st.markdown("#### 思考问题")
     st.write(lesson.question)
-    from quant_lab.ui_guidance import navigate
-    st.button("到学习中心保存实验与测验", key="academy_to_center", on_click=navigate,
-        args=("新手使用指引",), kwargs={"section": "课程与练习", "course": LESSON_TOPICS[choice][0]})
+    from quant_lab.ui_manual import open_manual_article
+    st.button(
+        "在使用手册中继续阅读",
+        key="academy_to_manual",
+        on_click=open_manual_article,
+        args=(ARTICLE_BY_TOPIC[LESSON_TOPICS[choice][0]],),
+    )

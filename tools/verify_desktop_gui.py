@@ -32,9 +32,7 @@ def main():
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--mock-ai", action="store_true")
     parser.add_argument("--research-fixes", action="store_true")
-    parser.add_argument("--learning-center", action="store_true")
-    parser.add_argument("--resume-learning", action="store_true")
-    parser.add_argument("--manual-preview", action="store_true")
+    parser.add_argument("--manual-reading", action="store_true")
     args = parser.parse_args()
     directory = (args.data_dir or ROOT / ".tools" / ("desktop-validation-" + uuid4().hex)).resolve()
     directory.relative_to((ROOT / ".tools").resolve())
@@ -111,10 +109,6 @@ def main():
                 expect(page).to_have_title("Quant Lab CN/HK", timeout=10000)
                 summary.update({"actual_webview_dom_loaded": True,
                                 "page_identity": {"url": page.url, "title": page.title()}})
-                welcome = page.get_by_role("button", name="跳过首次引导", exact=True)
-                if welcome.count():
-                    welcome.click()
-                    settle(page)
                 topbar = page.locator(".st-key-global_topbar")
                 expect(topbar).to_be_visible(timeout=10000)
                 sidebar_toggle = page.get_by_role("button", name="▥", exact=True)
@@ -127,61 +121,78 @@ def main():
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0
                 assert sidebar.get_by_text("新手使用指引", exact=True).count() == 0
                 assert sidebar.get_by_text("研究笔记", exact=True).count() == 0
-                assert sidebar.get_by_text("使用手册（预览）", exact=True).count() == 0
+                assert sidebar.get_by_text("使用手册", exact=True).count() == 0
+                assert page.get_by_role("button", name="新手使用指引", exact=True).count() == 0
                 main = page.get_by_test_id("stMain")
                 main_before = main.bounding_box()
-                manual_panel = None
-                if args.manual_preview:
-                    manual_button = page.get_by_role("button", name="使用手册（预览）", exact=True)
-                    expect(manual_button).to_be_visible(timeout=10000)
-                    manual_button.click()
-                    settle(page)
-                    manual_panel = page.locator(".st-key-manual_side_panel")
-                    expect(manual_panel).to_be_visible(timeout=10000)
+                manual_button = page.get_by_role("button", name="使用手册", exact=True)
+                expect(manual_button).to_be_visible(timeout=10000)
+                manual_button.click()
+                settle(page)
+                manual_panel = page.locator(".st-key-manual_side_panel")
+                expect(manual_panel).to_be_visible(timeout=10000)
+                if args.manual_reading:
                     manual_panel.get_by_text(
                         "快速开始：从资料库到第一份可复现实验", exact=True
                     ).wait_for(timeout=10000)
-                    preview_navigation = manual_panel.get_by_role(
-                        "radiogroup", name="使用手册预览分区", exact=True
+                    manual_navigation = manual_panel.get_by_role(
+                        "radiogroup", name="使用手册分区", exact=True
                     )
-                    preview_navigation.get_by_text("功能说明", exact=True).click()
+                    manual_navigation.get_by_text("功能说明", exact=True).click()
                     settle(page)
-                    manual_panel.get_by_text(
-                        "市场数据：代码、名称、区间、复权、来源与缓存", exact=True
-                    ).wait_for(timeout=10000)
-                    preview_navigation = manual_panel.get_by_role(
-                        "radiogroup", name="使用手册预览分区", exact=True
+                    manual_panel.get_by_role(
+                        "button", name="市场数据：代码、名称、区间、复权、来源与缓存", exact=True
+                    ).click()
+                    settle(page)
+                    manual_panel.get_by_text("加载真实历史日线", exact=False).first.wait_for(timeout=10000)
+                    manual_navigation = manual_panel.get_by_role(
+                        "radiogroup", name="使用手册分区", exact=True
                     )
-                    preview_navigation.get_by_text("专业知识库", exact=True).click()
+                    manual_navigation.get_by_text("专业知识库", exact=True).click()
                     settle(page)
-                    manual_panel.get_by_text(
-                        "开高低收与成交量（OHLCV）", exact=True
-                    ).wait_for(timeout=10000)
-                    assert "市场与数据 · implemented" in manual_panel.inner_text()
-                    summary.update({"manual_preview_dom": True,
-                                    "manual_preview_three_entries": True,
-                                    "manual_preview_offline_content": True})
-                page.get_by_role("button", name="新手使用指引", exact=True).click()
-                settle(page)
-                guide_panel = page.locator(".st-key-guide_side_panel")
-                expect(guide_panel).to_be_visible(timeout=10000)
+                    manual_panel.get_by_role("button", name="开高低收与成交量 / OHLCV", exact=True).click()
+                    settle(page)
+                    manual_panel.get_by_text("软件状态：软件已实现", exact=True).wait_for(timeout=10000)
+                    manual_search = manual_panel.get_by_label("搜索手册与专业知识", exact=True)
+                    manual_search.fill("Next-Open Execution")
+                    manual_search.press("Enter")
+                    settle(page)
+                    search_result = manual_panel.get_by_role(
+                        "button", name="词条 · 下一交易日开盘成交 / Next-Open Execution", exact=True
+                    )
+                    search_result.wait_for(state="attached", timeout=10000)
+                    search_result.scroll_into_view_if_needed()
+                    expect(search_result).to_be_visible(timeout=10000)
+                    assert manual_panel.locator(".st-key-manual_panel_body").evaluate(
+                        "element => element.scrollTop"
+                    ) < 20
+                    page.screenshot(path=str(directory/"manual-reading-search.png"), full_page=False)
+                    manual_search = manual_panel.get_by_label("搜索手册与专业知识", exact=True)
+                    manual_search.fill("Python Functions")
+                    manual_search.press("Enter")
+                    settle(page)
+                    manual_panel.get_by_role(
+                        "button", name="词条 · Python 函数 / Python Functions", exact=True
+                    ).click()
+                    settle(page)
+                    expect(manual_panel.locator("pre code").first).to_be_visible(timeout=10000)
+                    page.screenshot(path=str(directory/"manual-reading-code.png"), full_page=False)
+                    summary.update({"manual_reading_dom": True,
+                                    "manual_three_entries": True,
+                                    "manual_function_directory": True,
+                                    "manual_article_and_status": True,
+                                    "manual_local_search": True,
+                                    "manual_code_block_rendered": True,
+                                    "beginner_guidance_removed": True})
                 page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
                 expect(panel).to_be_visible(timeout=10000)
-                if args.manual_preview:
-                    manual_panel = page.locator(".st-key-manual_side_panel")
-                    expect(manual_panel).to_be_visible(timeout=10000)
-                    manual_box = manual_panel.bounding_box()
-                    guide_preview_box = guide_panel.bounding_box()
-                    deepseek_preview_box = panel.bounding_box()
-                    assert manual_box and guide_preview_box and deepseek_preview_box
-                    assert guide_preview_box["x"] < manual_box["x"] < deepseek_preview_box["x"]
-                    page.screenshot(path=str(directory/"manual-preview-coexist.png"), full_page=False)
-                    summary["manual_preview_coexists_with_panels"] = True
-                    manual_panel.get_by_role("button", name="×", exact=True).click()
-                    settle(page)
-                    expect(manual_panel).not_to_be_visible(timeout=10000)
+                manual_box = manual_panel.bounding_box()
+                deepseek_box = panel.bounding_box()
+                assert manual_box and deepseek_box and manual_box["x"] < deepseek_box["x"]
+                page.screenshot(path=str(directory/"manual-reading-coexist.png"), full_page=False)
+                summary["manual_coexists_with_panels"] = True
                 assert page.get_by_role("dialog").count() == 0
                 page.get_by_role("button", name="⚙", exact=True).click()
                 settle(page)
@@ -201,7 +212,7 @@ def main():
                     expect(initial_key).to_have_value(dummy_key)
                 settings_panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
-                guide_box = guide_panel.bounding_box()
+                manual_box = manual_panel.bounding_box()
                 box = panel.bounding_box()
                 main_after = main.bounding_box()
                 workspace_after = page.get_by_test_id("stMainBlockContainer").bounding_box()
@@ -209,12 +220,12 @@ def main():
                 assert box and abs((box["x"] + box["width"]) - viewport_width) <= 3, {
                     "panel_box": box, "viewport_width": viewport_width,
                 }
-                assert guide_box and guide_box["x"] < box["x"]
+                assert manual_box and manual_box["x"] < box["x"]
                 padding_right = main.evaluate("element => getComputedStyle(element).paddingRight")
                 assert main_before and main_after and workspace_after
-                assert float(padding_right.removesuffix("px")) >= box["width"] + guide_box["width"] - 3, {
+                assert float(padding_right.removesuffix("px")) >= box["width"] + manual_box["width"] - 3, {
                     "main_before": main_before, "main_after": main_after,
-                    "workspace_after": workspace_after, "panel_box": box, "guide_box": guide_box,
+                    "workspace_after": workspace_after, "panel_box": box, "manual_box": manual_box,
                     "padding_right": padding_right,
                 }
                 resize = panel.locator('.ql-resize-handle[data-panel="deepseek"]')
@@ -266,7 +277,7 @@ def main():
                         "SELECT COUNT(*) FROM note_attachments WHERE note_id=?", (saved_note[0],)
                     ).fetchone()[0] == 2
                 sticky_headers = []
-                for panel_name in ("guide", "deepseek", "notes"):
+                for panel_name in ("manual", "deepseek", "notes"):
                     current_panel = page.locator(f".st-key-{panel_name}_side_panel")
                     current_header = current_panel.locator(f".st-key-{panel_name}_panel_header")
                     current_body = current_panel.locator(f".st-key-{panel_name}_panel_body")
@@ -291,7 +302,7 @@ def main():
                 settle(page)
                 expect(sidebar).not_to_be_visible(timeout=10000)
                 expect(page.locator(".ql-left-sidebar-hidden")).to_be_attached(timeout=10000)
-                expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-manual_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-notes_side_panel")).to_be_visible(timeout=10000)
                 workspace_without_sidebar = page.get_by_test_id("stMainBlockContainer").bounding_box()
@@ -302,44 +313,44 @@ def main():
                 sidebar_toggle.click()
                 settle(page)
                 expect(sidebar).to_be_visible(timeout=10000)
-                expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-manual_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-notes_side_panel")).to_be_visible(timeout=10000)
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 page.screenshot(path=str(directory/"triple-side-panels.png"), full_page=False)
-                guide_button = page.get_by_role("button", name="新手使用指引", exact=True)
+                manual_button = page.get_by_role("button", name="使用手册", exact=True)
                 deepseek_button = page.get_by_role("button", name="DeepSeek 助手", exact=True)
                 notes_button = page.get_by_role("button", name="研究笔记", exact=True)
-                guide_button_box = guide_button.bounding_box()
+                manual_button_box = manual_button.bounding_box()
                 deepseek_button_box = deepseek_button.bounding_box()
-                assert guide_button_box and deepseek_button_box
-                assert guide_button.get_attribute("data-reorder-bound") == "1"
+                assert manual_button_box and deepseek_button_box
+                assert manual_button.get_attribute("data-reorder-bound") == "1"
                 assert deepseek_button.get_attribute("data-reorder-bound") == "1"
-                assert guide_button_box["x"] < deepseek_button_box["x"]
+                assert manual_button_box["x"] < deepseek_button_box["x"]
                 page.mouse.move(
                     deepseek_button_box["x"] + deepseek_button_box["width"] / 2,
                     deepseek_button_box["y"] + deepseek_button_box["height"] / 2,
                 )
                 page.mouse.down()
                 page.mouse.move(
-                    guide_button_box["x"] + guide_button_box["width"] / 3,
-                    guide_button_box["y"] + guide_button_box["height"] / 2,
+                    manual_button_box["x"] + manual_button_box["width"] / 3,
+                    manual_button_box["y"] + manual_button_box["height"] / 2,
                     steps=8,
                 )
                 page.mouse.up()
                 page.wait_for_timeout(350)
                 stored_order = page.evaluate("JSON.parse(localStorage.getItem('quantlab.dock.panelOrder'))")
-                assert stored_order[0] == "deepseek" and set(stored_order) == {"guide","manual","deepseek","notes"}
-                guide_panel = page.locator(".st-key-guide_side_panel")
+                assert stored_order[0] == "deepseek" and set(stored_order) == {"manual","deepseek","notes"}
+                manual_panel = page.locator(".st-key-manual_side_panel")
                 panel = page.locator(".st-key-deepseek_side_panel")
-                reordered_guide_button_box = guide_button.bounding_box()
+                reordered_manual_button_box = manual_button.bounding_box()
                 reordered_deepseek_button_box = deepseek_button.bounding_box()
-                swapped_guide_box = guide_panel.bounding_box()
+                swapped_manual_box = manual_panel.bounding_box()
                 swapped_deepseek_box = panel.bounding_box()
-                assert reordered_guide_button_box and reordered_deepseek_button_box
-                assert reordered_deepseek_button_box["x"] < reordered_guide_button_box["x"]
-                assert swapped_guide_box and swapped_deepseek_box
-                assert swapped_deepseek_box["x"] < swapped_guide_box["x"]
+                assert reordered_manual_button_box and reordered_deepseek_button_box
+                assert reordered_deepseek_button_box["x"] < reordered_manual_button_box["x"]
+                assert swapped_manual_box and swapped_deepseek_box
+                assert swapped_deepseek_box["x"] < swapped_manual_box["x"]
                 page.screenshot(path=str(directory/"dual-side-panels-swapped.png"), full_page=False)
                 notes_panel.get_by_role("button", name="⛶", exact=True).click()
                 settle(page)
@@ -380,10 +391,10 @@ def main():
                 assert abs(restored_maximized_box["x"] - restored_sidebar_box["width"]) <= 3
                 page.keyboard.press("Escape")
                 settle(page)
-                expect(page.locator(".st-key-guide_side_panel")).to_be_visible(timeout=10000)
+                expect(page.locator(".st-key-manual_side_panel")).to_be_visible(timeout=10000)
                 expect(page.locator(".st-key-deepseek_side_panel")).to_be_visible(timeout=10000)
                 summary.update({"global_topbar_dom": True, "topbar_pages_removed_from_sidebar": True,
-                                "deepseek_global_launcher": True, "learning_global_launcher": True,
+                                "deepseek_global_launcher": True, "manual_global_launcher": True,
                                 "notes_global_launcher": True, "triple_panels_open": True,
                                 "left_sidebar_launcher": True, "sticky_panel_headers": sticky_headers,
                                 "topbar_preserved_during_maximize": True,
@@ -397,14 +408,14 @@ def main():
                                 "remembered_key_restored_on_start": not args.mock_ai})
                 page.locator(".st-key-notes_side_panel").get_by_role("button", name="×", exact=True).click()
                 settle(page)
-                guide_panel.get_by_role("button", name="×", exact=True).click()
+                manual_panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
                 panel.get_by_role("button", name="×", exact=True).click()
                 settle(page)
                 expect(panel).not_to_be_visible(timeout=10000)
-                if args.manual_preview:
-                    page.get_by_role("button", name="使用手册（预览）", exact=True).click()
+                if args.manual_reading:
+                    page.get_by_role("button", name="使用手册", exact=True).click()
                     settle(page)
                     manual_panel = page.locator(".st-key-manual_side_panel")
                     expect(manual_panel).to_be_visible(timeout=10000)
@@ -432,15 +443,15 @@ def main():
                     assert manual_maximized and current_sidebar
                     assert abs(manual_maximized["x"] - (current_sidebar["x"] + current_sidebar["width"])) <= 3
                     expect(topbar).to_be_visible()
-                    page.screenshot(path=str(directory/"manual-preview-maximized.png"), full_page=False)
+                    page.screenshot(path=str(directory/"manual-reading-maximized.png"), full_page=False)
                     manual_panel.get_by_role("button", name="⛶", exact=True).click()
                     settle(page)
                     manual_panel = page.locator(".st-key-manual_side_panel")
                     manual_panel.get_by_role("button", name="×", exact=True).click()
                     settle(page)
-                    summary.update({"manual_preview_resize": True,
-                                    "manual_preview_maximize_restore": True,
-                                    "manual_preview_close": True})
+                    summary.update({"manual_reading_resize": True,
+                                    "manual_reading_maximize_restore": True,
+                                    "manual_reading_close": True})
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()
@@ -507,83 +518,6 @@ def main():
                         ) if source in body_text), None)
                         assert hk_source and "港股 00941" in body_text and "真实历史数据" in body_text
                         summary.update({"hk_history_loaded": True, "hk_history_source": hk_source})
-                if args.learning_center:
-                    sidebar = page.get_by_test_id("stSidebar")
-                    page.get_by_role("button", name="新手使用指引", exact=True).click()
-                    settle(page)
-                    page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("课程与练习", exact=True).click()
-                    settle(page)
-                    course = page.get_by_role("combobox", name="选择交互课程", exact=True)
-                    course.click()
-                    settle(page)
-                    course.fill("最大回撤")
-                    page.get_by_role("option", name="最大回撤", exact=True).click()
-                    settle(page)
-                    page.get_by_text("最大回撤 · 七层学习", exact=True).wait_for(timeout=10000)
-                    slider = page.get_by_test_id("stSlider").filter(has_text="低点净值").get_by_role("slider")
-                    slider.press("ArrowLeft")
-                    settle(page)
-                    page.get_by_role("button", name="保存交互实验记录", exact=True).click()
-                    settle(page)
-                    page.get_by_label("你的数值答案", exact=True).fill("-20")
-                    page.get_by_role("button", name="提交课程测验", exact=True).click()
-                    settle(page)
-                    page.get_by_text("答对了。", exact=False).wait_for(timeout=10000)
-                    page.get_by_role("button", name="使用 DeepSeek 辅导这节课", exact=True).click()
-                    settle(page)
-                    expect(page.get_by_role("radio", name="教学辅导模式", exact=True)).to_be_checked(timeout=10000)
-                    assert "不要直接给出" in page.get_by_label("问题（确认后发送）", exact=True).input_value()
-                    page.locator(".st-key-deepseek_side_panel").get_by_role(
-                        "button", name="×", exact=True
-                    ).click()
-                    settle(page)
-                    page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
-                    settle(page)
-                    page.get_by_label("当前学习目标", exact=True).fill("桌面验收：掌握回撤后理解样本外")
-                    page.get_by_role("button", name="保存学习目标", exact=True).click()
-                    settle(page)
-                    page.get_by_text("学习目标已保存；不会自动发送给 AI。", exact=True).wait_for(timeout=10000)
-                    page.get_by_label("学习笔记标题", exact=True).fill("桌面学习验收")
-                    page.get_by_label("学习笔记内容", exact=True).fill("峰值只能使用当前及更早数据；教学样本不是行情。")
-                    page.get_by_role("button", name="保存学习笔记", exact=True).click()
-                    settle(page)
-                    page.get_by_text("学习笔记已保存。", exact=True).wait_for(timeout=10000)
-                    sidebar.get_by_text("统计与机器学习", exact=True).click()
-                    settle(page)
-                    page.get_by_role("button", name="查看本页使用指南", exact=True).click()
-                    settle(page)
-                    page.get_by_text("统计与机器学习 · 使用指南", exact=True).wait_for(timeout=10000)
-                    page.get_by_role("button", name="返回研究任务 · 统计与机器学习", exact=True).click()
-                    settle(page)
-                    page.get_by_text("统计学与机器学习", exact=True).wait_for(timeout=10000)
-                    sidebar.get_by_text("市场数据", exact=True).click()
-                    settle(page)
-                    summary.update({"learning_center_dom":True,"interactive_lesson":True,"quiz_submission":True,
-                        "learning_goal_and_note":True,"help_return_navigation":True,"teaching_draft_without_send":True})
-                if args.resume_learning:
-                    sidebar = page.get_by_test_id("stSidebar")
-                    page.get_by_role("button", name="新手使用指引", exact=True).click()
-                    settle(page)
-                    page.get_by_text("最大回撤 · 七层学习", exact=True).wait_for(timeout=15000)
-                    page.get_by_role("radiogroup", name="学习中心分区", exact=True).get_by_text("学习进度", exact=True).click()
-                    settle(page)
-                    expect(page.get_by_label("当前学习目标", exact=True)).to_have_value("桌面验收：掌握回撤后理解样本外", timeout=15000)
-                    page.get_by_role("button", name="⚙", exact=True).click()
-                    settle(page)
-                    page.locator(".st-key-settings_panel").get_by_role(
-                        "tab", name="偏好设置", exact=True
-                    ).click()
-                    settle(page)
-                    page.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
-                    settle(page)
-                    page.get_by_text("新手模式（关闭为专业模式）", exact=True).click()
-                    settle(page)
-                    page.locator(".st-key-settings_panel").get_by_role("button", name="×", exact=True).click()
-                    settle(page)
-                    sidebar.get_by_text("市场数据", exact=True).click()
-                    settle(page)
-                    summary.update({"learning_resumed_in_actual_dom":True,"goal_restored_in_actual_dom":True,
-                                    "professional_mode_control":True})
                 sidebar = page.get_by_test_id("stSidebar")
                 assert sidebar.get_by_text("DeepSeek AI 助手", exact=True).count() == 0
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0

@@ -36,10 +36,11 @@ def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     assert "AI 研究助手" not in navigation.options
     assert "新手使用指引" not in navigation.options
     assert "研究笔记" not in navigation.options
-    widget(app, "button", "新手使用指引").click().run()
+    assert not [button for button in app.button if button.label == "新手使用指引"]
+    widget(app, "button", "使用手册").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究笔记").click().run()
-    assert app.session_state["guide_panel_open"] is True
+    assert app.session_state["manual_panel_open"] is True
     assert app.session_state["deepseek_panel_open"] is True
     assert app.session_state["notes_panel_open"] is True
     assert not app.exception
@@ -59,7 +60,7 @@ def test_left_sidebar_launcher_does_not_change_open_panels(tmp_path, monkeypatch
 
     app.button(key="left_sidebar_toggle").click().run()
     assert app.session_state["left_sidebar_visible"] is False
-    assert app.session_state["guide_panel_open"] is False
+    assert app.session_state["manual_panel_open"] is False
     assert app.session_state["deepseek_panel_open"] is True
     assert app.session_state["notes_panel_open"] is True
     assert app.button(key="deepseek_panel_maximize")

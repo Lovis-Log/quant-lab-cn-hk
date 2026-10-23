@@ -78,7 +78,9 @@ def test_searches_plain_text_body_and_can_filter_category():
     library = load_manual_content()
     results = library.search_articles("已经结束的交易日", category="market_data")
     assert "ohlcv" in {article.id for article in results}
+    assert "market_data" in {page.id for page in library.search_manuals("缓存状态")}
     assert library.search_articles("   ") == ()
+    assert library.search_manuals("   ") == ()
 
 
 def test_all_prerequisites_and_related_articles_resolve():

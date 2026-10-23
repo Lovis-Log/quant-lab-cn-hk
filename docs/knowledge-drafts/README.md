@@ -1,6 +1,6 @@
 # 使用手册与专业知识库草稿
 
-本目录是 Quant Lab CN/HK `2.2.0-rc.1` 使用手册与专业知识库的内容输入。这里的 Markdown 是**草稿**，还不是应用内功能；必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能进入软件。
+本目录是 Quant Lab CN/HK 文字手册分支的只读内容源。10 篇手册和 85 篇专业文章已在阶段 3 接入应用并通过自动测试与实际 WebView2 DOM 验收；`drafted` 仍表示外部来源尚未逐条核验，不等于内容已完成发布审校。
 
 ## 当前状态
 
@@ -11,7 +11,7 @@
 - 批次 5：Python、数据处理与工程 20 篇专业文章已起草（2026-10-23）。
 - 85 个专业词条已在 `CATALOG.md` 建立稳定 ID、分类、状态、模块、关联词条和主要来源；85 篇均为 `drafted`，`todo` 为 0。专业词条状态为 `implemented` 61、`needs_code_review` 13、`theory_only` 10、`academy_demo` 1。
 - 官方、学术和项目内来源见 `references/`；编号与核验状态以来源库为准。外部来源内容未逐条读取，文章不标 `source_checked`。
-- 未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件。
+- 阶段 3 已新增只读内容运行时和手册 UI；数据库 schema、`VERSION` 和发行文件未修改。
 
 ## 文件结构
 
@@ -69,7 +69,8 @@ docs/knowledge-drafts/
 
 ## 边界
 
-- 不修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、SQLite schema、Provider、金融计算、`VERSION`、安装器、构建脚本或 Release 文件。
+- 内容层和手册 UI 只读本目录；不把 Markdown 复制到用户资料库作为唯一来源，不建立阅读进度、收藏、远程索引或向量数据库。
+- 本轮不修改 SQLite schema、Provider、金融计算、`VERSION`、安装器或 Release 文件。
 - 不把模拟、缓存或历史日线写成实时行情；不写投资建议、收益承诺或实盘执行暗示。
 - 不调用付费模型 API，不写入或索取任何密钥。
 - 手册不使用复选框、任务状态、测验、打卡、完成度或“完成本章”措辞。

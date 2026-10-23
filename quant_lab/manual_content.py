@@ -166,6 +166,16 @@ class ManualContentLibrary:
             if all(term in article.search_text for term in terms)
         )
 
+    def search_manuals(self, query: str) -> tuple[ManualPage, ...]:
+        terms = _normalize_search_text(query).split()
+        if not terms:
+            return ()
+        return tuple(
+            page
+            for page in self.manuals
+            if all(term in page.search_text for term in terms)
+        )
+
 
 def content_root() -> Path:
     """Return the source or PyInstaller content root without using the CWD."""

@@ -15,7 +15,6 @@ from quant_lab.storage import save_experiment
 from quant_lab import names
 from quant_lab.ui_knowledge import render_knowledge
 from dataclasses import asdict
-from quant_lab.ui_guidance import complete_task, history_evidence
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -50,10 +49,6 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
     if spec is None:
         return
     signals = build_signals(bundle.frame, spec)
-    evidence = history_evidence(bundle)
-    evidence["signals_valid"] = bool(signals["ma_long"].notna().any())
-    evidence["strategy"] = asdict(spec)
-    complete_task("choose_strategy", evidence)
     st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
     chart = go.Figure()
     chart.add_trace(go.Scatter(
@@ -159,9 +154,6 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
             st.session_state["backtest_result"] = result
             st.session_state["backtest_raw"] = raw
             st.session_state["backtest_error"] = None
-            evidence = history_evidence(bundle)
-            evidence.update({"backtest_success": True, "audit_id": result.audit_id})
-            complete_task("run_backtest", evidence)
         except (ValueError, DataUnavailableError, DataValidationError) as exc:
             st.session_state["backtest_key"] = key
             st.session_state["backtest_result"] = None
@@ -257,8 +249,5 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
                     company_name=bundle.company_name,
                 )
                 st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
-                evidence = history_evidence(bundle)
-                evidence.update({"experiment_id": record_id, "audit_id": result.audit_id, "has_judgment": bool(notes.strip())})
-                complete_task("save_research", evidence)
             except (OSError, ValueError, sqlite3.Error) as exc:
                 st.error(f"保存失败：{exc}")

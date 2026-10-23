@@ -70,6 +70,34 @@ def test_migration_failure_rolls_back_schema_and_rows(tmp_path, monkeypatch):
         assert db.execute("SELECT notes FROM experiments").fetchone()[0] == "旧私人笔记"
 
 
+def test_manual_branch_preserves_legacy_learning_rows(tmp_path):
+    path = tmp_path / "learning-v3.sqlite3"
+    with sqlite3.connect(path) as db:
+        for sql in migrations.BASE_SCHEMA:
+            db.execute(sql)
+        db.execute("""CREATE TABLE learning_progress (
+            kind TEXT NOT NULL, item_id TEXT NOT NULL, status TEXT NOT NULL,
+            details_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL,
+            PRIMARY KEY(kind,item_id))""")
+        db.execute("""CREATE TABLE learning_quiz_attempts (
+            id INTEGER PRIMARY KEY, course_id TEXT NOT NULL, answer REAL NOT NULL,
+            correct INTEGER NOT NULL CHECK(correct IN (0,1)), created_at TEXT NOT NULL)""")
+        db.execute("INSERT INTO learning_progress VALUES ('course','drawdown','completed','{}','2026-10-20T00:00:00+00:00')")
+        db.execute("INSERT INTO learning_quiz_attempts VALUES (1,'drawdown',-20,1,'2026-10-20T00:00:00+00:00')")
+        db.execute("PRAGMA user_version=3")
+
+    storage.list_watchlist(path)
+
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert db.execute("SELECT kind,item_id,status FROM learning_progress").fetchone() == (
+            "course", "drawdown", "completed"
+        )
+        assert db.execute("SELECT course_id,answer,correct FROM learning_quiz_attempts").fetchone() == (
+            "drawdown", -20.0, 1
+        )
+
+
 def test_new_settings_notes_and_snapshot_are_isolated(tmp_path):
     old, audit = legacy_database(tmp_path)
     before = storage.get_experiment(1, old)

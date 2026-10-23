@@ -34,16 +34,12 @@ from quant_lab.ui_knowledge import render_knowledge
 from quant_lab.ui_deepseek import initialize_credentials, render_deepseek_panel
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
-from quant_lab.guidance import GUIDES
-from quant_lab.ui_guidance import (render_learning_panel, render_page_help,
-    render_welcome, protect_research_widgets, complete_task, history_evidence)
-from quant_lab.ui_manual import render_manual_preview_panel
+from quant_lab.ui_manual import render_manual_panel
 from quant_lab.ui_settings import library_configured, render_library_setup, render_settings_panel
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-TOPBAR_PAGES = {"AI 研究助手", "新手使用指引", "研究笔记"}
-PAGES = tuple(page for page in GUIDES if page not in TOPBAR_PAGES)
+PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy")
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 SIDEBAR_LAYOUT_JS = """
@@ -86,7 +82,7 @@ DOCK_RESIZE_JS = """
     const stored = Number.parseFloat(localStorage.getItem(storageKey));
 
     const applyWidth = (requested) => {
-      const otherWidth = ['guide','manual','deepseek','notes'].filter(value => value !== kind)
+      const otherWidth = ['manual','deepseek','notes'].filter(value => value !== kind)
         .map(value => document.querySelector(`.st-key-${value}_side_panel`))
         .reduce((total, other) => total + (other ? other.getBoundingClientRect().width : 0), 0);
       const sidebar = document.querySelector('[data-testid="stSidebar"]');
@@ -122,7 +118,6 @@ DOCK_RESIZE_JS = """
       applyWidth(panel.getBoundingClientRect().width + delta);
     });
   };
-  setup("guide", 220);
   setup("manual", 240);
   setup("deepseek", 240);
   setup("notes", 260);
@@ -135,7 +130,7 @@ TOPBAR_REORDER_JS = """
 (() => {
   const root = document.documentElement;
   const storageKey = "quantlab.dock.panelOrder";
-  const kinds = ['guide', 'manual', 'deepseek', 'notes'];
+  const kinds = ['manual', 'deepseek', 'notes'];
   const readOrder = () => {
     try {
       const value = JSON.parse(localStorage.getItem(storageKey));
@@ -246,6 +241,22 @@ TOPBAR_REORDER_JS = """
 """
 
 
+def _protect_session_widgets() -> None:
+    """Keep active research and AI controls across Streamlit page redraws."""
+    value_keys = {
+        "academy_lesson", "deepseek_api_key", "deepseek_remember",
+        "deepseek_prompt", "deepseek_answer_mode", "deepseek_attach",
+        "ds_model_select", "ds_model_manual", "ai_workspace",
+    }
+    prefixes = (
+        "strategy_", "backtest_", "portfolio_", "model_", "research_",
+        "ai_question", "cost_", "symbol_", "ds_effort_",
+    )
+    for key in list(st.session_state):
+        if key.startswith(prefixes) or key in value_keys:
+            st.session_state[key] = st.session_state[key]
+
+
 def _metric(label: str, value: str, note: str, accent: str = "") -> None:
     st.html(
         f'<div class="ql-metric {accent}">'
@@ -276,15 +287,13 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             labels = dict(directory.rows)
         except (OSError, ValueError, KeyError, TypeError) as exc:
             st.warning(str(exc))
-        def code_changed():
-            st.session_state["_security_selection_event"] = {"market": market, "symbol": st.session_state[f"symbol_{market}"]}
         current = st.session_state[f"symbol_{market}"]
         options = list(labels)
         if current and current not in options:
             options.append(current)
         symbol = (st.selectbox(
             "股票（代码 / 名称）", options, key=f"symbol_{market}",
-            accept_new_options=True, on_change=code_changed,
+            accept_new_options=True,
             format_func=lambda code: f"{code} · {labels[code]}" if code in labels else code,
             placeholder="输入代码或名称搜索，也可直接输入新代码",
             help="常见大盘股票优先展示；候选是证券目录，不是买入推荐。未收录的代码可输入后选择新增项确认。",
@@ -336,10 +345,6 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             name_error = names.NAME_CACHE.error(market, symbol)
             if name_error:
                 st.warning(name_error)
-            selection = st.session_state.pop("_security_selection_event", None)
-            if selection and selection["market"] == market and normalize_symbol(market, selection["symbol"]) == symbol:
-                complete_task("select_security", {"selected": True, "identity_known": bool(labels.get(symbol) or names.security_name(market, symbol)),
-                    "market": market, "symbol": symbol, "identity_basis": "基础资料目录快照或个股资料；不证明当前可交易"})
         try:
             watch_items = list_watchlist()
         except (OSError, ValueError, sqlite3.Error):
@@ -393,12 +398,6 @@ def _toggle_deepseek_panel() -> None:
         st.session_state.setdefault("ai_workspace", "对话与辅导")
 
 
-def _toggle_guide_panel() -> None:
-    st.session_state["guide_panel_open"] = not st.session_state.get(
-        "guide_panel_open", False
-    )
-
-
 def _toggle_manual_panel() -> None:
     st.session_state["manual_panel_open"] = not st.session_state.get(
         "manual_panel_open", False
@@ -421,15 +420,14 @@ def _toggle_settings() -> None:
 
 def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
-    st.session_state.setdefault("guide_panel_open", False)
     st.session_state.setdefault("manual_panel_open", False)
     st.session_state.setdefault("notes_panel_open", False)
     st.session_state.setdefault("left_sidebar_visible", True)
     st.session_state.setdefault("settings_open", False)
     st.session_state.setdefault("maximized_panel", None)
     with st.container(key="global_topbar"):
-        settings, sidebar_toggle, brand, workspace, guide, manual, assistant, research = st.columns(
-            [.42, .42, 1.62, 1.7, 1.25, 1.38, 1.2, 1.08],
+        settings, sidebar_toggle, brand, workspace, manual, assistant, research = st.columns(
+            [.42, .42, 1.7, 2.7, 1.38, 1.2, 1.08],
             vertical_alignment="center", gap="small"
         )
         with settings:
@@ -446,23 +444,17 @@ def _global_topbar() -> None:
             )
         with workspace:
             st.html('<div class="ql-topbar-workspace">研究工作台</div>')
-        with guide:
-            st.button(
-                "新手使用指引", key="guide_panel_toggle", width="stretch",
-                on_click=_toggle_guide_panel,
-                help="打开或关闭右侧新手使用指引；按住并左右拖动可与 DeepSeek 调换顺序。",
-            )
         with manual:
             st.button(
-                "使用手册（预览）", key="manual_panel_toggle", width="stretch",
+                "使用手册", key="manual_panel_toggle", width="stretch",
                 on_click=_toggle_manual_panel,
-                help="打开或关闭右侧文字使用手册预览；按住并左右拖动可调整顺序。",
+                help="打开或关闭右侧文字使用手册；按住并左右拖动可调整顺序。",
             )
         with assistant:
             st.button(
                 "DeepSeek 助手", key="deepseek_panel_toggle", width="stretch",
                 on_click=_toggle_deepseek_panel,
-                help="打开或关闭右侧 DeepSeek 助手；按住并左右拖动可与使用指引调换顺序。只有点击发送才调用付费 API。",
+                help="打开或关闭右侧 DeepSeek 助手；按住并左右拖动可调整顺序。只有点击发送才调用付费 API。",
             )
         with research:
             st.button("研究笔记", key="notes_panel_toggle", width="stretch",
@@ -475,27 +467,21 @@ def _global_topbar() -> None:
 
 
 def _render_right_dock(context: dict, bundle) -> None:
-    guide_open = st.session_state.get("guide_panel_open", False)
     manual_open = st.session_state.get("manual_panel_open", False)
     deepseek_open = st.session_state.get("deepseek_panel_open", False)
     notes_open = st.session_state.get("notes_panel_open", False)
     maximized = st.session_state.get("maximized_panel")
     if maximized:
-        guide_open = maximized == "guide"
         manual_open = maximized == "manual"
         deepseek_open = maximized == "deepseek"
         notes_open = maximized == "notes"
-    if not (guide_open or manual_open or deepseek_open or notes_open):
+    if not (manual_open or deepseek_open or notes_open):
         return
     with st.container(key="right_dock"):
         if maximized:
             st.html('<span class="ql-maximized-panel"></span>')
-        if guide_open:
-            render_learning_panel()
-            if st.session_state.get("active_learning_context"):
-                context["learning_context"] = st.session_state["active_learning_context"]
         if manual_open:
-            render_manual_preview_panel()
+            render_manual_panel()
         if deepseek_open:
             render_deepseek_panel(context, bundle)
         if notes_open:
@@ -555,7 +541,13 @@ def _main_page(
         "": "不复权", "qfq": "前复权", "hfq": "后复权"
     }[adjustment]
     has_data = history is not None and not history.empty
-    demonstration = bool(has_data and history_evidence(bundle).get("demonstration"))
+    demonstration = bool(
+        has_data
+        and any(
+            word in bundle.source.lower()
+            for word in ("模拟", "演示", "教学", "demo", "simulation", "teaching")
+        )
+    )
     real_data = has_data and not demonstration
     if error:
         st.error(error)
@@ -775,7 +767,7 @@ def render_app() -> None:
         return
     initialize_settings()
     initialize_credentials()
-    protect_research_widgets()
+    _protect_session_widgets()
     _global_topbar()
     st.session_state.pop("_open_ai_page", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
@@ -795,10 +787,6 @@ def render_app() -> None:
                         market, symbol, *dates, adjustment
                     )
                     st.session_state["loaded_bundle"] = replace(fetched, company_name=names.security_name(market, symbol))
-                    evidence = history_evidence(st.session_state["loaded_bundle"])
-                    complete_task("select_security", {"selected": True, "identity_known": bool(evidence.get("company_name")),
-                        "market": market, "symbol": symbol})
-                    complete_task("load_history", evidence)
                     st.session_state["_history_loaded_this_run"] = True
                 st.session_state["load_error"] = fetched.update_error
             except (DataUnavailableError, DataValidationError, ValueError) as exc:
@@ -825,8 +813,6 @@ def render_app() -> None:
         if bundle is not None and not bundle.frame.empty else None
     )
     st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else bundle_context(page, bundle).get("data_fingerprint")
-    render_welcome()
-    render_page_help(page)
     if page == "市场数据":
         _market_workspace(query, market, symbol, adjustment)
         bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None

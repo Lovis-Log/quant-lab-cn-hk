@@ -29,7 +29,7 @@
 
 ### 批次 1 口径说明
 
-- 10 篇手册按 2.2.0 已锁定的“使用手册”三入口结构撰写：快速开始、功能说明、专业知识库。当前 2.1.0-rc.1 仍显示“新手使用指引”及旧学习中心分区；Codex 接入时应逐项核对实际 DOM 和控件。
+- 10 篇手册已按文字手册分支的三入口结构接入：快速开始、功能说明、专业知识库。旧任务式学习中心继续保留在 `codex/learning-center-v2`。
 - 手册不使用复选框、任务状态、测验、打卡、完成度或“完成本章”措辞。Academy 手册只描述固定教学样本和参数实验，不描述测验或进度。
 - 手册中的“显示详细解释提示”对应产品决定中的新标签；当前 `ui_settings.py` 仍显示“新手模式（关闭为专业模式）”。
 - 所有 `implemented` 声明都以本地代码为依据；代码位置见 `references/source-map.md`。S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问；S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问；具体接口字段、条款和生效口径仍待逐项核验，S008–S022 仍待核验。
@@ -127,13 +127,13 @@
 | ID | 中文标题 / English | 功能状态 | 关联模块 | 关联词条 | 文章状态 | 主要来源 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `quick_start` | 快速开始：从资料库到第一份可复现实验 / Quick Start | `implemented` | UI、存储、回测、研究笔记 | `instrument_identity`, `data_provenance`, `next_open_execution`, `reproducibility_and_audit` | `source_checked` | P001–P004, S001–S003, A006 | 完整流程；不承诺收益或上游可用性。 |
-| `workspace` | 工作台与使用手册面板 / Workspace and Panels | `needs_code_review` | UI、设置、桌面 | `data_provenance`, `cache_and_freshness`, `provider_api_cache_and_concurrency`, `reproducibility_and_audit` | `review_needed` | P001, P002, P005, S012, S022 | `needs_code_review` 仅指三入口/改名/设置标签尚未接入；研究页控件已实现。 |
+| `workspace` | 工作台与使用手册面板 / Workspace and Panels | `needs_code_review` | UI、设置、桌面 | `data_provenance`, `cache_and_freshness`, `provider_api_cache_and_concurrency`, `reproducibility_and_audit` | `review_needed` | P001, P002, P005, S012, S022 | 三入口、目录、搜索和跳转已接入；`needs_code_review` 仅保留给阶段 4 的设置标签收口。 |
 | `market_data` | 市场数据：代码、名称、区间、复权、来源与缓存 / Market Data | `implemented` | 市场数据、名称、证券目录、UI | `instrument_identity`, `ohlcv`, `trading_calendar`, `timezone_and_session`, `currency_and_fx`, `price_adjustment`, `corporate_actions`, `data_provenance`, `cache_and_freshness`, `data_quality_and_bias` | `source_checked` | S001, S013, P002–P004 | 港股接受 1–5 位数字并补足五位；界面提示五位。 |
 | `strategy` | 策略实验室：均线、收盘信号与预热 / Strategy Lab | `implemented` | 策略、UI | `signal_position_order_trade`, `moving_average`, `moving_average_crossover`, `trend_following`, `lookahead_bias`, `next_open_execution` | `source_checked` | P002, P003, A008 | 单均线/趋势过滤只用长均线；双均线用短/长均线。 |
 | `backtest` | 历史回测：下一开盘成交、费用、基准与样本外 / Backtest | `implemented` | 回测、研究、存储、UI | `benchmark`, `equity_curve`, `cash_position_and_pnl`, `in_sample_out_of_sample`, `temporal_split`, `parameter_sensitivity`, `overfitting`, `reproducibility_and_audit`, `next_open_execution`, `trading_costs`, `slippage_liquidity_market_impact`, `lot_size_and_fractional_shares`, `lookahead_bias` | `source_checked` | P002, P003, S002–S004, A006, A007 | 费用/滑点/整手/涨跌停均为可修改研究假设。 |
 | `risk_portfolio` | 风险与组合：单资产波动、共同日期与权重 / Risk and Portfolio | `implemented` | 指标、组合、UI | `covariance`, `correlation`, `diversification`, `portfolio_weights_and_constraints`, `equal_weight`, `inverse_volatility`, `rebalancing_and_turnover`, `multi_currency_portfolio`, `variance`, `standard_deviation`, `volatility`, `maximum_drawdown` | `source_checked` | P002, P003, A001, A009, A013 | 同市场同币种；固定权重每日再平衡，未计调仓成本。 |
 | `statistics_ml` | 统计与机器学习：t 检验、时间切分与样本外误差 / Statistics and ML | `implemented` | 统计、UI | `sample_and_population`, `standard_error`, `null_and_alternative_hypothesis`, `t_test`, `p_value`, `features_and_targets`, `time_ordered_split`, `data_leakage`, `feature_scaling`, `prediction_baseline`, `mae_and_rmse`, `r_squared`, `time_series_cross_validation` | `source_checked` | P003, S015, S016, A003–A005, A009, A010 | 线性回归，不是分类器/因子框架/自动交易。 |
-| `academy` | Quant Academy：固定教学样本与参数实验 / Quant Academy | `implemented` | 学习、知识、UI | `simple_return`, `compound_return`, `moving_average`, `variance`, `standard_deviation`, `volatility`, `maximum_drawdown`, `sharpe_ratio`, `correlation`, `overfitting` | `review_needed` | P003, P005, A002, A009 | 当前代码仍有“到学习中心保存实验与测验”按钮；目标版本移除，文章不写测验。 |
+| `academy` | Quant Academy：固定教学样本与参数实验 / Quant Academy | `implemented` | 学习、知识、UI | `simple_return`, `compound_return`, `moving_average`, `variance`, `standard_deviation`, `volatility`, `maximum_drawdown`, `sharpe_ratio`, `correlation`, `overfitting` | `source_checked` | P003, P005, A002, A009 | 固定样本实验保留；旧测验/进度入口已移除，改为跳转专业文章。 |
 | `deepseek` | DeepSeek 助手：密钥、模型与显式请求 / DeepSeek Assistant | `implemented` | AI、设置、UI | `reproducibility_and_audit`, `data_provenance`, `overfitting`, `lookahead_bias`, `data_leakage`, `p_value`, `mae_and_rmse`, `r_squared` | `source_checked` | S005–S007, S022, P002, P003 | 连接设置实际在 `⚙` → DeepSeek；面板旧文案“本页上方”待修。 |
 | `research_notes` | 研究笔记：分类、草稿、附件、回收站与实验复算 / Research Notes | `implemented` | 存储、笔记、UI | `reproducibility_and_audit`, `hash_and_fingerprint`, `sqlite_and_transactions`, `schema_migration`, `data_provenance`, `data_quality_and_bias`, `overfitting` | `source_checked` | P002, P004, S011, S018 | 附件 200MB/20 个/1GB；复算只读归档。 |
 
@@ -193,7 +193,7 @@
 | `temporal_split` | 时间顺序切分 / Temporal Split | `implemented` | `research.py`, `statistics.py`, `portfolio.py` | `in_sample_out_of_sample`, `time_ordered_split`, `data_leakage` | `drafted` | P003, A005, A016 | 批次 3 已起草；按日期不随机；机器学习训练/测试留一行间隔。 |
 | `walk_forward_analysis` | 滚动前向分析 / Walk-Forward Analysis | `theory_only` | 无 | `temporal_split`, `parameter_sensitivity`, `overfitting` | `drafted` | P003, A005, A006, A016 | 批次 3 已起草；`theory_only`；当前只有单次切分和训练期 3 折 CV，不是完整 walk-forward。 |
 | `parameter_sensitivity` | 参数敏感性 / Parameter Sensitivity | `implemented` | `research.py`, `ui_strategy.py` | `overfitting`, `data_snooping_and_multiple_testing`, `in_sample_out_of_sample` | `drafted` | P003, A006, A016 | 批次 3 已起草；仅样本内 3×3 网格；跳过无效窗口。 |
-| `overfitting` | 过拟合 / Overfitting | `academy_demo` | `learning.py`, `guidance.py`, `research.py` | `in_sample_out_of_sample`, `parameter_sensitivity`, `data_snooping_and_multiple_testing` | `drafted` | P003, P005, A006, A018 | 批次 3 已起草；Academy 固定模拟；无自动过拟合检测器。 |
+| `overfitting` | 过拟合 / Overfitting | `academy_demo` | `learning.py`, `research.py` | `in_sample_out_of_sample`, `parameter_sensitivity`, `data_snooping_and_multiple_testing` | `drafted` | P003, P005, A006, A018 | 批次 3 已起草；Academy 固定模拟；无自动过拟合检测器。 |
 | `data_snooping_and_multiple_testing` | 数据窥探与多重检验 / Data Snooping and Multiple Testing | `theory_only` | 无 | `overfitting`, `parameter_sensitivity`, `p_value` | `drafted` | P003, A007, A015, A016 | 批次 3 已起草；`theory_only`；当前未做多重检验校正。 |
 | `reproducibility_and_audit` | 可复现性与审计 / Reproducibility and Audit | `implemented` | `research.py`, `storage.py`, `ui_research.py` | `hash_and_fingerprint`, `data_provenance`, `schema_migration` | `drafted` | P002, P004, S011, A034 | 批次 3 已起草；`audit_id` 覆盖 raw/signal CSV、策略、成本、训练比例；未保存源码提交/输入契约版本。 |
 
@@ -287,18 +287,18 @@
 - 数据库迁移目前只有 `schema_migration` 和 `sqlite_and_transactions`；备份/恢复流程在 `research_notes` 和工程文章中说明。
 - Python、数据处理与工程 20 篇已在批次 5 完成；后续缺口主要是全局术语统一、交叉链接、来源逐条核验，以及是否把复合词条拆成更细 ID。
 
-### 待 Codex 复核（优先级从高到低）
+### 接入状态与待 Codex 复核（优先级从高到低）
 
-1. **使用手册外壳与改名**：`ui.py` 顶栏仍显示“新手使用指引”；产品决定改为“使用手册”，并采用“快速开始/功能说明/专业知识库”三入口。`ui_guidance.py` 仍是旧学习中心分区。手册 `workspace` 标记 `needs_code_review`。
+1. **阶段 3 已完成**：顶栏“使用手册”、三入口、10+85 目录、离线搜索、文章关联跳转和真实 WebView DOM 验收已完成；文字手册分支已删除旧新手指引代码，任务式分支独立保留。
 2. **设置标签**：`ui_settings.py` 仍显示“新手模式（关闭为专业模式）”；目标为“显示详细解释提示”，只影响提示密度。手册已使用目标标签，需同步 UI 和测试。
-3. **Academy 旧入口**：`ui_learning.py` 仍有“到学习中心保存实验与测验”按钮；目标版本不再承担进度/测验。手册未描述该按钮，接入时需移除或替换。
+3. **Academy 旧入口已处理**：旧“到学习中心保存实验与测验”已替换为对应专业文章跳转；固定样本实验保留。
 4. **DeepSeek 面板文案与按钮重命名**：`ui_ai.py` 提示“请在本页上方‘DeepSeek 连接设置’配置密钥”，但面板没有连接控件，实际在 `⚙` → DeepSeek；同时 `ui_deepseek.py` 的“保存选定回答到学习笔记”需按目标版本改为“保存选定回答到研究笔记”，并同步成功/错误提示。
 5. **Academy 过拟合课程知识解释**：第 8 课没有 `readings`，`render_knowledge("bias", None)` 会显示“没有足够计算值”。手册已说明以表格/结论为准；是否需要传入模拟结果，待 Codex 判断。
 6. **13 个 `needs_code_review` 专业词条**：`trading_calendar`、`timezone_and_session`、`currency_and_fx`、`data_quality_and_bias`、`arithmetic_vs_geometric_mean`、`lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl`、`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`。不拆分 ID，总数保持 85。
 7. **复合词条文章分层规则**：批次 2 已对五个 `needs_code_review` 词条分节；批次 3 已对 `lot_size_and_fractional_shares`、`slippage_liquidity_market_impact`、`cash_position_and_pnl` 分三层说明；批次 4 已对 `rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse` 分三层说明。后续批次仍须分别写清“已实现/已显示”“只间接使用”“未实现/未建模”三部分；不得把整手、固定滑点、MAE、均值、样本方差、CNY/HKD 标注、固定权重数学曲线、t 检验内部标准误等已实现部分误写成 theory_only，也不得把碎股、市场冲击、RMSE、中位数、总体公式、汇率换算、跨币种组合、抽样分布图、置信区间、ACF/ADF 等未实现部分写成按钮或指标。
 8. **港股代码位数**：`normalize_symbol` 接受 1–5 位并补足五位，但侧栏提示写“港股请输入 5 位”。手册已同时说明；是否统一提示，待 Codex 判断。
 9. **外部来源**：S001–S007 官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍待逐项核验；S008–S022 仍待核验；A032–A035 书目/DOI/ISBN 已于 2026-10-23 核验，A001–A031 仍待核验。批次 2–5 的 85 篇文章状态为 `drafted`，外部来源未逐条读取，不能标 `source_checked`；批次 5 未新增来源编号；发布前更新 `official.md`、`academic.md` 和文章核验日期。
-10. **GUI 验收**：本批次只写文档，未启动 WebView，也未核对实际 DOM。Codex 接入手册内容后，必须按 AGENTS.md 做真实 WebView DOM/控件验收，不能把编译、健康检查或窗口显示当作通过。
+10. **阶段 3 GUI 验收已完成**：独立资料目录下的真实 WebView2 DOM 已核对入口、目录、搜索、文章、三面板、拖宽、排序和最大化；完整视觉抽样仍属于阶段 5。
 11. **批次 3 代码事实复核**：确认三种策略条件、`run_backtest` 的 `i` 与 `i-1` 信号索引、基准第二个交易日开盘买入、`split=int(N×train_fraction)`、样本外统计从 `split−1` 起、`split_date=date[split]`、参数敏感性跳过 `short>=long` 与 `long>=len(raw_train)`、`audit_id` 的五类输入，以及实验档案未保存源码提交/输入契约版本。另确认 A 股 `i <= last_buy_index` 的 T+1 检查是防御性代码：当前日线每天最多一笔订单，正常流程不会同日买卖，不应把 T+1 与零成交量、涨跌停并列为当前可观察的 `blocked` 原因。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 12. **批次 4 代码事实复核**：确认组合页 `align_closes` 的 2–4 只、共同收盘日 ≥8 天、日期内连接；确认 `returns.cov()/corr()` 使用全部共同日期收益且样本口径 `ddof=1`；确认 `split=int(len(returns)×f)`、权重只用训练收益、`test @ equal`/`test @ inverse` 与样本外起点归一化；确认 `inverse_volatility_weights` 对零/负/NaN 波动率报错；确认 `analyze_portfolio` 不掌握币种、同币种限制只在界面。确认 `one_sample_return_test` 至少 3 个收益、`std(ddof=1)`、`ttest_1samp(popmean=0.0)` 默认双侧、零标准差返回 `None`、页面只显示 p 值。确认 `supervised_frame` 的五个特征、次日收盘标签、零成交量替换和 `dropna`；确认 `evaluate_linear_model` 的 60 行门槛、`split-1` 间隔、训练 30/测试 10 行门槛、`TimeSeriesSplit(3,gap=1)` 折内新 Pipeline、MAE/零收益基线/R²/方向一致率口径，以及 RMSE 未实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
 13. **批次 5 代码事实复核**：确认 `bool` 是 `int` 子类但金融参数校验不应把 `True` 当 `1`；确认 `HistoryCache` 15 分钟/64 条、`SnapshotCache` 5 分钟/1 秒间隔、名称 24 小时/5 分钟冷却、`RefreshCache` 60 秒等待和 `NameCache` 30 秒等待；确认 `force=True` 绕过 TTL 但仍合并同键并发；确认缓存读取和页面重绘不更新上游成功时间；确认 `SCHEMA_VERSION=4`、高版本拒绝、backup API 和 `BEGIN IMMEDIATE`；确认 `stage_library` 的 `integrity_check` 与临时 bootstrap 文件替换；确认 `audit_id` 只取 SHA-256 前 16 个十六进制字符，完整 SHA-256 另存 `raw_sha256`/`signal_sha256`；确认 `quant_lab` 是含 `__init__.py` 的常规包，Python 3 命名空间包可不含；确认模块化单体不以进程数定义，桌面父进程、Streamlit 子进程和 WebView2 附加进程仍是一个应用；确认项目代码未显式设置 `journal_mode`；确认 `automated_testing_git_and_modular_monolith` 的三部分没有把 Git 写成应用功能、没有把 FastAPI 写成已实现。当前文章按 2026-10-23 本地代码写成，仍需 Codex 逐项复核。
