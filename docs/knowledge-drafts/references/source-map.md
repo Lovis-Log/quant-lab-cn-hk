@@ -1,6 +1,6 @@
 # 来源映射与用途
 
-日期：2026-10-22；批次 2 修订来源状态更新：2026-10-23；批次 3 文章映射：2026-10-23
+日期：2026-10-22；批次 2 修订来源状态更新：2026-10-23；批次 3 文章映射：2026-10-23；批次 4 文章映射：2026-10-23
 
 ## 映射原则
 
@@ -143,9 +143,71 @@
 | `data_snooping_and_multiple_testing` | `statistics.py:44-60`, `research.py:67-90` | 单次 t 检验和参数网格；无多重检验校正 |
 | `reproducibility_and_audit` | `research.py:50-63`, `storage.py:80-216`, `ui_research.py:266-282` | 指纹输入、快照、复算、报告和 ZIP |
 
+## 批次 4 文章来源映射
+
+| 文章 ID | 主要来源 | 支持的具体主张 |
+| --- | --- | --- |
+| `covariance` | P003, A001, A009 | 共同日期同日收益率协方差；样本分母 `n−1`；协方差有单位、不是相关系数；不证明因果。 |
+| `correlation` | P003, A001, A009 | Pearson 同日收益率相关；范围 `[−1,1]`；全部共同日期；不是价格相关或因果。 |
+| `diversification` | A001, A013, A027 | 两资产组合方差分解；分散化收益取决于相关性；软件无单独指标或优化器。 |
+| `portfolio_weights_and_constraints` | P003, A001, A013 | 2–4 只同市场；界面限制币种；权重为正、合计 100%；无做空/杠杆/上下限/优化器；核心不校验币种。 |
+| `equal_weight` | P003, A001, A013 | `1/n`；组合日收益为资产收益算术平均；不等于风险平价。 |
+| `inverse_volatility` | P003, A013, A027 | 训练期日标准差倒数归一化；年化因子约掉；零/负/NaN 波动率报错；不考虑相关性。 |
+| `rebalancing_and_turnover` | P003, A013, A026 | 固定权重每日收益数学曲线；换手公式；真实持仓、订单、换手和调仓成本未实现。 |
+| `multi_currency_portfolio` | S001, P004, A035, S024 | CNY/HKD 标注和同市场限制；本币/本地收益分解；无汇率数据、换算、对冲或跨币种净值。 |
+| `sample_and_population` | A009, P003 | 样本/总体区别；样本方差 `n−1`；总体公式未计算/显示；无有限总体校正。 |
+| `mean_and_median` | A009, P003 | 算术均值已显示；中位数未显示；均值对极端值敏感；算术均值不是复利年化。 |
+| `sampling_distribution` | A009, A029, A024 | 统计量在重复抽样下的分布；均值抽样分布和标准误；软件无重采样/模拟/分布图。 |
+| `standard_error` | A009, A019, A021 | `s/√n`；t 检验内部使用；页面不单独显示；无 HAC/聚类/bootstrap 标准误。 |
+| `null_and_alternative_hypothesis` | A009, A029, P003 | `H0: μ=0`；双侧 `H1: μ≠0`；无方向选择器；不拒绝不等于证明 H0。 |
+| `t_test` | P003, A003, S016, A009 | 单样本双侧 t 检验；`t=(x̄−0)/(s/√n)`；至少 3 个收益；零标准差返回 `None`；页面显示 p 值。 |
+| `p_value` | P003, A009, A029 | 零假设下至少同样极端结果的概率；不是 H0 为真概率、上涨概率或盈利概率；多重检验问题。 |
+| `confidence_interval` | A009, A029, A030 | 均值置信区间公式和覆盖率解释；置信区间不是预测区间；软件未计算/显示。 |
+| `autocorrelation_and_stationarity` | A004, A020, A028, A019 | 自相关和弱平稳定义；对标准误、t 检验和交叉验证的影响；无 ACF/Ljung–Box/ADF/KPSS。 |
+| `features_and_targets` | P003, A010, A016 | 五个内置特征；`next_return=close(t+1)/close(t)−1`；零成交量→NaN；缺失/无限值删除；样本损失。 |
+| `time_ordered_split` | P003, A005, A016 | `split=int(M×f)`；`train=[:split−1]`；一行间隔；`test=[split:]`；至少 60/30/10 行；不随机。 |
+| `data_leakage` | P003, A016, A005 | 固定内置管线的日期校验、时间切分、间隔、训练集标准化和折内 Pipeline；无通用检测器。 |
+| `feature_scaling` | A010, S014, P003 | `StandardScaler` 只用训练集拟合；scikit-learn 默认总体口径标准差；每折新建 Pipeline；零方差尺度为 1。 |
+| `prediction_baseline` | P003, A010 | 零收益基线 `MAE=(1/n)Σ\|y\|`；只实现这一基线；MAE 低不等于盈利。 |
+| `mae_and_rmse` | P003, A010, A029 | MAE 公式和收益率误差单位；RMSE 公式但软件未计算/显示；MAE/RMSE 对大误差敏感度不同。 |
+| `r_squared` | P003, A010 | 样本外 `R²=1−SS_res/SS_tot`；分母为测试均值；可为负；不是相关系数平方或盈利概率。 |
+| `time_series_cross_validation` | P003, S015, A005, A016 | 训练内 `TimeSeriesSplit(3,gap=1)`；扩展窗口；每折新 Pipeline；`cv_mae` 为三折平均；不是完整 walk-forward。 |
+
+## 批次 4 代码依据
+
+行号以 2026-10-23 的 `codex/learning-center-v2` 工作树为准；复核时以符号名和测试为准。
+
+| 文章 ID | 代码位置 | 核对内容 |
+| --- | --- | --- |
+| `covariance` | `portfolio.py:19-78`, `ui_analysis.py:92-100` | 共同日期内连接、`returns.cov()`、样本协方差表和协方差解释 |
+| `correlation` | `portfolio.py:53-76`, `ui_analysis.py:92-100` | `returns.corr()`、相关矩阵、知识解释 |
+| `diversification` | `portfolio.py:53-76`, `ui_analysis.py:101-115` | 相关矩阵、等权/逆波动率曲线；无单独分散化指标 |
+| `portfolio_weights_and_constraints` | `portfolio.py:19-78`, `ui_analysis.py:44-100` | 2–4 只校验、共同日期、训练比例、权重表 |
+| `equal_weight` | `portfolio.py:60-66` | `1/n` 权重和组合日收益 |
+| `inverse_volatility` | `portfolio.py:38-44`, `portfolio.py:60-66` | 训练期 `std(ddof=1)`、倒数归一化、零/负/NaN 报错 |
+| `rebalancing_and_turnover` | `portfolio.py:63-72`, `ui_analysis.py:101-115` | `test @ equal`/`test @ inverse`、曲线说明；无持仓/订单/换手/成本 |
+| `multi_currency_portfolio` | `portfolio.py:19-35`, `ui_analysis.py:44-49`, `data.py:79-101` | 同市场界面限制、CNY/HKD 标签；核心函数无币种字段 |
+| `sample_and_population` | `statistics.py:44-60`, `metrics.py:58-79`, `ui_analysis.py:26-34` | 样本量、均值、`ddof=1`、年化波动率 |
+| `mean_and_median` | `statistics.py:44-60`, `ui_analysis.py:137-141` | 日均收益率计算和显示；无中位数 |
+| `sampling_distribution` | 无独立实现；`statistics.py:44-60` | t 检验使用理论 t 分布；无重采样/模拟 |
+| `standard_error` | `statistics.py:49-52` | t 检验内部 `s/√n`；页面无独立标准误指标 |
+| `null_and_alternative_hypothesis` | `statistics.py:44-52`, `ui_analysis.py:141-146` | `popmean=0.0`、双侧默认、页面 p 值说明 |
+| `t_test` | `statistics.py:44-60`, `ui_analysis.py:137-146` | 至少 3 个收益、`ttest_1samp`、零标准差 `None`、p 值显示 |
+| `p_value` | `statistics.py:51-52`, `ui_analysis.py:141-146`, `knowledge.py` | p 值计算和三处解释 |
+| `confidence_interval` | 无独立实现 | 当前未计算或显示置信区间 |
+| `autocorrelation_and_stationarity` | 无独立实现；`ui_analysis.py:145-146` | 只在局限说明中提及；无 ACF/ADF/KPSS |
+| `features_and_targets` | `statistics.py:63-80`, `ui_analysis.py:129`, `ui_analysis.py:191-207` | 五个特征、`next_return`、`feature_date`/`target_date`、零成交量、`dropna` |
+| `time_ordered_split` | `statistics.py:87-97` | `split=int(M×f)`、`train=[:split−1]`、`test=[split:]`、30/10 行门槛 |
+| `data_leakage` | `statistics.py:63-80`, `statistics.py:87-108` | 日期校验、时间切分、一行间隔、训练集标准化、折内 Pipeline |
+| `feature_scaling` | `statistics.py:98-108` | `Pipeline(StandardScaler(), LinearRegression())`、每折新 Pipeline |
+| `prediction_baseline` | `statistics.py:119-128`, `ui_analysis.py:178-186` | 零收益基线 MAE 和页面比较提示 |
+| `mae_and_rmse` | `statistics.py:123-125`, `ui_analysis.py:178-186` | MAE 计算和 4 位百分比显示；无 RMSE |
+| `r_squared` | `statistics.py:125`, `ui_analysis.py:181` | `r2_score`、3 位小数显示、负值说明 |
+| `time_series_cross_validation` | `statistics.py:98-107`, `ui_analysis.py:191-195` | `TimeSeriesSplit(n_splits=3, gap=1)`、三折 MAE 平均 |
+
 ## 专业词条来源分配
 
-`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2–3 已撰写市场与数据、收益与风险、策略与执行、回测与研究共 40 篇；其余 45 篇仍为 `todo`。后续批次可按以下优先级补充来源：
+`CATALOG.md` 已为 85 个词条逐行列出主要来源。批次 2–4 已撰写市场与数据、收益与风险、策略与执行、回测与研究、组合分析、统计推断、机器学习共 65 篇；其余 20 篇（Python 与工程）仍为 `todo`。后续批次可按以下优先级补充来源：
 
 1. **市场与数据**：S001、S013、P004；公司行动和交易规则需补充交易所/监管机构官方页面。
 2. **收益与风险**：A009、A014、A002、P003；年化交易日假设需在正文明确。
@@ -158,8 +220,11 @@
 
 ## 待复核与缺口
 
-- S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2–3 的 40 篇文章因此全部标 `drafted`，不标 `source_checked`。
-- 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）的官方入口已确认可访问，具体规则仍按文章需要核验；A032（Campbell 等）、A034（FAIR）书目/DOI 已核验；A033（Berk 与 DeMarzo）修正 ISBN 后书目已核验；A035（Bekaert 与 Hodrick）第三版、ISBN 和 2017 出版日期已核验。批次 3 未新增来源编号。
+- S001–S024 外部页面在 2026-10-23 前未逐条读取内容；S001–S007 的官方入口已由 Codex 于 2026-10-22 确认可访问，S023、S024 的官方入口已由 Codex 于 2026-10-23 确认可访问，但接口字段、条款和生效口径仍需逐项核验。批次 2–4 的 65 篇文章因此全部标 `drafted`，不标 `source_checked`。
+- 新增来源 S023（IANA 时区数据库）、S024（ISO 4217 货币代码）的官方入口已确认可访问，具体规则仍按文章需要核验；A032（Campbell 等）、A034（FAIR）书目/DOI 已核验；A033（Berk 与 DeMarzo）修正 ISBN 后书目已核验；A035（Bekaert 与 Hodrick）第三版、ISBN 和 2017 出版日期已核验。批次 3 和批次 4 均未新增来源编号。
+- 批次 4 的组合文章按 `portfolio.py`/`ui_analysis.py` 写成：`analyze_portfolio` 只接收历史表，不掌握币种；同市场/同币种限制由界面上下文保证。文章不得声称核心函数独立校验了币种，也不得把固定权重数学曲线写成真实可执行组合回测。
+- 批次 4 的统计文章按 `statistics.py`/`ui_analysis.py` 写成：样本方差/标准差使用 `n−1`；t 检验使用 `ttest_1samp(popmean=0.0)` 的默认双侧；页面只显示 p 值，不单独显示 t 值、自由度、标准误或置信区间。`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse` 必须继续分三层说明；`sampling_distribution`、`confidence_interval`、`autocorrelation_and_stationarity` 保持 `theory_only`。
+- 批次 4 的机器学习文章按 `statistics.py` 写成：五个特征、次日收盘标签、`split-1` 一行间隔、`TimeSeriesSplit(3,gap=1)`、训练集内标准化；RMSE 未实现；`data_leakage` 的保护范围仅限固定内置管线，不是通用泄漏检测器。
 - 批次 3 的交易费用、整手、涨跌停、零成交量和 VCM 仍按简化研究假设写作；S002、S003、S004 的具体条款未逐项核验。
 - 批次 3 的 A 股 T+1 检查是日线引擎的防御性代码：当前每天最多一笔订单，正常流程不会同日买卖；文章不得把 T+1 写成当前可观察的 `blocked` 原因，也不得声称软件完整模拟交易所级 T+1。
 - 交易费用、税率、结算、申报单位和涨跌幅规则不能只靠本项目默认值推断；当前手册只把它们写成可修改假设。

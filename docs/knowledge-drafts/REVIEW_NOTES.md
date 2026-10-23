@@ -1,13 +1,26 @@
-# 批次 1 复核、批次 2 修订与批次 3 记录
+# 批次 1 复核、批次 2–3 修订与批次 4 记录
 
-日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23
-批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇
-代码基线：`codex/learning-center-v2`，提交 `d50cfd1`
-恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）
+日期：2026-10-22；批次 2 修订：2026-10-23；批次 3：2026-10-23；批次 4：2026-10-23
+批次：使用手册 10 篇；专业文章批次 2 共 20 篇；批次 3 共 20 篇；批次 4 共 25 篇
+代码基线：`codex/learning-center-v2`，提交 `7275d71`（批次 4 起点；本批次未修改程序代码）
+恢复分支：`codex/recovery-before-manual-batch1-20261022`（指向 `d50cfd1`）；批次 2 修订恢复分支：`codex/recovery-before-batch2-revision-20261023`（指向 `0ada6fd`）；批次 3 恢复分支：`codex/recovery-before-batch3-20261023`（指向 `3498f98`）；批次 4 恢复分支：`codex/recovery-before-batch4-20261023`（指向 `7275d71`）
 写作范围：仅 `docs/knowledge-drafts/`；未修改 `quant_lab/`、`tests/`、`app.py`、`desktop_launcher.py`、`VERSION`、构建脚本、数据库或发行文件。
-批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`。
+批次 1 草稿提交：`09b003f`；批次 1 修订提交：`99c70aa`；批次 2 草稿提交：`0ada6fd`；批次 2 修订提交：`3498f98`；批次 3 基于 `3498f98`；批次 4 基于 `7275d71`。
 
-## 0. 批次 2 修订摘要（2026-10-23）
+## 0. 批次 4 摘要（2026-10-23）
+
+1. 25 篇专业文章已写入 `articles/portfolio/`（8 篇）、`articles/statistics/`（9 篇）与 `articles/machine_learning/`（8 篇），全部文章状态为 `drafted`；外部来源未逐条读取，不标 `source_checked`。
+2. 软件状态为 `implemented` 15、`needs_code_review` 5、`theory_only` 5；不因文章已撰写而改变任何 `software_status`。
+3. `needs_code_review`：`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；正文均分三层写“已计算/已显示、只间接使用、未提供/未建模”。
+4. `theory_only`：`diversification`、`multi_currency_portfolio`、`sampling_distribution`、`confidence_interval`、`autocorrelation_and_stationarity`；正文明确写“当前软件未实现”，没有暗示不存在的按钮、指标或图表。
+5. 组合口径与 `portfolio.py`/`ui_analysis.py`/`docs/METHODOLOGY.md` 一致：2–4 只不重复的当前市场代码；日期内连接；至少 8 个共同收盘日；协方差/相关使用全部共同日期收益且 `ddof=1`；训练比例 0.50–0.85；权重只用训练收益；样本外曲线在第一笔测试收益之前的共同收盘日期归一化为 1。
+6. 组合权重只有等权和训练期逆波动率；权重为正、合计 100%；没有做空、杠杆、权重上下限或优化器；样本外收益矩阵乘固定权重（`test @ equal`、`test @ inverse`）是每日固定权重数学曲线，不生成持仓、订单、成交、换手率或调仓成本。核心函数不掌握币种；同市场/同币种限制由界面上下文保证。
+7. 统计口径与 `statistics.py`/`ui_analysis.py` 一致：至少 3 个有效日收益；均值、样本方差/标准差使用 `n−1`；年化波动率为样本标准差 × `√252`；t 检验零假设为平均日收益率为 0，`ttest_1samp(popmean=0.0)` 默认双侧；零标准差时 t/p 返回 `None`；页面显示 p 值，不单独显示 t 值、自由度、标准误或置信区间。
+8. 机器学习口径与 `statistics.py` 一致：五个特征；标签 `next_return=close(t+1)/close(t)−1`；零成交量先替换为 NaN；至少 60 行；训练比例 0.55–0.85；`split=int(M×f)`；`train=samples[:split−1]`、索引 `split−1` 为一行间隔、`test=samples[split:]`；训练至少 30 行、测试至少 10 行；`Pipeline(StandardScaler(), LinearRegression())`；训练内 `TimeSeriesSplit(3,gap=1)`；MAE、零收益基线、样本外 R²、方向一致率；RMSE 未实现。
+9. 不新增、删除或拆分 ID，专业词条总数仍为 85；未新增来源编号。全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；专业文章状态更新为 `drafted` 65、`todo` 20。
+10. 本批次只修改 `docs/knowledge-drafts/` 下的 Markdown；未改程序、测试、数据库、`VERSION`、构建或发行文件。使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）。
+
+## 0.1 批次 2 修订摘要（2026-10-23）
 
 1. `annualized_return`：修正 126 个间隔的表述，改为“年化是累计增长因子的平方再减一，即 `(1+R_cum)^2−1`”，不再写成平方根。
 2. `maximum_drawdown`：删除全部英文内部编辑批注；保留 `d=−25%` 对应恢复涨幅 33.33%、`d=−20%` 对应恢复涨幅 25%。
@@ -62,6 +75,8 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - `quant_lab/strategy.py`, `research.py`, `metrics.py`, `notes.py`, `storage.py`, `paths.py`, `ai_context.py`, `deepseek.py`, `ai_research.py`, `credentials.py`, `names.py`, `refresh.py`, `market_data.py`, `processing.py`, `data.py`
 
 批次 3 额外只读核对 `strategy.py`、`backtest.py`、`research.py`、`metrics.py`、`storage.py`、`ui_strategy.py`、`learning.py`、`ui_learning.py`、`statistics.py`，用于核对策略条件、成交时序、费用、样本切分、参数敏感性和实验指纹；这些文件只读，没有修改。
+
+批次 4 额外只读核对 `portfolio.py`、`statistics.py`、`ui_analysis.py`、`metrics.py`，用于核对组合共同日期、权重、样本外曲线、t 检验、特征/标签、时间切分、交叉验证和评价指标；这些文件只读，没有修改。
 
 ## 3. 事实核对结果
 
@@ -207,14 +222,15 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 - 批次 2 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；首次使用默认临时目录运行时，Windows 拒绝访问 `pytest-of-LENOVO` 目录，属于环境权限问题，不是测试断言失败。本次仅修改 `docs/knowledge-drafts/`。
 - 批次 3 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次仅新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
 - 批次 3 修订后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只修改 `docs/knowledge-drafts/`。
+- 批次 4 后使用独立 `--basetemp` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；本次只新增/修改 `docs/knowledge-drafts/` 下的 Markdown 文件。
 
 ## 9. 声明
 
-本轮（批次 1 修订、批次 2 起草与修订、批次 3 起草）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 40 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
+本轮（批次 1 修订、批次 2 起草与修订、批次 3 起草、批次 4 起草）只修改 `docs/knowledge-drafts/` 下的 Markdown 文件。未修改程序代码、测试、数据库、`VERSION`、构建脚本或发行文件；未执行打包、标签或 Release。手册和 65 篇专业文章仍是草稿，尚未进入软件，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
 
 ## 10. 下一批次建议
 
-批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订；批次 3 已完成 20 篇（策略与执行、回测与研究）草稿，文章状态均为 `drafted`。下一批次（未开始）为批次 4：组合分析、统计推断、机器学习，共 25 篇；本次提交不进入批次 4。批次 4 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
+批次 2 已完成 20 篇（市场与数据、收益与风险）并于 2026-10-23 完成修订；批次 3 已完成 20 篇（策略与执行、回测与研究）草稿；批次 4 已完成 25 篇（组合分析、统计推断、机器学习）草稿；65 篇文章状态均为 `drafted`。下一批次（未开始）为批次 5：Python、数据处理与工程，共 20 篇；本次提交不进入批次 5。批次 5 应继续使用 `theory_only` 标注未实现能力，并在外部来源未逐条读取时保持 `drafted`，不标 `source_checked`。
 
 ## 11. 批次 2：市场与数据、收益与风险（20 篇）
 
@@ -348,3 +364,106 @@ Codex 对批次 1 的复核结论已落实为以下修改：
 5. 文章 `software_status` 保持不变：`signal_position_order_trade`、`next_open_execution` 仍为 `implemented`；`slippage_liquidity_market_impact`、`cash_position_and_pnl` 仍为 `needs_code_review`；`lot_size_and_fractional_shares` 仍为 `needs_code_review`。T+1 是防御性实现边界，不改变文章主体功能状态。
 6. 状态统计不变：专业词条 85；`drafted` 40、`todo` 45；全目录 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13；批次 3 为 `implemented` 13、`needs_code_review` 3、`theory_only` 3、`academy_demo` 1。
 7. 本次只修改 `docs/knowledge-drafts/` 下的 Markdown；未修改程序、测试、数据库、`VERSION`、构建或发行文件。
+
+## 13. 批次 4：组合分析、统计推断、机器学习（25 篇）
+
+### 13.1 完成状态
+
+- 8 篇组合文章：`covariance`、`correlation`、`diversification`、`portfolio_weights_and_constraints`、`equal_weight`、`inverse_volatility`、`rebalancing_and_turnover`、`multi_currency_portfolio`。
+- 9 篇统计文章：`sample_and_population`、`mean_and_median`、`sampling_distribution`、`standard_error`、`null_and_alternative_hypothesis`、`t_test`、`p_value`、`confidence_interval`、`autocorrelation_and_stationarity`。
+- 8 篇机器学习文章：`features_and_targets`、`time_ordered_split`、`data_leakage`、`feature_scaling`、`prediction_baseline`、`mae_and_rmse`、`r_squared`、`time_series_cross_validation`。
+- 文章状态全部为 `drafted`；外部来源内容未逐条读取，未标 `source_checked`。
+- 软件状态：`implemented` 15 篇、`needs_code_review` 5 篇、`theory_only` 5 篇。
+- 15 篇 `implemented`：`covariance`、`correlation`、`portfolio_weights_and_constraints`、`equal_weight`、`inverse_volatility`、`null_and_alternative_hypothesis`、`t_test`、`p_value`、`features_and_targets`、`time_ordered_split`、`data_leakage`、`feature_scaling`、`prediction_baseline`、`r_squared`、`time_series_cross_validation`。
+- 5 篇 `needs_code_review`：`rebalancing_and_turnover`、`sample_and_population`、`mean_and_median`、`standard_error`、`mae_and_rmse`；正文均分三层写“已计算/已显示、只间接使用、未提供/未建模”。
+- 5 篇 `theory_only`：`diversification`、`multi_currency_portfolio`、`sampling_distribution`、`confidence_interval`、`autocorrelation_and_stationarity`；正文明确写“当前软件未实现”。
+- 未新增或删除 ID，专业词条总数仍为 85；未新增来源编号；专业文章状态为 `drafted` 65、`todo` 20；全目录功能状态保持 `implemented` 61、`theory_only` 10、`academy_demo` 1、`needs_code_review` 13。
+
+### 13.2 公式与口径清单
+
+| 文章 ID | 核心公式/口径 | 软件状态 | 主要代码依据 | 待复核/说明 |
+| --- | --- | --- | --- | --- |
+| `covariance` | `cov=Σ(x−x̄)(y−ȳ)/(n−1)`；矩阵对角线为方差 | `implemented` | `portfolio.py:53-76`, `ui_analysis.py:92-100` | 全部共同日期同日收益率；不是价格协方差 |
+| `correlation` | `ρ=cov/(s_x s_y)`；`[−1,1]` | `implemented` | `portfolio.py:53-76`, `ui_analysis.py:92-100` | Pearson；不证明因果或未来分散 |
+| `diversification` | `σ_p²=w₁²σ₁²+w₂²σ₂²+2w₁w₂ρσ₁σ₂` | `theory_only` | 无独立实现 | 只有相关矩阵和曲线辅助讨论 |
+| `portfolio_weights_and_constraints` | `w_i≥0`，`Σw_i=1`；等权或逆波动率 | `implemented` | `portfolio.py:19-78`, `ui_analysis.py:44-100` | 核心不掌握币种；界面限制同市场 |
+| `equal_weight` | `w_i=1/n`；`r_p=(1/n)Σr_i` | `implemented` | `portfolio.py:60-66` | 不等于风险平价 |
+| `inverse_volatility` | `w_i=(1/s_i)/Σ(1/s_j)` | `implemented` | `portfolio.py:38-44`, `portfolio.py:60-66` | 训练期日标准差；零/负/NaN 报错 |
+| `rebalancing_and_turnover` | `r_p=Σw_i r_i`；`turnover=0.5Σ\|w_target−w_drift\|` | `needs_code_review` | `portfolio.py:63-72`, `ui_analysis.py:101-115` | 数学曲线已实现；换手/成本未实现 |
+| `multi_currency_portfolio` | `r_investor=(1+r_local)(1+r_fx)−1` | `theory_only` | 无独立实现；界面限制同币种 | 无汇率、换算、对冲或跨币种净值 |
+| `sample_and_population` | 样本 `s²=Σ(x−x̄)²/(n−1)`；总体 `σ²=Σ(x−μ)²/n` | `needs_code_review` | `statistics.py:44-60`, `metrics.py:58-79` | 样本口径已实现；总体公式未显示 |
+| `mean_and_median` | `x̄=(1/n)Σx`；`med` 为排序中间值 | `needs_code_review` | `statistics.py:44-60`, `ui_analysis.py:137-141` | 均值已显示；中位数未显示 |
+| `sampling_distribution` | 统计量重复抽样分布；`SE=σ/√n` | `theory_only` | 无重采样/模拟 | t 检验只用理论 t 分布 |
+| `standard_error` | `SE=s/√n`；`t=(x̄−μ₀)/SE` | `needs_code_review` | `statistics.py:49-52` | t 检验内部使用；不单独显示 |
+| `null_and_alternative_hypothesis` | `H0: μ=0`；`H1: μ≠0`（双侧） | `implemented` | `statistics.py:44-52`, `ui_analysis.py:141-146` | 无方向选择器或 α 输入 |
+| `t_test` | `t=(x̄−0)/(s/√n)`；`df=n−1` | `implemented` | `statistics.py:44-60`, `ui_analysis.py:137-146` | 页面显示 p 值，不显示 t 值/自由度 |
+| `p_value` | `p=P(至少同样极端结果\|H0)` | `implemented` | `statistics.py:51-52`, `ui_analysis.py:141-146` | 不是 H0 为真概率或盈利概率 |
+| `confidence_interval` | `x̄±t_{1−α/2,n−1}s/√n` | `theory_only` | 无独立实现 | 未计算/显示 |
+| `autocorrelation_and_stationarity` | `ρ_k=γ_k/γ_0`；弱平稳三条件 | `theory_only` | 无独立实现 | 无 ACF/Ljung–Box/ADF/KPSS |
+| `features_and_targets` | 五个特征；`next_return=close(t+1)/close(t)−1` | `implemented` | `statistics.py:63-80` | 标签不是下一开盘交易收益 |
+| `time_ordered_split` | `split=int(M×f)`；`train=[:split−1]`；`test=[split:]` | `implemented` | `statistics.py:87-97` | 一行间隔；不随机；非 walk-forward |
+| `data_leakage` | 特征 `X_t` 只能依赖 `I_t` | `implemented` | `statistics.py:63-108` | 固定管线防护；无通用检测器 |
+| `feature_scaling` | `z=(x−μ_train)/σ_train` | `implemented` | `statistics.py:98-108` | 只用训练集；scikit-learn 默认总体口径 |
+| `prediction_baseline` | `MAE_0=(1/n)Σ\|y_t\|` | `implemented` | `statistics.py:119-128`, `ui_analysis.py:178-186` | 只实现零收益基线 |
+| `mae_and_rmse` | `MAE=(1/n)Σ\|y−ŷ\|`；`RMSE=√(1/nΣ(y−ŷ)²)` | `needs_code_review` | `statistics.py:123-125`, `ui_analysis.py:178-186` | MAE 已显示；RMSE 未显示 |
+| `r_squared` | `R²=1−SS_res/SS_tot`；分母为测试均值 | `implemented` | `statistics.py:125`, `ui_analysis.py:181` | 样本外可为负；不是相关系数平方 |
+| `time_series_cross_validation` | `TimeSeriesSplit(3,gap=1)`；`cv_mae=mean(MAE_k)` | `implemented` | `statistics.py:98-107`, `ui_analysis.py:191-195` | 训练内 3 折；不是完整 walk-forward |
+
+### 13.3 来源与核验
+
+- 批次 4 未新增来源编号；沿用现有 S/P/A。`S001`–`S024` 外部页面未逐条读取；`S001`–`S007` 入口已由 Codex 于 2026-10-22 确认可访问，`S023`、`S024` 入口已由 Codex 于 2026-10-23 确认可访问；`S008`–`S022` 仍待核验。
+- `A001`–`A031` 书目信息仍待复核；`A032`–`A035` 书目/DOI/ISBN 已核验。批次 4 使用 `A001`、`A003`、`A004`、`A005`、`A009`、`A010`、`A013`、`A016`、`A019`、`A020`、`A021`、`A024`、`A026`、`A027`、`A028`、`A029`、`A030`；这些引用只用于概念、公式和背景，不用于证明策略有效。
+- 文章状态全部 `drafted`；未把“入口可访问”写成“内容已核验”；frontmatter 的 `last_verified: 2026-10-23` 仅表示本地代码/项目文档核对日期。
+
+### 13.4 `needs_code_review` 分层结果
+
+| 文章 ID | 已计算/已显示 | 只间接使用 | 未提供/未建模 |
+| --- | --- | --- | --- |
+| `rebalancing_and_turnover` | 固定权重每日收益数学曲线；累计净值；页面“未计调仓成本”说明 | 每日按固定权重加权，数学上等价于每日恢复目标权重 | 持仓股数、订单、成交、换手率、佣金、滑点、税费、整手、市场冲击 |
+| `sample_and_population` | 样本量、均值、样本方差/标准差、年化波动率 | `n−1` 通过 `ddof=1`、t 检验标准误间接体现 | 总体公式、有限总体校正、抽样设计、参数置信区间 |
+| `mean_and_median` | 日均收益率；t 检验分子；方差围绕均值 | 均值通过方差和 t 检验间接影响其他指标 | 中位数、截尾/缩尾均值、几何平均收益、均值/中位数区间 |
+| `standard_error` | t 检验内部 `s/√n`；页面 p 值 | t 统计量由均值除以标准误；标准误影响 p 值 | 独立标准误指标、置信区间、HAC/聚类/bootstrap 标准误 |
+| `mae_and_rmse` | 样本外 MAE；零收益基线 MAE；训练期 3 折 MAE | 线性回归训练使用平方误差损失；交叉验证 MAE 用于训练期评估 | RMSE、MSE、MAPE、误差分布、置信区间、成本调整误差 |
+
+以上文章保持原 `software_status`，没有因为文章已撰写而改变功能状态；也没有把已实现部分写成 `theory_only`，或把未实现部分写成按钮/指标。
+
+### 13.5 `theory_only` 边界
+
+| 文章 ID | 当前软件明确没有提供的功能 |
+| --- | --- |
+| `diversification` | 无分散化比率、风险贡献、有效前沿或优化器；只有相关矩阵和等权/逆波动率曲线辅助讨论 |
+| `multi_currency_portfolio` | 无汇率数据、换算、对冲、跨币种加总或跨币种净值；界面限制同市场同币种 |
+| `sampling_distribution` | 无重采样、bootstrap、Monte Carlo 或抽样分布图；t 检验只用理论 t 分布 |
+| `confidence_interval` | 无均值、波动率、相关系数、权重、MAE、R² 的置信区间；无预测区间 |
+| `autocorrelation_and_stationarity` | 无 ACF/PACF、Ljung–Box、ADF、KPSS、单位根或平稳性检验；只在方法局限文字中提及 |
+
+以上文章没有暗示不存在的按钮、图表、指标或计算结果。
+
+### 13.6 自检结果
+
+- 85 个专业词条 ID 无缺失、无重复；手册仍为 10 篇；专业文章为 `drafted` 65、`todo` 20。
+- 批次 4 共 25 篇，目录和文件名准确：`portfolio` 8、`statistics` 9、`machine_learning` 8。
+- 所有 `prerequisites`、`related_articles`、`source_ids` 均指向现有 ID/来源；没有悬空引用。
+- 每篇文章包含完整 frontmatter 和“快速理解/软件实践/专业原理/相关知识/参考资料”模板，含手算例子、软件边界和参考资料。
+- 五个 `needs_code_review` 词条均完成三层说明；五个 `theory_only` 词条均明确“当前软件未实现”。
+- 全目录扫描未发现英文内部编辑批注或未完成标记；合法状态值 `todo` 除外。
+- 所有手算例子已用独立脚本复核；关键数值包括协方差 `0.0001`、相关系数 `0.6547`、逆波动率权重 `57.14%/28.57%/14.29%`、t 值 `1.7253`、p 值 `0.0482`、R² `0.7647`、RMSE `1.1180%`、TimeSeriesSplit 三折索引。
+- 使用独立 `--basetemp=/tmp/qb4-pytest-20261023` 运行 `pytest -q`：115 passed，1 warning（`.pytest_cache` 路径权限提示）；未跳过失败测试。
+- 修改范围仅为 `docs/knowledge-drafts/`；未修改程序、测试、数据库、`VERSION`、构建脚本或发行文件。
+
+### 13.7 需要 Codex 复核的问题（批次 4）
+
+1. 确认组合页 `align_closes`：2–4 只、日期唯一、有效收盘价、内连接、至少 8 个共同收盘日；确认 `analyze_portfolio` 只接收历史表、不掌握币种。
+2. 确认协方差/相关系数使用全部共同日期日收益率，pandas 样本口径 `ddof=1`；确认文章没有把相关系数写成因果或未来分散保证。
+3. 确认 `split=int(len(returns)×train_fraction)`、训练比例 0.50–0.85、权重只用训练收益、样本外曲线在第一笔测试收益之前的共同收盘日期归一化为 1。
+4. 确认等权 `1/n`、逆波动率 `(1/std_i)/Σ`、权重为正且合计 100%、零/负/NaN 波动率报错、没有做空/杠杆/上下限/优化器。
+5. 确认 `rebalancing_and_turnover` 三层：`test @ equal`/`test @ inverse` 是数学曲线；不生成持仓/订单/成交；换手率和调仓成本未实现；不得写成真实可执行组合回测。
+6. 确认统计页至少 3 个有效日收益、`std(ddof=1)`、`ttest_1samp(popmean=0.0)` 默认双侧、零标准差返回 `None`、页面只显示 p 值；确认 `sample_and_population`、`mean_and_median`、`standard_error` 三层说明准确。
+7. 确认机器学习五个特征和 `next_return=close(t+1)/close(t)−1` 标签；确认零成交量→NaN、无限值/缺失值删除、均线预热/波动率窗口/最后一行导致样本减少。
+8. 确认 `evaluate_linear_model` 的 60 行门槛、`split=int(M×f)`、`train=[:split−1]`、一行间隔、`test=[split:]`、训练 30/测试 10 行门槛、不随机打乱。
+9. 确认 `Pipeline(StandardScaler(), LinearRegression())` 只在训练集拟合、每折新 Pipeline、`TimeSeriesSplit(n_splits=3,gap=1)`、`cv_mae` 为三折平均、不是完整 walk-forward。
+10. 确认 MAE/零收益基线/R²/方向一致率口径；确认 RMSE 未计算或显示；确认 `data_leakage` 只声称固定内置管线有防护，不是通用泄漏检测器；确认五个 `theory_only` 词条没有虚构按钮、指标或图表。
+
+### 13.8 声明
+
+批次 4 只新增/修改 `docs/knowledge-drafts/` 下的 Markdown。未修改程序代码、测试、数据库、`VERSION`、安装器、构建脚本或发行文件；未执行打包、标签或 Release；未进入批次 5。25 篇文章仍是草稿，必须由 Codex 复核、转换、测试并通过实际 WebView 验收后，才能成为正式功能。
