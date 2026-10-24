@@ -202,7 +202,8 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
     st.radio("回答模式", ("研究解释模式", "教学辅导模式"), key="deepseek_answer_mode", on_change=_save_answer_mode)
     context["answer_mode"] = st.session_state["deepseek_answer_mode"]
     scope = context_scope(context)
-    attach = st.checkbox("附带当前程序事实摘要", value=True, key="deepseek_attach")
+    st.session_state.setdefault("deepseek_attach", True)
+    attach = st.checkbox("附带当前程序事实摘要", key="deepseek_attach")
     with st.expander("发送前查看上下文摘要"):
         st.json(context if attach else {"说明": "本次不附带当前研究摘要。"})
         st.caption("不附带私人笔记、完整历史行情或数据库；发送前请核对标的与实验。")

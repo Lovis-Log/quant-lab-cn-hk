@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import ast
+from collections import Counter
 import shutil
 import sys
 
@@ -46,6 +47,28 @@ def test_loads_all_manuals_and_articles_offline(monkeypatch, tmp_path):
     assert len({article.id for article in library.articles}) == 85
     assert library.category_order == CATEGORY_ORDER
     assert not forbidden_user_dir.exists()
+
+
+def test_complete_catalog_distribution_matches_reviewed_content():
+    library = load_manual_content()
+
+    assert Counter(article.category for article in library.articles) == {
+        "market_data": 10,
+        "return_risk": 10,
+        "strategy_execution": 10,
+        "backtest_research": 10,
+        "portfolio": 8,
+        "statistics": 9,
+        "machine_learning": 8,
+        "programming_engineering": 20,
+    }
+    assert Counter(article.software_status for article in library.articles) == {
+        "implemented": 61,
+        "needs_code_review": 13,
+        "theory_only": 10,
+        "academy_demo": 1,
+    }
+    assert all(item.body.strip() and item.source_path.is_file() for item in (*library.manuals, *library.articles))
 
 
 def test_queries_by_stable_id_category_and_relationships():

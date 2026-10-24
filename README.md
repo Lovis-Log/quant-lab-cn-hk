@@ -41,6 +41,8 @@ CHANGELOG.md             里程碑记录
 
 `codex/manual-reading-v1` 当前完成文字手册版的阶段 4：首次进入工作台默认打开“使用手册”，可离线浏览全部 10 篇手册和 85 篇专业文章，支持中文标题、英文名、别名和正文搜索，以及分类、面包屑、前置概念、相关词条和下一篇跳转。“新手使用指引”及其任务、路径、测验和进度功能已从本分支删除；完整任务式版本继续保留在 `codex/learning-center-v2`。旧 SQLite 学习表和数据不删除、不迁移，Quant Academy 固定样本实验继续可用。
 
+阶段 5 的自动测试、Browser 插件抽样、实际 WebView2 DOM 验收、已知限制和外部来源状态见 [文字手册版验收记录](docs/MANUAL_READING_ACCEPTANCE.md)。该验收不包含打包或 Release。
+
 ## Windows 启动
 
 在项目目录下的 PowerShell 执行：

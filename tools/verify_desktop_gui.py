@@ -641,7 +641,10 @@ def main():
                 child.wait(timeout=15)
         probe = json.loads(probe_file.read_text(encoding="utf-8"))
         assert child.returncode == 0 and probe.get("webview_loaded") and probe.get("child_stopped")
-        summary.update({"loaded_event": True, "child_stopped": True, "exit_code": child.returncode})
+        parent_log = (directory / "parent.log").read_text(encoding="utf-8", errors="replace")
+        assert 'The widget with key "deepseek_attach" was created with a default value' not in parent_log
+        summary.update({"loaded_event": True, "child_stopped": True, "exit_code": child.returncode,
+                        "streamlit_widget_state_warning": False})
         (directory/"gui-result.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps(summary, ensure_ascii=False))
     except Exception:
