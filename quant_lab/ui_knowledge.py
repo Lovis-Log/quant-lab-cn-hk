@@ -21,7 +21,16 @@ ARTICLE_BY_TOPIC = {
 }
 
 
-def render_knowledge(topic: str, value=None, *, key="", observations=None, period="所选样本区间", expanded=False):
+def render_knowledge(
+    topic: str,
+    value=None,
+    *,
+    key="",
+    observations=None,
+    period="所选样本区间",
+    expanded=False,
+    current_reading: str | None = None,
+):
     item = KNOWLEDGE[topic]
     with st.expander(f"知识解释：{item.title}", expanded=expanded):
         for label, content in (("是什么", item.definition), ("刻画什么", item.feature),
@@ -31,7 +40,7 @@ def render_knowledge(topic: str, value=None, *, key="", observations=None, perio
         st.latex(item.formula)
         st.write(item.symbols)
         st.markdown(f"**手算例子**：{item.example}")
-        reading = interpret(topic, value, observations=observations, period=period)
+        reading = current_reading or interpret(topic, value, observations=observations, period=period)
         st.markdown(f"**当前结果怎么读**：{reading}")
         st.markdown(f"**局限和常见误读**：{item.limitation}")
         st.markdown(f"**小实验或思考题**：{item.question}")

@@ -360,7 +360,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         if st.session_state.get("settings_error"):
             st.warning(st.session_state.pop("settings_error"))
         if not valid_symbol:
-            st.caption("A 股请输入 6 位、港股请输入 5 位股票代码。")
+            st.caption("A 股请输入 6 位数字；港股可输入 1–5 位数字，程序会自动补足为 5 位。")
         elif dates is None:
             st.caption("请选择完整的开始和结束日期。")
         else:
@@ -420,7 +420,7 @@ def _toggle_settings() -> None:
 
 def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
-    st.session_state.setdefault("manual_panel_open", False)
+    st.session_state.setdefault("manual_panel_open", True)
     st.session_state.setdefault("notes_panel_open", False)
     st.session_state.setdefault("left_sidebar_visible", True)
     st.session_state.setdefault("settings_open", False)

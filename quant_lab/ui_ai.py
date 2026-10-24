@@ -56,9 +56,9 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     model = st.session_state.get("ds_model_select") if st.session_state.get("deepseek_models") else st.session_state.get("ds_model_manual", st.session_state.get("deepseek_model", ""))
     metadata = next((m for m in st.session_state.get("deepseek_models", []) if m["id"] == model), {})
     configured = bool(api_key and model)
-    st.caption(f"使用本页 DeepSeek 连接 · 当前模型：{model or '尚未选择'}。生成假设和审阅按钮会发送付费请求；本地实验免费。")
+    st.caption(f"使用 `⚙ → DeepSeek` 中的连接 · 当前模型：{model or '尚未选择'}。生成假设和审阅按钮会发送付费请求；本地实验免费。")
     if not configured:
-        st.info("请在本页上方“DeepSeek 连接设置”配置密钥并选择模型。已接入的连接会直接共用；也可先运行本地受控实验。")
+        st.info("请在左上角 `⚙ → DeepSeek` 配置密钥并选择模型；也可先运行不调用模型的本地受控实验。")
     question = st.text_area(
         "研究问题", value="双均线过滤能否改善这只股票的历史回撤？",
         max_chars=600, height=95,

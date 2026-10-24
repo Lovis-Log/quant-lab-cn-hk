@@ -28,7 +28,8 @@ def _visible_text(app) -> str:
 
 
 def _open_manual(app):
-    _widget(app, "button", "使用手册").click().run()
+    if not app.session_state.get("manual_panel_open", False):
+        _widget(app, "button", "使用手册").click().run()
     return app
 
 
@@ -40,6 +41,7 @@ def test_manual_replaces_beginner_guidance_and_is_offline(monkeypatch):
     monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", no_network)
     app = _start_app()
 
+    assert app.session_state["manual_panel_open"] is True
     assert not [button for button in app.button if button.label == "新手使用指引"]
     assert not [button for button in app.button if button.label == "查看本页使用指南"]
     assert not [button for button in app.button if button.label in {"开始入门任务", "跳过首次引导"}]
@@ -48,6 +50,18 @@ def test_manual_replaces_beginner_guidance_and_is_offline(monkeypatch):
     assert app.radio(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
     assert "离线使用手册 · 阅读和搜索不会调用 AI" in _visible_text(app)
     assert "快速开始：从资料库到第一份可复现实验" in _visible_text(app)
+
+
+def test_detailed_explanation_setting_uses_product_label_only():
+    app = _start_app()
+    _widget(app, "button", "⚙").click().run()
+
+    setting = app.toggle(key="learning_mode")
+    assert setting.label == "显示详细解释提示"
+    assert not [toggle for toggle in app.toggle if "新手模式" in toggle.label]
+    setting.set_value(False).run()
+    assert not app.exception
+    assert app.session_state["learning_mode"] is False
 
 
 def test_function_directory_opens_all_registered_manuals_and_returns():

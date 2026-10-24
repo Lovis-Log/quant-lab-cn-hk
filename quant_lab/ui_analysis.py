@@ -43,7 +43,7 @@ def render_risk(bundle: HistoryBundle | None) -> None:
     )
     code_text = st.text_input(
         "组合股票代码（逗号分隔，2–4 只）", value=f"{bundle.symbol},{other}",
-        help="只允许当前市场的股票；A 股六位，港股五位。不会混合 CNY 与 HKD。",
+        help="只允许当前市场的股票；A 股六位，港股可输入 1–5 位并自动补足五位。不会混合 CNY 与 HKD。",
         key=f"portfolio_codes_{bundle.market}_{bundle.symbol}",
     )
     fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05, key="portfolio_fraction")

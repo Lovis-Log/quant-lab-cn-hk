@@ -30,6 +30,7 @@ def render_academy() -> None:
     st.dataframe(frame, width="stretch", hide_index=True)
     st.info(conclusion)
     readings = {}
+    current_readings = {}
     if choice == 0:
         readings = {"simple_return": float(frame["本金"].iloc[-1]/100-1), "compound": float(frame["本金"].iloc[-1]/100-1)}
     elif choice == 1:
@@ -45,8 +46,20 @@ def render_academy() -> None:
         readings["sharpe"] = float((daily.mean()-value/100)/daily.std(ddof=1)*math.sqrt(252))
     elif choice == 6:
         readings["correlation"] = float(frame["X"].corr(frame["Y"]))
+    elif choice == 7:
+        current_readings["bias"] = (
+            f"当前固定教学样本比较 {int(value)} 组参数。{conclusion}"
+            "本课没有单一的‘偏差值’；应比较训练期选出的参数在测试期是否仍成立。"
+        )
     for topic in LESSON_TOPICS[choice]:
-        render_knowledge(topic, readings.get(topic), key="academy", period="当前固定教学样本（不是行情）", expanded=True)
+        render_knowledge(
+            topic,
+            readings.get(topic),
+            key="academy",
+            period="当前固定教学样本（不是行情）",
+            expanded=True,
+            current_reading=current_readings.get(topic),
+        )
     st.markdown("#### 思考问题")
     st.write(lesson.question)
     from quant_lab.ui_manual import open_manual_article

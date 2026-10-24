@@ -37,7 +37,6 @@ def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     assert "新手使用指引" not in navigation.options
     assert "研究笔记" not in navigation.options
     assert not [button for button in app.button if button.label == "新手使用指引"]
-    widget(app, "button", "使用手册").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究笔记").click().run()
     assert app.session_state["manual_panel_open"] is True
@@ -60,7 +59,7 @@ def test_left_sidebar_launcher_does_not_change_open_panels(tmp_path, monkeypatch
 
     app.button(key="left_sidebar_toggle").click().run()
     assert app.session_state["left_sidebar_visible"] is False
-    assert app.session_state["manual_panel_open"] is False
+    assert app.session_state["manual_panel_open"] is True
     assert app.session_state["deepseek_panel_open"] is True
     assert app.session_state["notes_panel_open"] is True
     assert app.button(key="deepseek_panel_maximize")
@@ -126,9 +125,12 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     assert not app.exception and len(calls) == 2 and calls[-1]["model"] == "beta"
     assert calls[-1]["history"] == []  # New lesson context, old stock messages retained only for display.
     assert "notes" not in calls[-1]["context"]
-    widget(app,"selectbox","选择回答保存为学习笔记").set_value(1).run()
-    widget(app,"button","保存选定回答到学习笔记").click().run()
-    assert storage.list_learning_notes(tmp_path / "research.sqlite3")[0]["model"] == "beta-actual"
+    widget(app,"selectbox","选择回答保存为研究笔记").set_value(1).run()
+    widget(app,"button","保存选定回答到研究笔记").click().run()
+    saved = storage.list_learning_notes(tmp_path / "research.sqlite3")[0]
+    assert saved["model"] == "beta-actual"
+    assert saved["title"].startswith("AI 研究回答")
+    assert any("研究笔记 #" in item.value for item in app.success)
     assert "sk-only-ui-mock-secret" not in (tmp_path / "research.sqlite3").read_bytes().decode("utf-8", errors="ignore")
     widget(app,"button","⚙").click().run()
     widget(app,"button","清除密钥").click().run()
@@ -146,6 +148,40 @@ def test_knowledge_followup_only_creates_draft(tmp_path, monkeypatch):
     widget(app,"button","向 AI 追问").click().run()
     assert not app.exception
     assert "简单收益率" in widget(app,"text_area","问题（确认后发送）").value
+
+
+def test_research_note_failure_uses_research_copy(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        "quant_lab.ui_deepseek.save_research_note",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("read only")),
+    )
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    app.session_state["deepseek_chat"] = [{
+        "role": "assistant", "content": "待复核回答", "model": "model-x",
+        "security": "教学问答", "complete": True, "context": {},
+    }]
+    app.run()
+    widget(app, "button", "保存选定回答到研究笔记").click().run()
+
+    assert any("研究笔记保存失败" in item.value for item in app.error)
+    assert not any("学习笔记保存失败" in item.value for item in app.error)
+
+
+def test_research_workspace_points_to_actual_connection_location(tmp_path, monkeypatch):
+    from test_workspaces import sample_bundle
+
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr("quant_lab.ui.fetch_history", lambda *args: sample_bundle())
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    app.sidebar.button[0].click().run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    widget(app, "radio", "AI 工作区").set_value("研究实验").run()
+    text = "\n".join(str(item.value) for item in (*app.caption, *app.info))
+
+    assert "⚙ → DeepSeek" in text
+    assert "本页上方" not in text
 
 
 def test_history_manual_failure_keeps_previous_data(tmp_path, monkeypatch):

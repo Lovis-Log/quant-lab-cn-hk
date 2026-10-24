@@ -127,10 +127,9 @@ def main():
                 main_before = main.bounding_box()
                 manual_button = page.get_by_role("button", name="使用手册", exact=True)
                 expect(manual_button).to_be_visible(timeout=10000)
-                manual_button.click()
-                settle(page)
                 manual_panel = page.locator(".st-key-manual_side_panel")
                 expect(manual_panel).to_be_visible(timeout=10000)
+                summary["manual_open_by_default"] = True
                 if args.manual_reading:
                     manual_panel.get_by_text(
                         "快速开始：从资料库到第一份可复现实验", exact=True
@@ -188,6 +187,7 @@ def main():
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
                 expect(panel).to_be_visible(timeout=10000)
+                expect(panel.get_by_text("连接与模型设置位于左上角 ⚙ → DeepSeek。", exact=True)).to_be_visible(timeout=10000)
                 manual_box = manual_panel.bounding_box()
                 deepseek_box = panel.bounding_box()
                 assert manual_box and deepseek_box and manual_box["x"] < deepseek_box["x"]
@@ -198,6 +198,10 @@ def main():
                 settle(page)
                 settings_panel = page.locator(".st-key-settings_panel")
                 expect(settings_panel).to_be_visible(timeout=10000)
+                settings_panel.get_by_role("tab", name="偏好设置", exact=True).click()
+                settle(page)
+                expect(settings_panel.get_by_text("显示详细解释提示", exact=True)).to_be_visible(timeout=10000)
+                assert settings_panel.get_by_text("新手模式（关闭为专业模式）", exact=True).count() == 0
                 settings_panel.get_by_role("tab", name="DeepSeek", exact=True).click()
                 settle(page)
                 initial_key = settings_panel.get_by_label("DeepSeek API Key", exact=True)
@@ -452,6 +456,24 @@ def main():
                     summary.update({"manual_reading_resize": True,
                                     "manual_reading_maximize_restore": True,
                                     "manual_reading_close": True})
+                    sidebar.get_by_text("Quant Academy", exact=True).click()
+                    settle(page)
+                    lesson_picker = page.get_by_role("combobox", name="选择课程", exact=True)
+                    lesson_picker.click()
+                    lesson_picker.fill("回测偏差与过拟合")
+                    page.get_by_role("option", name="8. 回测偏差与过拟合", exact=True).click()
+                    settle(page)
+                    body_text = page.inner_text("body")
+                    assert "本课没有单一的‘偏差值’" in body_text
+                    assert "当前没有足够的有效计算值" not in body_text
+                    assert page.get_by_role("button", name="保存交互实验记录", exact=True).count() == 0
+                    assert page.get_by_role("button", name="提交课程测验", exact=True).count() == 0
+                    page.screenshot(path=str(directory/"academy-lesson-8-explanation.png"), full_page=False)
+                    sidebar.get_by_text("市场数据", exact=True).click()
+                    settle(page)
+                    summary.update({"academy_no_progress_actions": True,
+                                    "academy_lesson_8_current_explanation": True,
+                                    "detailed_explanation_label": True})
                 pause = page.get_by_role("button", name="暂停自动刷新", exact=True)
                 if pause.count():
                     pause.click()

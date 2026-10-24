@@ -79,8 +79,9 @@ def render_settings_panel() -> None:
         with ai_tab:
             render_connection_settings()
         with preference_tab:
-            st.toggle("新手模式（关闭为专业模式）", key="learning_mode",
+            st.toggle("显示详细解释提示", key="learning_mode",
                       on_change=persist_setting, args=("learning_mode",))
+            st.caption("只调整页面解释密度，不改变行情、策略、回测、统计或组合计算。")
             st.toggle("自动刷新行情（仅市场页）", key="refresh_enabled",
                       on_change=persist_setting, args=("refresh_enabled",))
             st.selectbox("自动刷新间隔", INTERVALS, key="refresh_interval_seconds",

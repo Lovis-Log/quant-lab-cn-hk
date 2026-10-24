@@ -18,6 +18,10 @@ def test_academy_and_empty_notes_render(tmp_path: Path, monkeypatch) -> None:
     for lesson in range(8):
         next(item for item in app.get("selectbox") if item.label == "选择课程").set_value(lesson).run()
         assert not app.exception, lesson
+    academy_text = "\n".join(str(item.value) for item in app.get("markdown"))
+    assert "本课没有单一的‘偏差值’" in academy_text
+    assert "当前没有足够的有效计算值" not in academy_text
+    assert not [button for button in app.button if button.label in {"保存交互实验记录", "提交课程测验"}]
     next(item for item in app.get("button") if item.label == "研究笔记").click().run()
     assert not app.exception
     assert any("没有符合条件" in item.value for item in app.get("info"))

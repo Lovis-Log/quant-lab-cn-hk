@@ -8,7 +8,7 @@ from quant_lab import credentials
 from quant_lab.deepseek import DeepSeekClient, AIRequestError, safe_context
 from quant_lab.ai_context import context_scope
 from quant_lab.security import redact
-from quant_lab.storage import save_learning_note, save_setting
+from quant_lab.storage import save_learning_note as save_research_note, save_setting
 
 
 QUICK_QUESTIONS = ("解释当前指标", "分析本次回测", "给一个手算例子", "下一步学什么")
@@ -177,6 +177,7 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
     key, model_id, metadata, effort = connection_state()
     status = f"已连接 · {model_id}" if key and model_id else "尚未完成 DeepSeek 连接设置"
     st.caption(status)
+    st.caption("连接与模型设置位于左上角 `⚙ → DeepSeek`。")
     if st.button("前往设置", key="deepseek_open_settings"):
         st.session_state["settings_open"] = True
         st.rerun()
@@ -261,21 +262,21 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                 st.session_state["deepseek_busy"] = False
     answers = [m for m in st.session_state.get("deepseek_chat", []) if m["role"] == "assistant"]
     if answers:
-        selected = st.selectbox("选择回答保存为学习笔记", range(len(answers)),
+        selected = st.selectbox("选择回答保存为研究笔记", range(len(answers)),
             format_func=lambda i: f"{i+1}. {answers[i]['model']} · {answers[i]['content'][:25]}")
-        if st.button("保存选定回答到学习笔记", key="ds_save_note"):
+        if st.button("保存选定回答到研究笔记", key="ds_save_note"):
             message = answers[selected]
             note_context = message.get("context", {})
             try:
-                note_id = save_learning_note(
-                    "AI 学习回答 · " + message["security"], message["content"],
+                note_id = save_research_note(
+                    "AI 研究回答 · " + message["security"], message["content"],
                     model=message["model"], origin="DeepSeek 模型解释（需复核）",
                     market=note_context.get("market"), symbol=note_context.get("symbol"),
                     experiment_id=note_context.get("experiment_id"), secrets=(key,),
                 )
-                st.success(f"学习笔记 #{note_id} 已保存。")
+                st.success(f"研究笔记 #{note_id} 已保存。")
             except (ValueError, OSError, sqlite3.Error):
-                st.error("学习笔记保存失败；请检查用户数据目录。")
+                st.error("研究笔记保存失败；请检查用户数据目录。")
 
 
 def _close_deepseek_panel() -> None:

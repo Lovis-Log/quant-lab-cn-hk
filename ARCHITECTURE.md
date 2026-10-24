@@ -10,7 +10,7 @@
 | Analytics | `metrics.py`, `statistics.py`, `portfolio.py`, `research.py` | 风险收益、统计、组合、样本内外实验与指纹 |
 | Learning | `learning.py`, `knowledge.py` | 八节固定样本参数实验与页面内知识解释；不记录任务、测验或进度 |
 | Manual Content | `manual_content.py`, `ui_manual.py`, `docs/knowledge-drafts/` | 只读发现、严格校验、稳定 ID/分类/关联查询、离线搜索和完整阅读界面；不依赖 SQLite 或网络 |
-| Storage | `storage.py`, `migrations.py`, `paths.py` | SQLite 版本迁移、备份、自选股、设置、实验和学习笔记 |
+| Storage | `storage.py`, `migrations.py`, `paths.py` | SQLite 版本迁移、备份、自选股、设置、实验和研究笔记；底层保留旧表名兼容 |
 | AI | `deepseek.py`, `ai_research.py`, `ai_context.py`, `credentials.py`, `security.py` | 共用 DeepSeek 连接、动态模型、流式问答与 JSON 假设/审阅、限定摘要、安全凭据和脱敏 |
 | UI | `ui*.py`, `charts.py`, `app.py` | Streamlit 页面、文字手册预览与 Plotly 展示；不实现核心金融公式 |
 | Desktop | `desktop_launcher.py`, `QuantLab.spec`, `installer/` | 本地服务、pywebview、PyInstaller 与 Inno Setup |
@@ -61,11 +61,13 @@ V2 构建输出到 `dist/packages/<版本>/QuantLab`，manifest 保存 `payload_
 
 `global_topbar` 固定横跨窗口，并提供使用手册、DeepSeek 和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；各面板外壳不滚动，固定头部下的 `*_panel_body` 独立滚动。`left_sidebar_visible` 控制左侧导航栏显示，完全独立于三个右侧面板状态；ResizeObserver 把左栏实测宽度同步到 `--ql-sidebar-width`。最大化时只渲染目标面板并清除主区让位宽度：左栏可见则从左栏右缘开始，左栏隐藏则覆盖完整应用宽度，垂直方向始终限制在全局顶栏下方。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
 
+阶段 4 首次会话默认打开使用手册；用户关闭后不会在同一会话强制重开。设置继续使用兼容键 `learning_mode`，但界面名称为“显示详细解释提示”，只控制解释密度。DeepSeek 连接位置统一写作 `⚙ → DeepSeek`，选定回答保存到研究笔记；数据库底层沿用旧 `learning_notes` 表名以保持资料兼容。
+
 `notes.py` 负责分类树、草稿、统一笔记/实验检索、回收站、附件验证和 ZIP 导出。附件先写临时文件，再原子改名并记录相对路径、MIME、大小与 SHA-256；图片 `attachment://id` 标记在渲染前从 Markdown 中移除并由受控组件显示，避免浏览器请求未知协议。
 
 股票选择用一个支持 `accept_new_options` 的搜索下拉框，代码和名称候选排序保持原样；未收录代码统一经过 `normalize_symbol`，无效输入禁用加载，市场切换保留各自选择。`securities.py` 提供市场隔离的目录：内置基础资料快照保证离线候选可用，显式更新取得新目录后原子写入 `user_data_dir()/securities/`。每份目录校验市场、规范代码、名称冲突、来源和带时区接收时间；失败保留原值。目录没有价格、币种换算或买入意见，名称字段不用于证明上市/可交易。`names.py` 独立查询东方财富基础资料，24 小时成功缓存、5 分钟失败冷却，手动名称更新绕过缓存且合并同查询并发，失败保留名称与原成功时间；不改写存档实验。
 
-Key 只存在会话或 Win32 `CredWriteW/CredReadW/CredDeleteW` 管理的本应用凭据中；新会话在创建任何 Key 控件前自动执行一次 `CredReadW` 恢复。安全存储故障不会退回文件。异常信息不显示原始响应或带 Key 的传输异常；输出与学习笔记经过脱敏。测试用虚拟凭据和模拟 API；真实 API 最小验证由用户在软件内完成。
+Key 只存在会话或 Win32 `CredWriteW/CredReadW/CredDeleteW` 管理的本应用凭据中；新会话在创建任何 Key 控件前自动执行一次 `CredReadW` 恢复。安全存储故障不会退回文件。异常信息不显示原始响应或带 Key 的传输异常；输出与研究笔记经过脱敏。测试用虚拟凭据和模拟 API；真实 API 最小验证由用户在软件内完成。
 
 ## 手册导航与教学
 

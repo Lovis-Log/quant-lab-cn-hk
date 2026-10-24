@@ -69,7 +69,7 @@ def test_candidate_fills_code_and_market_switch_is_isolated(monkeypatch, tmp_pat
     assert not app.exception
 
 
-@pytest.mark.parametrize("code,can_load", [("HK09988", True), ("不是代码", False)])
+@pytest.mark.parametrize("code,can_load", [("700", True), ("HK09988", True), ("不是代码", False)])
 def test_custom_code_validation_without_directory(monkeypatch, code, can_load):
     def unavailable(*args):
         raise OSError("目录暂不可用")
@@ -82,3 +82,5 @@ def test_custom_code_validation_without_directory(monkeypatch, code, can_load):
     assert not app.exception
     assert any("目录暂不可用" in item.value for item in app.warning)
     assert next(w for w in app.button if w.label == "加载真实历史日线").disabled != can_load
+    if not can_load:
+        assert any("港股可输入 1–5 位数字" in item.value for item in app.caption)
