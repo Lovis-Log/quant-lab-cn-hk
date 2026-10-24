@@ -133,8 +133,6 @@
 - `next_open_execution` 下一交易日开盘成交
 - `parameter_sensitivity` 参数敏感性
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P003` docs/METHODOLOGY.md：三种策略的信号定义、预热和下一开盘成交规则。

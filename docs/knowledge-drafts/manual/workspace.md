@@ -144,8 +144,6 @@
 - `provider_api_cache_and_concurrency` Provider、API、缓存与并发
 - `reproducibility_and_audit` 可复现性与审计
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P001` Quant Lab CN/HK README：顶栏、面板、设置、资料库和桌面启动说明。

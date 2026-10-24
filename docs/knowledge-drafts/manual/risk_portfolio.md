@@ -152,8 +152,6 @@
 - `volatility` 波动率
 - `maximum_drawdown` 最大回撤
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P003` docs/METHODOLOGY.md：样本内外切分、等权/逆波动率、共同交易日和组合边界。

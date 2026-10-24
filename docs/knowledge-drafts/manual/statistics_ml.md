@@ -163,8 +163,6 @@
 - `r_squared` 决定系数 R²
 - `time_series_cross_validation` 时间序列交叉验证
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P003` docs/METHODOLOGY.md：t 检验、线性回归特征、标签、切分和样本外指标。

@@ -59,6 +59,10 @@ def _draft(question):
     st.session_state["deepseek_prompt"] = question
 
 
+def _clear_chat() -> None:
+    st.session_state["deepseek_chat"] = []
+
+
 def _save_model(widget_key):
     value = st.session_state[widget_key]
     st.session_state["deepseek_model"] = value
@@ -84,6 +88,14 @@ def open_ai_followup(prompt, topic):
     st.session_state["deepseek_prompt"] = prompt
     st.session_state["ai_workspace"] = "对话与辅导"
     st.session_state["deepseek_panel_open"] = True
+
+
+def _open_research_workspace() -> None:
+    st.session_state["ai_workspace"] = "研究实验"
+
+
+def _return_to_chat() -> None:
+    st.session_state["ai_workspace"] = "对话与辅导"
 
 
 def connection_state() -> tuple[str, str, dict, str | None]:
@@ -176,63 +188,119 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
     from quant_lab.ui_ai import render_ai, current_experiment_context
     key, model_id, metadata, effort = connection_state()
     status = f"已连接 · {model_id}" if key and model_id else "尚未完成 DeepSeek 连接设置"
-    st.caption(status)
-    st.caption("连接与模型设置位于左上角 `⚙ → DeepSeek`。")
-    if st.button("前往设置", key="deepseek_open_settings"):
-        st.session_state["settings_open"] = True
-        st.rerun()
-
-    if not chat_only:
-        workspace = st.radio("AI 工作区", ("研究实验", "对话与辅导"), key="ai_workspace", horizontal=True)
-        if workspace == "研究实验":
-            render_ai(bundle)
-            if st.session_state.get("active_backtest_context"):
-                context.update(st.session_state["active_backtest_context"])
-                st.session_state["_current_ai_context"] = context
-            return
-    st.subheader("DeepSeek 对话与辅导")
+    workspace = st.session_state.setdefault("ai_workspace", "对话与辅导")
+    if not chat_only and workspace == "研究实验":
+        st.button("← 返回对话", key="deepseek_return_chat", on_click=_return_to_chat)
+        render_ai(bundle)
+        if st.session_state.get("active_backtest_context"):
+            context.update(st.session_state["active_backtest_context"])
+            st.session_state["_current_ai_context"] = context
+        return
     followup = st.session_state.get("ai_followup_context")
-    if followup:
-        st.caption("追问来源：" + followup.get("page", "知识解释") + " · 使用点击追问时的事实摘要")
-        if st.button("改用当前研究摘要"):
-            st.session_state.pop("ai_followup_context", None)
-            followup = None
     context.update(current_experiment_context(bundle))
     context = safe_context(followup or context)
-    st.radio("回答模式", ("研究解释模式", "教学辅导模式"), key="deepseek_answer_mode", on_change=_save_answer_mode)
-    context["answer_mode"] = st.session_state["deepseek_answer_mode"]
-    scope = context_scope(context)
     st.session_state.setdefault("deepseek_attach", True)
-    attach = st.checkbox("附带当前程序事实摘要", key="deepseek_attach")
-    with st.expander("发送前查看上下文摘要"):
-        st.json(context if attach else {"说明": "本次不附带当前研究摘要。"})
-        st.caption("不附带私人笔记、完整历史行情或数据库；发送前请核对标的与实验。")
-    if compact:
-        quick_columns = st.columns(2, gap="small")
-        for index, question in enumerate(QUICK_QUESTIONS):
-            with quick_columns[index % 2]:
-                st.button(question, key=f"ds_quick_{question}", width="stretch",
-                          on_click=_draft, args=(question,))
-    else:
-        for question in QUICK_QUESTIONS:
-            st.button(question, key=f"ds_quick_{question}", on_click=_draft, args=(question,))
     records = st.session_state.setdefault("deepseek_chat", [])
-    if st.button("清空当前对话", key="ds_clear_chat"):
-        st.session_state["deepseek_chat"] = []
-        records = []
+    answers = [message for message in records if message["role"] == "assistant"]
+    with st.container(key="deepseek_chat_toolbar"):
+        status_column, settings_column, experiment_column = st.columns(
+            [2.1, 1, 1.15], gap="small", vertical_alignment="center"
+        )
+        with status_column:
+            st.caption(status)
+        with settings_column:
+            with st.popover("⚙ 设置", use_container_width=True):
+                st.caption("连接与模型设置位于左上角 `⚙ → DeepSeek`。")
+                if st.button("前往 DeepSeek 设置", key="deepseek_open_settings", width="stretch"):
+                    st.session_state["settings_open"] = True
+                    st.rerun()
+                st.radio(
+                    "回答模式",
+                    ("研究解释模式", "教学辅导模式"),
+                    key="deepseek_answer_mode",
+                    on_change=_save_answer_mode,
+                )
+                st.checkbox("附带当前程序事实摘要", key="deepseek_attach")
+                if followup:
+                    st.caption(
+                        "追问来源：" + followup.get("page", "知识解释")
+                        + " · 使用点击追问时的事实摘要"
+                    )
+                    if st.button("改用当前研究摘要", key="deepseek_use_current_context"):
+                        st.session_state.pop("ai_followup_context", None)
+                        st.rerun()
+                with st.expander("发送前查看上下文摘要"):
+                    attach_preview = st.session_state.get("deepseek_attach", True)
+                    st.json(context if attach_preview else {"说明": "本次不附带当前研究摘要。"})
+                    st.caption("不附带私人笔记、完整历史行情或数据库；发送前请核对标的与实验。")
+                st.markdown("##### 快捷问题")
+                quick_columns = st.columns(2, gap="small")
+                for index, question in enumerate(QUICK_QUESTIONS):
+                    with quick_columns[index % 2]:
+                        st.button(
+                            question,
+                            key=f"ds_quick_{question}",
+                            width="stretch",
+                            on_click=_draft,
+                            args=(question,),
+                        )
+                st.button("清空当前对话", key="ds_clear_chat", width="stretch",
+                          on_click=_clear_chat)
+                if answers:
+                    answer_options = [
+                        f"{index+1}. {answer['model']} · {answer['content'][:25]}"
+                        for index, answer in enumerate(answers)
+                    ]
+                    selected_label = st.selectbox(
+                        "选择回答保存为研究笔记",
+                        answer_options,
+                        key="deepseek_save_answer_select",
+                    )
+                    if st.button("保存选定回答到研究笔记", key="ds_save_note", width="stretch"):
+                        message = answers[answer_options.index(selected_label)]
+                        note_context = message.get("context", {})
+                        try:
+                            note_id = save_research_note(
+                                "AI 研究回答 · " + message["security"], message["content"],
+                                model=message["model"], origin="DeepSeek 模型解释（需复核）",
+                                market=note_context.get("market"), symbol=note_context.get("symbol"),
+                                experiment_id=note_context.get("experiment_id"), secrets=(key,),
+                            )
+                            st.success(f"研究笔记 #{note_id} 已保存。")
+                        except (ValueError, OSError, sqlite3.Error):
+                            st.error("研究笔记保存失败；请检查用户数据目录。")
+        with experiment_column:
+            if not chat_only:
+                st.button(
+                    "研究实验",
+                    key="deepseek_open_research",
+                    width="stretch",
+                    on_click=_open_research_workspace,
+                )
+    context["answer_mode"] = st.session_state["deepseek_answer_mode"]
+    attach = st.session_state.get("deepseek_attach", True)
+    scope = context_scope(context)
     with st.container(height=260 if compact else 320, border=True):
         if not records:
-            st.caption("没有 Key 时仍可使用离线课程和知识解释。")
+            st.caption("开始新的对话。没有 Key 时仍可使用离线手册和 Academy。")
         for message in records[-20:]:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
                 if message["role"] == "assistant":
                     st.caption(f"模型：{message['model']} · {message.get('security', '教学问答')}" +
                                (" · 回答不完整" if not message.get("complete", True) else ""))
-    with st.form("deepseek_send_form", clear_on_submit=False):
-        prompt = st.text_area("问题（确认后发送）", key="deepseek_prompt", max_chars=3000)
-        submitted = st.form_submit_button("发送到 DeepSeek", disabled=not key or not model_id,
-                                          help="此操作使用你的 API 账户；其他页面重绘不会自动发送。")
+    with st.container(key="deepseek_composer"):
+        with st.form("deepseek_send_form", clear_on_submit=False):
+            prompt = st.text_area(
+                "问题（确认后发送）", key="deepseek_prompt", max_chars=3000,
+                placeholder="输入你的研究问题…",
+            )
+            submitted = st.form_submit_button(
+                "发送到 DeepSeek",
+                disabled=not key or not model_id,
+                help="此操作使用你的 API 账户；其他页面重绘不会自动发送。",
+                width="stretch",
+            )
     if submitted:
         selected_context = context if attach else {}
         outgoing_scope = scope if attach else "standalone"
@@ -261,23 +329,8 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                                     "complete": answer.complete, "context": selected_context})
                 st.session_state["deepseek_chat"] = records[-40:]
                 st.session_state["deepseek_busy"] = False
-    answers = [m for m in st.session_state.get("deepseek_chat", []) if m["role"] == "assistant"]
-    if answers:
-        selected = st.selectbox("选择回答保存为研究笔记", range(len(answers)),
-            format_func=lambda i: f"{i+1}. {answers[i]['model']} · {answers[i]['content'][:25]}")
-        if st.button("保存选定回答到研究笔记", key="ds_save_note"):
-            message = answers[selected]
-            note_context = message.get("context", {})
-            try:
-                note_id = save_research_note(
-                    "AI 研究回答 · " + message["security"], message["content"],
-                    model=message["model"], origin="DeepSeek 模型解释（需复核）",
-                    market=note_context.get("market"), symbol=note_context.get("symbol"),
-                    experiment_id=note_context.get("experiment_id"), secrets=(key,),
-                )
-                st.success(f"研究笔记 #{note_id} 已保存。")
-            except (ValueError, OSError, sqlite3.Error):
-                st.error("研究笔记保存失败；请检查用户数据目录。")
+            if answer and answer.text:
+                st.rerun()
 
 
 def _close_deepseek_panel() -> None:

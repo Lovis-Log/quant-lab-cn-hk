@@ -47,7 +47,7 @@ def test_manual_replaces_beginner_guidance_and_is_offline(monkeypatch):
     assert not [button for button in app.button if button.label in {"开始入门任务", "跳过首次引导"}]
     _open_manual(app)
     assert not app.exception
-    assert app.radio(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
+    assert app.selectbox(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
     assert "离线使用手册 · 阅读和搜索不会调用 AI" in _visible_text(app)
     assert "快速开始：从资料库到第一份可复现实验" in _visible_text(app)
 
@@ -66,7 +66,7 @@ def test_detailed_explanation_setting_uses_product_label_only():
 
 def test_function_directory_opens_all_registered_manuals_and_returns():
     app = _open_manual(_start_app())
-    app.radio(key="manual_section").set_value("功能说明").run()
+    app.selectbox(key="manual_section").set_value("功能说明").run()
 
     directory_buttons = [
         button for button in app.button if button.key and button.key.startswith("manual_index_")
@@ -75,13 +75,13 @@ def test_function_directory_opens_all_registered_manuals_and_returns():
     _widget(app, "button", "市场数据：代码、名称、区间、复权、来源与缓存").click().run()
     assert "使用手册 / 功能说明 / 市场数据" in _visible_text(app)
     assert "加载真实历史日线" in _visible_text(app)
-    _widget(app, "button", "← 返回功能说明目录").click().run()
+    _widget(app, "button", "← 返回功能目录").click().run()
     assert len([button for button in app.button if button.key and button.key.startswith("manual_index_")]) == 9
 
 
 def test_professional_categories_article_status_and_relationship_navigation():
     app = _open_manual(_start_app())
-    app.radio(key="manual_section").set_value("专业知识库").run()
+    app.selectbox(key="manual_section").set_value("专业知识库").run()
     category = app.selectbox(key="manual_category")
     assert len(category.options) == 8
     assert "市场与数据 · 10 篇" in _visible_text(app)
@@ -95,7 +95,7 @@ def test_professional_categories_article_status_and_relationship_navigation():
     assert "#### 建议下一篇" in text
     _widget(app, "button", "证券身份与代码规范化 / Instrument Identity and Symbol Normalization").click().run()
     assert "证券身份" in _visible_text(app)
-    _widget(app, "button", "← 返回专业知识库目录").click().run()
+    _widget(app, "button", "← 返回知识库目录").click().run()
     assert app.selectbox(key="manual_category")
 
 
@@ -104,15 +104,58 @@ def test_local_search_covers_english_alias_body_and_empty_state():
     search = _widget(app, "text_input", "搜索手册与专业知识")
 
     search.input("Next-Open Execution").run()
-    assert _widget(app, "button", "词条 · 下一交易日开盘成交 / Next-Open Execution")
-    _widget(app, "button", "清除搜索").click().run()
+    assert _widget(app, "button", "下一交易日开盘成交 / Next-Open Execution")
+    _widget(app, "button", "← 返回当前分区").click().run()
 
     _widget(app, "text_input", "搜索手册与专业知识").input("价量数据").run()
-    _widget(app, "button", "词条 · 开高低收与成交量 / OHLCV").click().run()
+    _widget(app, "button", "开高低收与成交量 / OHLCV").click().run()
     assert "软件状态：软件已实现" in _visible_text(app)
 
     _widget(app, "text_input", "搜索手册与专业知识").input("绝对不存在的检索词xyz").run()
     assert "没有找到匹配内容" in _visible_text(app)
+
+
+def test_search_shows_twelve_ranked_cards_then_expands():
+    app = _open_manual(_start_app())
+    _widget(app, "text_input", "搜索手册与专业知识").input("复权").run()
+
+    result_buttons = [
+        button for button in app.button
+        if button.key and button.key.startswith(("manual_search_page_", "manual_search_article_"))
+    ]
+    assert len(result_buttons) == 12
+    assert result_buttons[0].label == "价格复权 / Price Adjustment"
+    assert "最相关" in _visible_text(app)
+    _widget(app, "button", next(button.label for button in app.button if button.key == "manual_search_more")).click().run()
+    expanded = [
+        button for button in app.button
+        if button.key and button.key.startswith(("manual_search_page_", "manual_search_article_"))
+    ]
+    assert len(expanded) > 12
+
+
+def test_search_result_back_restores_results_then_origin():
+    app = _open_manual(_start_app())
+    _widget(app, "text_input", "搜索手册与专业知识").input("OHLCV").run()
+    _widget(app, "button", "开高低收与成交量 / OHLCV").click().run()
+
+    assert _widget(app, "button", "← 返回搜索结果")
+    _widget(app, "button", "← 返回搜索结果").click().run()
+    assert _widget(app, "text_input", "搜索手册与专业知识").value == "OHLCV"
+    _widget(app, "button", "← 返回当前分区").click().run()
+    assert _widget(app, "text_input", "搜索手册与专业知识").value == ""
+    assert "快速开始：从资料库到第一份可复现实验" in _visible_text(app)
+
+
+def test_manual_related_term_opens_article_directly():
+    app = _open_manual(_start_app())
+    _widget(
+        app, "button",
+        "证券身份与代码规范化 / Instrument Identity and Symbol Normalization",
+    ).click().run()
+
+    assert app.session_state["manual_article_id"] == "instrument_identity"
+    assert "使用手册 / 专业知识库 / 市场与数据 / 证券身份与代码规范化" in _visible_text(app)
 
 
 def test_all_four_software_statuses_render_accurately():

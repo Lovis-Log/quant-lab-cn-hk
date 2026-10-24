@@ -162,8 +162,6 @@
 - `lot_size_and_fractional_shares` 整手与碎股
 - `lookahead_bias` 前视偏差
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P003` docs/METHODOLOGY.md：信号、下一开盘成交、费用、滑点、基准、样本内外和指标定义。

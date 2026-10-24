@@ -106,6 +106,30 @@ def test_searches_plain_text_body_and_can_filter_category():
     assert library.search_manuals("   ") == ()
 
 
+def test_ranked_search_prefers_exact_terms_and_returns_explanations():
+    library = load_manual_content()
+
+    adjustment = library.search("复权")
+    assert adjustment[0].item_id == "price_adjustment"
+    assert adjustment[0].kind == "article"
+    assert adjustment[0].match_reason == "标题或别名完全匹配"
+    assert adjustment[0].excerpt
+    assert library.search("Next-Open Execution")[0].item_id == "next_open_execution"
+    assert library.search("复权") == adjustment  # Stable ordering across calls.
+
+
+def test_all_manual_related_terms_are_parsed_and_resolve():
+    library = load_manual_content()
+    article_ids = {article.id for article in library.articles}
+
+    assert all(page.related_articles for page in library.manuals)
+    assert all(set(page.related_articles) <= article_ids for page in library.manuals)
+    assert all("相关词条正文将在后续批次提供" not in page.body + page.footer
+               for page in library.manuals)
+    assert "instrument_identity" in library.get_manual("quick_start").related_articles
+    assert library.get_manual("quick_start").footer.startswith("## 参考资料")
+
+
 def test_all_prerequisites_and_related_articles_resolve():
     library = load_manual_content()
     ids = {article.id for article in library.articles}
@@ -147,6 +171,15 @@ def test_missing_related_article_fails(tmp_path):
     _replace(article, "prerequisites: [instrument_identity]", "prerequisites: [missing_article]")
 
     with pytest.raises(ContentValidationError, match="不存在的文章 ID：missing_article"):
+        load_manual_content(root)
+
+
+def test_missing_manual_related_term_fails(tmp_path):
+    root = _content_copy(tmp_path)
+    manual = root / "manual" / "quick_start.md"
+    _replace(manual, "`instrument_identity`", "`missing_manual_term`")
+
+    with pytest.raises(ContentValidationError, match="相关术语引用了不存在的文章 ID"):
         load_manual_content(root)
 
 

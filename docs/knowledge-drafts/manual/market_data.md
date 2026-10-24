@@ -167,8 +167,6 @@
 - `cache_and_freshness` 缓存与新鲜度
 - `data_quality_and_bias` 数据质量与偏差
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `S001` AKShare 股票数据文档：A 股 `stock_zh_a_hist_tx`、港股 `stock_hk_hist` 与 `stock_hk_daily` 的接口和字段。

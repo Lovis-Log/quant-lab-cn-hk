@@ -395,7 +395,7 @@ def _toggle_deepseek_panel() -> None:
     opening = not st.session_state.get("deepseek_panel_open", False)
     st.session_state["deepseek_panel_open"] = opening
     if opening:
-        st.session_state.setdefault("ai_workspace", "对话与辅导")
+        st.session_state["ai_workspace"] = "对话与辅导"
 
 
 def _toggle_manual_panel() -> None:

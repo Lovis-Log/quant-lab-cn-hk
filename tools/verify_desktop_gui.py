@@ -135,9 +135,11 @@ def main():
                         "快速开始：从资料库到第一份可复现实验", exact=True
                     ).wait_for(timeout=10000)
                     manual_navigation = manual_panel.get_by_role(
-                        "radiogroup", name="使用手册分区", exact=True
+                        "combobox", name="当前分区", exact=True
                     )
-                    manual_navigation.get_by_text("功能说明", exact=True).click()
+                    manual_navigation.click()
+                    manual_navigation.fill("功能说明")
+                    manual_navigation.press("Enter")
                     settle(page)
                     manual_panel.get_by_role(
                         "button", name="市场数据：代码、名称、区间、复权、来源与缓存", exact=True
@@ -145,19 +147,39 @@ def main():
                     settle(page)
                     manual_panel.get_by_text("加载真实历史日线", exact=False).first.wait_for(timeout=10000)
                     manual_navigation = manual_panel.get_by_role(
-                        "radiogroup", name="使用手册分区", exact=True
+                        "combobox", name="当前分区", exact=True
                     )
-                    manual_navigation.get_by_text("专业知识库", exact=True).click()
+                    manual_navigation.click()
+                    manual_navigation.fill("专业知识库")
+                    manual_navigation.press("Enter")
                     settle(page)
                     manual_panel.get_by_role("button", name="开高低收与成交量 / OHLCV", exact=True).click()
                     settle(page)
                     manual_panel.get_by_text("软件状态：软件已实现", exact=True).wait_for(timeout=10000)
                     manual_search = manual_panel.get_by_label("搜索手册与专业知识", exact=True)
+                    manual_search.fill("复权")
+                    manual_search.press("Enter")
+                    settle(page)
+                    search_cards = manual_panel.locator('[class*="st-key-manual_search_card_"]')
+                    assert search_cards.count() == 12
+                    first_card = search_cards.nth(0).bounding_box()
+                    second_card = search_cards.nth(1).bounding_box()
+                    assert first_card and second_card
+                    assert abs(first_card["y"] - second_card["y"]) <= 3
+                    assert abs(first_card["width"] - second_card["width"]) <= 3
+                    panel_body = manual_panel.locator(".st-key-manual_panel_body")
+                    panel_body.evaluate("element => { element.scrollTop = 700; }")
+                    toolbar_box = manual_panel.locator(".st-key-manual_sticky_toolbar").bounding_box()
+                    body_box = panel_body.bounding_box()
+                    assert toolbar_box and body_box and toolbar_box["y"] < body_box["y"] + 4
+                    assert toolbar_box["y"] + toolbar_box["height"] > body_box["y"]
+                    panel_body.evaluate("element => { element.scrollTop = 0; }")
+                    manual_search = manual_panel.get_by_label("搜索手册与专业知识", exact=True)
                     manual_search.fill("Next-Open Execution")
                     manual_search.press("Enter")
                     settle(page)
                     search_result = manual_panel.get_by_role(
-                        "button", name="词条 · 下一交易日开盘成交 / Next-Open Execution", exact=True
+                        "button", name="下一交易日开盘成交 / Next-Open Execution", exact=True
                     )
                     search_result.wait_for(state="attached", timeout=10000)
                     search_result.scroll_into_view_if_needed()
@@ -171,7 +193,7 @@ def main():
                     manual_search.press("Enter")
                     settle(page)
                     manual_panel.get_by_role(
-                        "button", name="词条 · Python 函数 / Python Functions", exact=True
+                        "button", name="Python 函数 / Python Functions", exact=True
                     ).click()
                     settle(page)
                     expect(manual_panel.locator("pre code").first).to_be_visible(timeout=10000)
@@ -187,7 +209,11 @@ def main():
                 settle(page)
                 panel = page.locator(".st-key-deepseek_side_panel")
                 expect(panel).to_be_visible(timeout=10000)
-                expect(panel.get_by_text("连接与模型设置位于左上角 ⚙ → DeepSeek。", exact=True)).to_be_visible(timeout=10000)
+                expect(panel.get_by_label("问题（确认后发送）", exact=True)).to_be_visible(timeout=10000)
+                expect(panel.get_by_role("button", name="⚙ 设置", exact=True)).to_be_visible(timeout=10000)
+                assert panel.get_by_text(
+                    "连接与模型设置位于左上角 ⚙ → DeepSeek。", exact=True
+                ).count() == 0
                 manual_box = manual_panel.bounding_box()
                 deepseek_box = panel.bounding_box()
                 assert manual_box and deepseek_box and manual_box["x"] < deepseek_box["x"]
@@ -546,11 +572,13 @@ def main():
                 assert sidebar.get_by_text("新手使用指引", exact=True).count() == 0
                 page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
                 settle(page)
-                page.get_by_role("radiogroup", name="AI 工作区", exact=True).get_by_text("对话与辅导", exact=True).click()
-                settle(page)
                 assert sidebar.get_by_label("DeepSeek API Key", exact=True).count() == 0
                 summary["deepseek_in_right_panel"] = True
                 deepseek_panel = page.locator(".st-key-deepseek_side_panel")
+                expect(deepseek_panel.get_by_label("问题（确认后发送）", exact=True)).to_be_visible(timeout=10000)
+                expect(deepseek_panel.get_by_role("button", name="⚙ 设置", exact=True)).to_be_visible(timeout=10000)
+                expect(deepseek_panel.get_by_role("button", name="研究实验", exact=True)).to_be_visible(timeout=10000)
+                assert deepseek_panel.get_by_role("radiogroup", name="AI 工作区", exact=True).count() == 0
                 page.get_by_role("button", name="⚙", exact=True).click()
                 settle(page)
                 settings_panel = page.locator(".st-key-settings_panel")
@@ -581,14 +609,16 @@ def main():
                     settle(page)
                     page.get_by_text("实际模型：mock-b-actual", exact=True).wait_for(timeout=20000)
                     assert "STREAM_DONE" in page.inner_text("body")
-                    page.get_by_role("button", name="保存选定回答到学习笔记", exact=True).click()
+                    deepseek_panel.get_by_role("button", name="⚙ 设置", exact=True).click()
                     settle(page)
-                    page.get_by_text("学习笔记 #", exact=False).wait_for(timeout=10000)
+                    page.get_by_role("button", name="保存选定回答到研究笔记", exact=True).click()
+                    settle(page)
+                    page.get_by_text("研究笔记 #", exact=False).wait_for(timeout=10000)
                     summary.update({"model_switch": True, "streamed_answer": True, "answer_saved": True})
                     if args.research_fixes:
                         page.get_by_role("button", name="加载真实历史日线", exact=True).click()
                         settle(page)
-                        page.get_by_role("radiogroup", name="AI 工作区", exact=True).get_by_text("研究实验", exact=True).click()
+                        deepseek_panel.get_by_role("button", name="研究实验", exact=True).click()
                         settle(page)
                         page.get_by_text("DeepSeek 量化研究助手", exact=True).wait_for(timeout=10000)
                         assert "OPENAI_API_KEY" not in page.inner_text("body")

@@ -146,8 +146,6 @@
 - `overfitting` 过拟合
 - `reproducibility_and_audit` 可复现性与审计
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P001` Quant Lab CN/HK README：安装、启动、资料库与使用方法。

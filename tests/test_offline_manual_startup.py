@@ -21,7 +21,7 @@ def test_offline_startup_opens_manual_and_academy(monkeypatch, tmp_path):
 
     assert not app.exception
     assert app.session_state["manual_panel_open"] is True
-    assert app.radio(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
+    assert app.selectbox(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
     assert any("快速开始：从资料库到第一份可复现实验" in item.value for item in app.subheader)
 
     app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()

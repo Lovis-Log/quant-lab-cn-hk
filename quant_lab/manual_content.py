@@ -80,7 +80,10 @@ class ManualPage:
     id: str
     title: str
     body: str
+    related_articles: tuple[str, ...]
+    footer: str
     source_path: Path
+    summary: str
     search_text: str
 
 
@@ -99,7 +102,21 @@ class KnowledgeArticle:
     last_verified: date
     body: str
     source_path: Path
+    summary: str
     search_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ContentSearchResult:
+    kind: str
+    item_id: str
+    title: str
+    english_title: str
+    category: str | None
+    software_status: str | None
+    score: int
+    match_reason: str
+    excerpt: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +131,12 @@ class ManualContentLibrary:
         manual_by_id = _unique_index(self.manuals, "手册")
         article_by_id = _unique_index(self.articles, "专业文章")
         article_ids = set(article_by_id)
+        for page in self.manuals:
+            missing = [reference for reference in page.related_articles if reference not in article_ids]
+            if missing:
+                raise ContentValidationError(
+                    f"{page.source_path}: 相关术语引用了不存在的文章 ID：{', '.join(missing)}"
+                )
         for article in self.articles:
             for field_name, references in (
                 ("prerequisites", article.prerequisites),
@@ -175,6 +198,60 @@ class ManualContentLibrary:
             for page in self.manuals
             if all(term in page.search_text for term in terms)
         )
+
+    def search(self, query: str) -> tuple[ContentSearchResult, ...]:
+        normalized_query = _normalize_search_text(query)
+        terms = normalized_query.split()
+        if not terms:
+            return ()
+        results: list[tuple[ContentSearchResult, int, int]] = []
+        for index, article in enumerate(self.articles):
+            if not all(term in article.search_text for term in terms):
+                continue
+            score, reason, excerpt = _rank_match(
+                normalized_query,
+                terms,
+                article.id,
+                (article.title, article.english_title, *article.aliases),
+                article.summary,
+                article.body,
+            )
+            results.append((ContentSearchResult(
+                kind="article",
+                item_id=article.id,
+                title=article.title,
+                english_title=article.english_title,
+                category=article.category,
+                software_status=article.software_status,
+                score=score,
+                match_reason=reason,
+                excerpt=excerpt,
+            ), 0, index))
+        for index, page in enumerate(self.manuals):
+            if not all(term in page.search_text for term in terms):
+                continue
+            score, reason, excerpt = _rank_match(
+                normalized_query,
+                terms,
+                page.id,
+                (page.title,),
+                page.summary,
+                "\n".join((page.body, page.footer)),
+            )
+            results.append((ContentSearchResult(
+                kind="manual",
+                item_id=page.id,
+                title=page.title,
+                english_title="",
+                category=None,
+                software_status=None,
+                score=score,
+                match_reason=reason,
+                excerpt=excerpt,
+            ), 1, index))
+        return tuple(item for item, _, _ in sorted(
+            results, key=lambda value: (-value[0].score, value[1], value[2])
+        ))
 
 
 def content_root() -> Path:
@@ -251,15 +328,22 @@ def parse_manual_page(path: Path) -> ManualPage:
     if not match:
         raise ContentValidationError(f"{path}: 手册首行必须是一级标题。")
     title = match.group(1).strip()
-    body = "\n".join(lines[1:]).strip()
+    raw_body = "\n".join(lines[1:]).strip()
+    body, related_articles, footer = _split_manual_related(raw_body, path)
     if not body:
         raise ContentValidationError(f"{path}: 手册正文为空。")
+    summary = _section_paragraph(body, "这一页是做什么的")
     return ManualPage(
         id=path.stem,
         title=title,
         body=body,
+        related_articles=related_articles,
+        footer=footer,
         source_path=path.resolve(),
-        search_text=_normalize_search_text(f"{title}\n{_markdown_to_text(body)}"),
+        summary=summary,
+        search_text=_normalize_search_text(
+            f"{title}\n{' '.join(related_articles)}\n{_markdown_to_text(body)}\n{_markdown_to_text(footer)}"
+        ),
     )
 
 
@@ -300,6 +384,7 @@ def parse_knowledge_article(path: Path) -> KnowledgeArticle:
             f"{path}: last_verified 必须是 YYYY-MM-DD 日期。"
         ) from exc
 
+    summary = _section_paragraph(body, "一句话解释")
     searchable = "\n".join(
         (scalars["title"], scalars["english_title"], *lists["aliases"], _markdown_to_text(body))
     )
@@ -317,8 +402,112 @@ def parse_knowledge_article(path: Path) -> KnowledgeArticle:
         last_verified=last_verified,
         body=body,
         source_path=path.resolve(),
+        summary=summary,
         search_text=_normalize_search_text(searchable),
     )
+
+
+def _split_manual_related(body: str, path: Path) -> tuple[str, tuple[str, ...], str]:
+    lines = body.splitlines()
+    try:
+        start = next(index for index, line in enumerate(lines) if line.strip() == "## 相关术语")
+    except StopIteration as exc:
+        raise ContentValidationError(f"{path}: 手册缺少“相关术语”区段。") from exc
+    end = next(
+        (index for index in range(start + 1, len(lines)) if lines[index].startswith("## ")),
+        len(lines),
+    )
+    related: list[str] = []
+    for line_number, line in enumerate(lines[start + 1:end], start=start + 2):
+        match = re.fullmatch(r"\s*-\s+`([a-z0-9_]+)`(?:\s+.+)?\s*", line)
+        if match:
+            related.append(match.group(1))
+        elif line.strip() and not line.startswith("相关词条正文将在后续批次提供"):
+            raise ContentValidationError(f"{path}:{line_number}: 相关术语行格式无效。")
+    if not related:
+        raise ContentValidationError(f"{path}: 相关术语不得为空。")
+    return (
+        "\n".join(lines[:start]).strip(),
+        tuple(related),
+        "\n".join(lines[end:]).strip(),
+    )
+
+
+def _section_paragraph(markdown: str, heading: str) -> str:
+    lines = markdown.splitlines()
+    start = next(
+        (index for index, line in enumerate(lines) if line.lstrip("# ").strip() == heading),
+        -1,
+    )
+    candidates = lines[start + 1:] if start >= 0 else lines
+    paragraph: list[str] = []
+    for line in candidates:
+        stripped = line.strip()
+        if not stripped:
+            if paragraph:
+                break
+            continue
+        if stripped.startswith("#"):
+            if paragraph:
+                break
+            continue
+        if stripped.startswith(("- ", "|", "```")):
+            if paragraph:
+                break
+            continue
+        paragraph.append(stripped)
+    summary = _markdown_to_text(" ".join(paragraph))
+    if summary:
+        return summary
+    plain = _markdown_to_text(markdown)
+    return plain[:180] + ("…" if len(plain) > 180 else "")
+
+
+def _rank_match(
+    query: str,
+    terms: list[str],
+    item_id: str,
+    metadata_fields: tuple[str, ...],
+    summary: str,
+    body: str,
+) -> tuple[int, str, str]:
+    normalized_id = _normalize_search_text(item_id)
+    normalized_fields = tuple(_normalize_search_text(value) for value in metadata_fields)
+    normalized_summary = _normalize_search_text(summary)
+    plain_body = _markdown_to_text(body)
+    normalized_body = _normalize_search_text(plain_body)
+    if query == normalized_id or query in normalized_fields:
+        score, reason = 1000, "标题或别名完全匹配"
+    elif any(field.startswith(query) for field in normalized_fields):
+        score, reason = 820, "标题或别名开头匹配"
+    elif any(query in field for field in normalized_fields):
+        score, reason = 720, "标题或别名匹配"
+    elif query in normalized_summary:
+        score, reason = 460, "核心解释匹配"
+    else:
+        score, reason = 220, "正文匹配"
+    for term in terms:
+        if term == normalized_id or any(term in field for field in normalized_fields):
+            score += 30
+        elif term in normalized_summary:
+            score += 12
+        else:
+            score += min(normalized_body.count(term), 5)
+    score += min(normalized_body.count(query), 5)
+    excerpt = summary
+    if query not in normalized_summary and query in normalized_body:
+        excerpt = _matching_excerpt(plain_body, query)
+    return score, reason, excerpt
+
+
+def _matching_excerpt(text: str, normalized_query: str) -> str:
+    normalized_text = _normalize_search_text(text)
+    position = normalized_text.find(normalized_query)
+    if position < 0:
+        return text[:180] + ("…" if len(text) > 180 else "")
+    start = max(0, position - 55)
+    end = min(len(text), position + len(normalized_query) + 105)
+    return ("…" if start else "") + text[start:end].strip() + ("…" if end < len(text) else "")
 
 
 def _split_frontmatter(text: str, path: Path) -> tuple[dict[str, str], str]:

@@ -50,6 +50,34 @@ def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     assert app.session_state["maximized_panel"] is None
 
 
+def test_deepseek_opens_chat_first_and_research_returns_without_model_call(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    calls = []
+
+    class NeverCalled:
+        def __init__(self, *args, **kwargs):
+            calls.append("client")
+
+    monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", NeverCalled)
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+
+    assert app.session_state["ai_workspace"] == "对话与辅导"
+    assert widget(app, "text_area", "问题（确认后发送）")
+    assert widget(app, "button", "研究实验")
+    assert not [radio for radio in app.radio if radio.label == "AI 工作区"]
+    widget(app, "button", "研究实验").click().run()
+    assert app.session_state["ai_workspace"] == "研究实验"
+    assert widget(app, "button", "← 返回对话")
+    widget(app, "button", "← 返回对话").click().run()
+    assert app.session_state["ai_workspace"] == "对话与辅导"
+    assert calls == []
+
+    app.button(key="deepseek_panel_close").click().run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    assert app.session_state["ai_workspace"] == "对话与辅导"
+
+
 def test_left_sidebar_launcher_does_not_change_open_panels(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
@@ -104,7 +132,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     assert not any(w.label == "DeepSeek API Key" for w in app.text_input)
     assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
     widget(app,"button","DeepSeek 助手").click().run()
-    widget(app,"radio","AI 工作区").set_value("对话与辅导").run()
+    assert app.session_state["ai_workspace"] == "对话与辅导"
     widget(app,"button","⚙").click().run()
     widget(app,"text_input","DeepSeek API Key").input("sk-only-ui-mock-secret").run()
     widget(app,"button","测试连接").click().run()
@@ -125,7 +153,8 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     assert not app.exception and len(calls) == 2 and calls[-1]["model"] == "beta"
     assert calls[-1]["history"] == []  # New lesson context, old stock messages retained only for display.
     assert "notes" not in calls[-1]["context"]
-    widget(app,"selectbox","选择回答保存为研究笔记").set_value(1).run()
+    answer_picker = widget(app,"selectbox","选择回答保存为研究笔记")
+    answer_picker.set_value(answer_picker.options[1]).run()
     widget(app,"button","保存选定回答到研究笔记").click().run()
     saved = storage.list_learning_notes(tmp_path / "research.sqlite3")[0]
     assert saved["model"] == "beta-actual"
@@ -177,7 +206,7 @@ def test_research_workspace_points_to_actual_connection_location(tmp_path, monke
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
-    widget(app, "radio", "AI 工作区").set_value("研究实验").run()
+    widget(app, "button", "研究实验").click().run()
     text = "\n".join(str(item.value) for item in (*app.caption, *app.info))
 
     assert "⚙ → DeepSeek" in text

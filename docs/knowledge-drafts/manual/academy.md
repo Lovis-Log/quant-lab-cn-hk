@@ -163,8 +163,6 @@ Quant Academy 是内置的金融数学实验室：用固定、可手算的教学
 - `correlation` 相关系数
 - `overfitting` 过拟合
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P003` docs/METHODOLOGY.md：指标定义、年化近似和回测边界。

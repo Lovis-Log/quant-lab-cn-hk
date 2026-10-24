@@ -177,8 +177,6 @@
 - `data_quality_and_bias` 数据质量与偏差
 - `overfitting` 过拟合
 
-相关词条正文将在后续批次提供；这里的 ID 与总目录一致。
-
 ## 参考资料
 
 - `P002` ARCHITECTURE.md：笔记、附件、实验档案、复算和迁移边界。

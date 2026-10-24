@@ -55,7 +55,7 @@ def test_research_actions_run_from_loaded_history() -> None:
             assert not app.exception, page
             assert not app.get("error"), page
         next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
-        next(item for item in app.get("radio") if item.label == "AI 工作区").set_value("研究实验").run()
+        next(item for item in app.get("button") if item.label == "研究实验").click().run()
         next(item for item in app.get("button") if item.label == "运行受控实验（内置策略）").click().run()
         assert not app.exception
         assert not app.get("error")
