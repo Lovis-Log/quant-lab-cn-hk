@@ -13,7 +13,7 @@ from quant_lab.strategy import STRATEGY_NAMES, StrategySpec, build_signals
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
 from quant_lab.storage import save_experiment
 from quant_lab import names
-from quant_lab.ui_knowledge import render_knowledge
+from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
 from dataclasses import asdict
 
 
@@ -181,14 +181,19 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
         cols[3].metric("夏普比率", "—" if result.full_stats.sharpe is None else f"{result.full_stats.sharpe:.2f}")
         st.caption(f"同成本买入并持有基准：{result.benchmark_stats.cumulative_return:+.2%}；实验指纹：`{result.audit_id}`。这些是模型结果，不是可实现收益。")
         if st.session_state.get("learning_mode", True):
-            render_knowledge("drawdown", result.full_stats.max_drawdown, key="backtest", observations=len(bundle.frame))
-            render_knowledge("sharpe", result.full_stats.sharpe, key="backtest", observations=len(bundle.frame))
-            render_knowledge("volatility", result.full_stats.annualized_volatility, key="backtest")
-            render_knowledge("annual_return", result.full_stats.annualized_return, key="backtest", observations=len(bundle.frame))
-            render_knowledge("benchmark", result.benchmark_stats.cumulative_return, key="backtest")
-            render_knowledge("costs", key="backtest")
-            render_knowledge("slippage", config.slippage_bps, key="backtest")
-            render_knowledge("bias", key="backtest")
+            render_knowledge_group(
+                (
+                    KnowledgePoint("drawdown", result.full_stats.max_drawdown, observations=len(bundle.frame)),
+                    KnowledgePoint("sharpe", result.full_stats.sharpe, observations=len(bundle.frame)),
+                    KnowledgePoint("volatility", result.full_stats.annualized_volatility),
+                    KnowledgePoint("annual_return", result.full_stats.annualized_return, observations=len(bundle.frame)),
+                    KnowledgePoint("benchmark", result.benchmark_stats.cumulative_return),
+                    KnowledgePoint("costs"),
+                    KnowledgePoint("slippage", config.slippage_bps),
+                    KnowledgePoint("bias"),
+                ),
+                key="backtest",
+            )
     figure = go.Figure()
     figure.add_trace(go.Scatter(
         x=result.strategy.equity["date"],

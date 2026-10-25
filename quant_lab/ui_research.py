@@ -43,6 +43,15 @@ def _load_editor(note_id: int | None = None) -> None:
         st.session_state["note_editor_title"] = record["title"]
         st.session_state["note_editor_content"] = record["content"]
         st.session_state["note_editor_category"] = record.get("category_id") or notes.UNCATEGORIZED_ID
+        st.session_state["note_editor_scroll_pending"] = True
+    _autosave_draft(st.session_state["note_editor_draft_id"])
+
+
+def _new_note() -> None:
+    draft_id = st.session_state.get("note_editor_draft_id")
+    if draft_id:
+        _autosave_draft(draft_id)
+    _load_editor()
 
 
 def _insert_attachment(draft_id: str, attachment_id: str, original_name: str) -> None:
@@ -120,11 +129,14 @@ def _render_editor(categories: list[dict]) -> None:
             _load_editor()
     draft_id = st.session_state["note_editor_draft_id"]
     note_id = st.session_state.get("note_editor_note_id")
+    if st.session_state.pop("note_editor_scroll_pending", False):
+        st.html(
+            '<script>(()=>{const body=document.querySelector(".st-key-notes_panel_body");'
+            'if(body)requestAnimationFrame(()=>body.scrollTo({top:0,behavior:"smooth"}));})();</script>',
+            unsafe_allow_javascript=True,
+        )
     st.text_input("笔记标题", key="note_editor_title", on_change=_autosave_draft, args=(draft_id,))
-    st.selectbox("笔记分类", list(by_id), key="note_editor_category",
-                 format_func=lambda value: _category_label(by_id[value]),
-                 on_change=_autosave_draft, args=(draft_id,))
-    st.text_area("Markdown 正文", key="note_editor_content", height=260,
+    st.text_area("Markdown 正文", key="note_editor_content", height=360,
                  on_change=_autosave_draft, args=(draft_id,),
                  help="字段变化时自动保存草稿；点击保存后写入正式笔记。")
     draft_key = json.dumps(f"quantlab.noteDraft.{draft_id}")
@@ -164,28 +176,7 @@ def _render_editor(categories: list[dict]) -> None:
     }})();
     </script>
     """, unsafe_allow_javascript=True)
-    uploads = st.file_uploader("添加附件", accept_multiple_files=True,
-        type=[ext[1:] for ext in sorted(notes.ALLOWED_EXTENSIONS)], key="note_attachment_upload")
-    if st.button("保存所选附件到草稿", disabled=not uploads, key="note_attachment_save"):
-        try:
-            _autosave_draft(draft_id)
-            for uploaded in uploads:
-                notes.save_attachment(uploaded.getvalue(), uploaded.name, draft_id=draft_id)
-            st.success("附件已复制到托管资料目录。")
-            st.rerun()
-        except (OSError, ValueError, sqlite3.Error) as exc:
-            st.error(str(exc))
-    attachments = notes.list_attachments(draft_id=draft_id)
-    if note_id:
-        attachments = notes.list_attachments(note_id=note_id) + attachments
-    for item in attachments:
-        row = st.columns([4, 1])
-        row[0].caption(f"📎 {item['original_name']} · {item['size_bytes']/1024:.1f} KB")
-        if Path(item["original_name"]).suffix.lower() in notes.IMAGE_EXTENSIONS:
-            row[1].button("插入", key=f"insert_attachment_{item['id']}",
-                          on_click=_insert_attachment,
-                          args=(draft_id, item["id"], item["original_name"]))
-    save_col, new_col, discard_col = st.columns(3)
+    save_col, new_col = st.columns(2)
     if save_col.button("保存笔记", key="note_save", width="stretch"):
         try:
             saved = notes.save_note(
@@ -201,19 +192,41 @@ def _render_editor(categories: list[dict]) -> None:
             st.rerun()
         except (OSError, ValueError, sqlite3.Error, KeyError) as exc:
             st.error(str(exc))
-    new_col.button("新笔记", key="note_new", width="stretch", on_click=_load_editor)
-    discard_col.button("放弃草稿", key="note_discard", width="stretch",
-                       on_click=_discard_and_reset, args=(draft_id,))
+    new_col.button("新建笔记", key="note_new", width="stretch", on_click=_new_note)
     if st.session_state.get("note_editor_error"):
         st.warning(st.session_state.pop("note_editor_error"))
-    with st.expander("Markdown 预览"):
+    with st.expander("笔记选项与附件", expanded=False):
+        st.selectbox("笔记分类", list(by_id), key="note_editor_category",
+                     format_func=lambda value: _category_label(by_id[value]),
+                     on_change=_autosave_draft, args=(draft_id,))
+        uploads = st.file_uploader("添加附件", accept_multiple_files=True,
+            type=[ext[1:] for ext in sorted(notes.ALLOWED_EXTENSIONS)], key="note_attachment_upload")
+        if st.button("保存所选附件到草稿", disabled=not uploads, key="note_attachment_save"):
+            try:
+                _autosave_draft(draft_id)
+                for uploaded in uploads:
+                    notes.save_attachment(uploaded.getvalue(), uploaded.name, draft_id=draft_id)
+                st.success("附件已复制到托管资料目录。")
+                st.rerun()
+            except (OSError, ValueError, sqlite3.Error) as exc:
+                st.error(str(exc))
+        attachments = notes.list_attachments(draft_id=draft_id)
+        if note_id:
+            attachments = notes.list_attachments(note_id=note_id) + attachments
+        for item in attachments:
+            row = st.columns([4, 1])
+            row[0].caption(f"📎 {item['original_name']} · {item['size_bytes']/1024:.1f} KB")
+            if Path(item["original_name"]).suffix.lower() in notes.IMAGE_EXTENSIONS:
+                row[1].button("插入", key=f"insert_attachment_{item['id']}",
+                              on_click=_insert_attachment,
+                              args=(draft_id, item["id"], item["original_name"]))
+        st.markdown("#### Markdown 预览")
         _render_markdown(st.session_state.get("note_editor_content", ""), attachments)
+        st.button("放弃草稿", key="note_discard", width="stretch",
+                  on_click=_discard_and_reset, args=(draft_id,))
 
 
-def render_research_notes() -> dict | None:
-    st.subheader("研究笔记与实验档案")
-    categories = notes.list_categories()
-    _render_categories(categories)
+def _render_library(categories: list[dict]) -> dict | None:
     search_col, type_col = st.columns([2, 1])
     query = search_col.text_input("搜索标题、正文或假设", key="library_search")
     kind = type_col.selectbox("内容类型", ("全部", "笔记", "实验"), key="library_kind")
@@ -225,8 +238,6 @@ def render_research_notes() -> dict | None:
     items = notes.list_library_items(query=query, category_id=category, kind=kind, trashed=trashed)
     if not items:
         st.info("没有符合条件的笔记或实验。")
-        if not trashed:
-            _render_editor(categories)
         return None
     chosen = st.selectbox("选择内容", range(len(items)),
                           format_func=lambda index: f"{items[index]['kind']} · {items[index]['title']}",
@@ -250,8 +261,9 @@ def render_research_notes() -> dict | None:
     if action_cols[0].button("移到回收站", key="item_trash"):
         notes.trash_item(item["kind"], item["id"]); st.rerun()
     if item["kind"] == "笔记":
-        if action_cols[1].button("编辑", key="item_edit"):
-            _load_editor(item["id"]); st.rerun()
+        action_cols[1].button(
+            "编辑", key="item_edit", on_click=_load_editor, args=(item["id"],)
+        )
         note = notes.get_note(item["id"])
         attachments = notes.list_attachments(note_id=item["id"])
         _render_markdown(note["content"], attachments)
@@ -261,7 +273,6 @@ def render_research_notes() -> dict | None:
                 key=f"download_attachment_{attachment['id']}")
         st.download_button("导出笔记与附件 ZIP", notes.export_note_zip(item["id"]),
                            file_name=f"note-{item['id']}.zip", mime="application/zip")
-        _render_editor(categories)
         return note
     try:
         record = get_experiment(item["id"])
@@ -281,6 +292,15 @@ def render_research_notes() -> dict | None:
         except ValueError as exc:
             st.error(f"复算失败：{exc}")
     return record
+
+
+def render_research_notes() -> dict | None:
+    categories = notes.list_categories()
+    _render_editor(categories)
+    with st.expander("浏览笔记与实验", expanded=False):
+        selected = _render_library(categories)
+    _render_categories(categories)
+    return selected
 
 
 def _close_panel() -> None:

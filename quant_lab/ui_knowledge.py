@@ -1,5 +1,8 @@
 """Shared knowledge entry used by metrics, Academy and the AI prompt draft."""
 
+from dataclasses import dataclass
+from typing import Sequence
+
 import streamlit as st
 
 from quant_lab.knowledge import KNOWLEDGE, interpret
@@ -21,6 +24,18 @@ ARTICLE_BY_TOPIC = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class KnowledgePoint:
+    """One explanation inside a result-local knowledge group."""
+
+    topic: str
+    value: object = None
+    observations: int | None = None
+    period: str = "所选样本区间"
+    expanded: bool = False
+    current_reading: str | None = None
+
+
 def render_knowledge(
     topic: str,
     value=None,
@@ -31,6 +46,8 @@ def render_knowledge(
     expanded=False,
     current_reading: str | None = None,
 ):
+    if not st.session_state.get("learning_mode", True):
+        return
     item = KNOWLEDGE[topic]
     with st.expander(f"知识解释：{item.title}", expanded=expanded):
         for label, content in (("是什么", item.definition), ("刻画什么", item.feature),
@@ -57,3 +74,38 @@ def render_knowledge(
                 on_click=open_manual_article,
                 args=(article_id,),
             )
+
+
+def _toggle_knowledge_group(state_key: str) -> None:
+    st.session_state[state_key] = not st.session_state.get(state_key, False)
+
+
+def render_knowledge_group(
+    points: Sequence[KnowledgePoint],
+    *,
+    key: str,
+) -> None:
+    """Render at most two explanations until this result block is expanded."""
+    if not st.session_state.get("learning_mode", True) or not points:
+        return
+    state_key = f"knowledge_group_expanded_{key}"
+    expanded = st.session_state.get(state_key, False)
+    visible = points if expanded else points[:2]
+    for point in visible:
+        render_knowledge(
+            point.topic,
+            point.value,
+            key=key,
+            observations=point.observations,
+            period=point.period,
+            expanded=point.expanded,
+            current_reading=point.current_reading,
+        )
+    remaining = len(points) - 2
+    if remaining > 0:
+        st.button(
+            "收起详细解释" if expanded else f"显示更多（剩余 {remaining} 项）",
+            key=f"knowledge_group_toggle_{key}",
+            on_click=_toggle_knowledge_group,
+            args=(state_key,),
+        )

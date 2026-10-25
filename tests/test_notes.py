@@ -3,6 +3,7 @@
 from io import BytesIO
 import json
 from pathlib import Path
+import sqlite3
 from zipfile import ZipFile
 
 import pytest
@@ -76,3 +77,37 @@ def test_first_run_requires_library_setup(tmp_path, monkeypatch):
     assert not app.exception
     assert any("创建 Quant Lab 专用资料库" in item.value for item in app.get("html"))
     assert not app.sidebar.radio
+
+
+def test_notes_panel_opens_on_restored_editor_and_keeps_new_draft(monkeypatch, tmp_path):
+    data_dir = tmp_path / "notes-ui"
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(data_dir))
+    notes.save_draft("existing-draft", title="最近草稿", content="# 未完成正文")
+    note_id = notes.save_note(title="资料库笔记", content="已保存正文")
+
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    next(item for item in app.button if item.label == "研究笔记").click().run()
+
+    assert app.text_input(key="note_editor_title").value == "最近草稿"
+    assert app.text_area(key="note_editor_content").value == "# 未完成正文"
+    assert app.button(key="note_save").label == "保存笔记"
+    assert app.button(key="note_new").label == "新建笔记"
+    assert not [item for item in app.subheader if item.value == "研究笔记与实验档案"]
+    assert {item.label for item in app.expander} >= {
+        "笔记选项与附件", "浏览笔记与实验", "分类管理"
+    }
+
+    app.text_input(key="note_editor_title").input("更新中的草稿").run()
+    app.button(key="note_new").click().run()
+    assert app.text_input(key="note_editor_title").value == ""
+    assert app.text_area(key="note_editor_content").value == ""
+    with sqlite3.connect(paths.database_path()) as db:
+        drafts = db.execute("SELECT id,title FROM note_drafts ORDER BY updated_at").fetchall()
+    assert len(drafts) == 2
+    assert any(title == "更新中的草稿" for _, title in drafts)
+
+    app.button(key="item_edit").click().run()
+    assert app.session_state["note_editor_note_id"] == note_id
+    assert app.text_input(key="note_editor_title").value == "资料库笔记"
+    assert app.text_area(key="note_editor_content").value == "已保存正文"
+    assert any("scrollTo" in str(item.value) for item in app.get("html"))

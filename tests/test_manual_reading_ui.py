@@ -54,6 +54,7 @@ def test_manual_replaces_beginner_guidance_and_is_offline(monkeypatch):
 
 def test_detailed_explanation_setting_uses_product_label_only():
     app = _start_app()
+    assert [item for item in app.expander if item.label.startswith("知识解释：")]
     _widget(app, "button", "⚙").click().run()
 
     setting = app.toggle(key="learning_mode")
@@ -62,6 +63,10 @@ def test_detailed_explanation_setting_uses_product_label_only():
     setting.set_value(False).run()
     assert not app.exception
     assert app.session_state["learning_mode"] is False
+    assert app.session_state["settings_open"] is True
+    assert not [item for item in app.expander if item.label.startswith("知识解释：")]
+    app.toggle(key="learning_mode").set_value(True).run()
+    assert [item for item in app.expander if item.label.startswith("知识解释：")]
 
 
 def test_function_directory_opens_all_registered_manuals_and_returns():
@@ -75,7 +80,9 @@ def test_function_directory_opens_all_registered_manuals_and_returns():
     _widget(app, "button", "市场数据：代码、名称、区间、复权、来源与缓存").click().run()
     assert "使用手册 / 功能说明 / 市场数据" in _visible_text(app)
     assert "加载真实历史日线" in _visible_text(app)
-    _widget(app, "button", "← 返回功能目录").click().run()
+    back = app.button(key="manual_toolbar_back")
+    assert back.label == "← 返回" and back.help == "返回功能目录"
+    back.click().run()
     assert len([button for button in app.button if button.key and button.key.startswith("manual_index_")]) == 9
 
 
@@ -95,7 +102,9 @@ def test_professional_categories_article_status_and_relationship_navigation():
     assert "#### 建议下一篇" in text
     _widget(app, "button", "证券身份与代码规范化 / Instrument Identity and Symbol Normalization").click().run()
     assert "证券身份" in _visible_text(app)
-    _widget(app, "button", "← 返回知识库目录").click().run()
+    back = app.button(key="manual_toolbar_back")
+    assert back.label == "← 返回" and back.help == "返回知识库目录"
+    back.click().run()
     assert app.selectbox(key="manual_category")
 
 
@@ -105,7 +114,7 @@ def test_local_search_covers_english_alias_body_and_empty_state():
 
     search.input("Next-Open Execution").run()
     assert _widget(app, "button", "下一交易日开盘成交 / Next-Open Execution")
-    _widget(app, "button", "← 返回当前分区").click().run()
+    app.button(key="manual_toolbar_back").click().run()
 
     _widget(app, "text_input", "搜索手册与专业知识").input("价量数据").run()
     _widget(app, "button", "开高低收与成交量 / OHLCV").click().run()
@@ -139,10 +148,11 @@ def test_search_result_back_restores_results_then_origin():
     _widget(app, "text_input", "搜索手册与专业知识").input("OHLCV").run()
     _widget(app, "button", "开高低收与成交量 / OHLCV").click().run()
 
-    assert _widget(app, "button", "← 返回搜索结果")
-    _widget(app, "button", "← 返回搜索结果").click().run()
+    back = app.button(key="manual_toolbar_back")
+    assert back.label == "← 返回" and back.help == "返回搜索结果"
+    back.click().run()
     assert _widget(app, "text_input", "搜索手册与专业知识").value == "OHLCV"
-    _widget(app, "button", "← 返回当前分区").click().run()
+    app.button(key="manual_toolbar_back").click().run()
     assert _widget(app, "text_input", "搜索手册与专业知识").value == ""
     assert "快速开始：从资料库到第一份可复现实验" in _visible_text(app)
 

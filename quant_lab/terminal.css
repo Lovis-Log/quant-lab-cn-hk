@@ -93,6 +93,10 @@ header[data-testid="stHeader"] { display:none; }
 .st-key-manual_panel_body > div:has(> .st-key-manual_sticky_toolbar) { position:sticky; top:-14px; z-index:45; }
 .st-key-manual_sticky_toolbar { position:relative; margin:-14px -18px 14px; padding:12px 18px 10px; background:linear-gradient(180deg,#101A28 0%,#101A28 88%,rgba(16,26,40,.97) 100%); border-bottom:1px solid #293548; box-shadow:0 7px 14px rgba(5,9,16,.18); }
 .st-key-manual_sticky_toolbar [data-testid="stVerticalBlock"] { gap:.45rem; }
+.st-key-manual_sticky_toolbar [data-testid="stHorizontalBlock"] { align-items:center; flex-wrap:nowrap; gap:.35rem; }
+.st-key-manual_sticky_toolbar [data-testid="stColumn"] { min-width:0; }
+.st-key-manual_sticky_toolbar input { min-width:0; }
+.st-key-manual_toolbar_back button { min-width:54px; white-space:nowrap; padding-left:6px; padding-right:6px; }
 [class*="st-key-manual_search_card_"] { min-height:190px; background:#111B2A; }
 [class*="st-key-manual_search_card_"] button { min-height:42px; white-space:normal; text-align:left; justify-content:flex-start; line-height:1.35; }
 [class*="st-key-manual_search_card_"] [data-testid="stMarkdownContainer"] p { font-size:12px; line-height:1.55; color:#AEB9C9; }
@@ -111,6 +115,7 @@ header[data-testid="stHeader"] { display:none; }
 .st-key-deepseek_chat_toolbar { position:relative; margin:-14px -18px 10px; padding:10px 18px; background:#111927; border-bottom:1px solid #293548; }
 .st-key-deepseek_panel_body > div:has(> .st-key-deepseek_composer) { position:sticky; bottom:-28px; z-index:45; }
 .st-key-deepseek_composer { position:relative; margin:10px -18px -28px; padding:10px 18px 16px; background:linear-gradient(0deg,#111927 0%,#111927 88%,rgba(17,25,39,.97) 100%); border-top:1px solid #293548; box-shadow:0 -7px 14px rgba(5,9,16,.18); }
+.st-key-notes_panel_body textarea[aria-label="Markdown 正文"] { min-height:360px; }
 [data-testid="stAppViewContainer"]:has(.st-key-right_dock) [data-testid="stMain"] { padding-right:var(--ql-dock-total-width); }
 [data-testid="stAppViewContainer"]:has(.st-key-manual_side_panel):has(.st-key-deepseek_side_panel) .ql-header,
 [data-testid="stAppViewContainer"]:has(.st-key-manual_side_panel):has(.st-key-notes_side_panel) .ql-header,

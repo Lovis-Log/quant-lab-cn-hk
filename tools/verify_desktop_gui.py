@@ -160,6 +160,16 @@ def main():
                     manual_search.fill("复权")
                     manual_search.press("Enter")
                     settle(page)
+                    toolbar = manual_panel.locator(".st-key-manual_sticky_toolbar")
+                    toolbar_back = toolbar.get_by_role("button", name="← 返回", exact=True)
+                    toolbar_boxes = [
+                        manual_navigation.bounding_box(), manual_search.bounding_box(),
+                        toolbar_back.bounding_box(),
+                    ]
+                    assert all(toolbar_boxes)
+                    assert max(box["y"] for box in toolbar_boxes) - min(
+                        box["y"] for box in toolbar_boxes
+                    ) <= 4
                     search_cards = manual_panel.locator('[class*="st-key-manual_search_card_"]')
                     assert search_cards.count() == 12
                     first_card = search_cards.nth(0).bounding_box()
@@ -203,6 +213,7 @@ def main():
                                     "manual_function_directory": True,
                                     "manual_article_and_status": True,
                                     "manual_local_search": True,
+                                    "manual_toolbar_single_row": True,
                                     "manual_code_block_rendered": True,
                                     "beginner_guidance_removed": True})
                 page.get_by_role("button", name="DeepSeek 助手", exact=True).click()
@@ -282,8 +293,33 @@ def main():
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 expect(notes_panel).to_be_visible(timeout=10000)
+                notes_body = notes_panel.locator(".st-key-notes_panel_body")
+                notes_body_box = notes_body.bounding_box()
+                first_screen_controls = [
+                    notes_panel.get_by_label("笔记标题", exact=True),
+                    notes_panel.get_by_label("Markdown 正文", exact=True),
+                    notes_panel.get_by_role("button", name="保存笔记", exact=True),
+                    notes_panel.get_by_role("button", name="新建笔记", exact=True),
+                ]
+                control_boxes = [control.bounding_box() for control in first_screen_controls]
+                assert notes_body_box and all(control_boxes)
+                assert max(box["y"] + box["height"] for box in control_boxes) <= (
+                    notes_body_box["y"] + notes_body_box["height"] + 2
+                )
+                notes_panel.get_by_label("笔记标题", exact=True).fill("GUI 保留草稿")
+                notes_panel.get_by_label("Markdown 正文", exact=True).fill("新建前应自动保存。")
+                notes_panel.get_by_role("button", name="新建笔记", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                expect(notes_panel.get_by_label("笔记标题", exact=True)).to_have_value("")
+                with sqlite3.connect(directory / "research.sqlite3") as db:
+                    assert db.execute(
+                        "SELECT COUNT(*) FROM note_drafts WHERE title=? AND content=?",
+                        ("GUI 保留草稿", "新建前应自动保存。"),
+                    ).fetchone()[0] == 1
                 notes_panel.get_by_label("笔记标题", exact=True).fill("GUI 附件笔记")
                 notes_panel.get_by_label("Markdown 正文", exact=True).fill("# 图表记录\n\n本地托管附件验收。")
+                notes_panel.get_by_text("笔记选项与附件", exact=True).click()
                 png = base64.b64decode(
                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z2S8AAAAASUVORK5CYII="
                 )
@@ -293,7 +329,11 @@ def main():
                 ])
                 notes_panel.get_by_role("button", name="保存所选附件到草稿", exact=True).click()
                 settle(page)
-                page.locator(".st-key-notes_side_panel").get_by_role("button", name="插入", exact=True).click()
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                insert = notes_panel.get_by_role("button", name="插入", exact=True)
+                if not insert.is_visible():
+                    notes_panel.get_by_text("笔记选项与附件", exact=True).click()
+                insert.click()
                 settle(page)
                 page.locator(".st-key-notes_side_panel").get_by_role("button", name="保存笔记", exact=True).click()
                 settle(page)
@@ -306,6 +346,17 @@ def main():
                     assert db.execute(
                         "SELECT COUNT(*) FROM note_attachments WHERE note_id=?", (saved_note[0],)
                     ).fetchone()[0] == 2
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                notes_panel.get_by_text("浏览笔记与实验", exact=True).click()
+                notes_body = notes_panel.locator(".st-key-notes_panel_body")
+                notes_body.evaluate("element => { element.scrollTop = element.scrollHeight; }")
+                notes_panel.get_by_role("button", name="编辑", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                expect(notes_panel.get_by_label("笔记标题", exact=True)).to_have_value("GUI 附件笔记")
+                assert notes_panel.locator(".st-key-notes_panel_body").evaluate(
+                    "element => element.scrollTop"
+                ) < 20
                 sticky_headers = []
                 for panel_name in ("manual", "deepseek", "notes"):
                     current_panel = page.locator(f".st-key-{panel_name}_side_panel")
@@ -431,6 +482,9 @@ def main():
                                 "maximize_respects_visible_sidebar": True,
                                 "maximize_fills_app_without_sidebar": True,
                                 "markdown_note_with_attachments": True,
+                                "notes_editor_first_screen": True,
+                                "notes_new_preserves_draft": True,
+                                "notes_library_edit_scrolls_to_editor": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,
                                 "panel_width_before": box["width"],
@@ -566,6 +620,55 @@ def main():
                         ) if source in body_text), None)
                         assert hk_source and "港股 00941" in body_text and "真实历史数据" in body_text
                         summary.update({"hk_history_loaded": True, "hk_history_source": hk_source})
+                    sidebar.get_by_text("历史回测", exact=True).click()
+                    settle(page)
+                    page.get_by_role("button", name="运行历史回测", exact=True).click()
+                    settle(page)
+                    explanation = page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    )
+                    assert explanation.count() == 2
+                    page.get_by_role("button", name="显示更多（剩余 6 项）", exact=True).click()
+                    settle(page)
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 8
+                    page.get_by_role("button", name="收起详细解释", exact=True).click()
+                    settle(page)
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 2
+                    page.get_by_role("button", name="显示更多（剩余 6 项）", exact=True).click()
+                    settle(page)
+                    page.get_by_role("button", name="⚙", exact=True).click()
+                    settle(page)
+                    settings_panel = page.locator(".st-key-settings_panel")
+                    settings_panel.get_by_role("tab", name="偏好设置", exact=True).click()
+                    settings_panel.get_by_text("显示详细解释提示", exact=True).click()
+                    settle(page)
+                    expect(page.locator(".st-key-settings_panel")).to_be_visible(timeout=10000)
+                    assert not page.locator(".st-key-settings_panel").get_by_label(
+                        "显示详细解释提示", exact=True
+                    ).is_checked()
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 0
+                    page.locator(".st-key-settings_panel").get_by_text(
+                        "显示详细解释提示", exact=True
+                    ).click()
+                    settle(page)
+                    assert page.locator(".st-key-settings_panel").get_by_label(
+                        "显示详细解释提示", exact=True
+                    ).is_checked()
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 2
+                    page.locator(".st-key-settings_panel").get_by_role(
+                        "button", name="×", exact=True
+                    ).click()
+                    settle(page)
+                    summary.update({"knowledge_group_pagination": True,
+                                    "learning_mode_immediate_app_rerun": True})
                 sidebar = page.get_by_test_id("stSidebar")
                 assert sidebar.get_by_text("DeepSeek AI 助手", exact=True).count() == 0
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0

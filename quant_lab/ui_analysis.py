@@ -12,7 +12,7 @@ from quant_lab.portfolio import analyze_portfolio
 from quant_lab.processing import DataValidationError
 from quant_lab.statistics import evaluate_linear_model, one_sample_return_test
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
-from quant_lab.ui_knowledge import render_knowledge
+from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
 from quant_lab import names
 
 
@@ -33,10 +33,15 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         cols[3].metric("历史最大回撤", percent(price_stats.max_drawdown))
     st.caption("方差与标准差使用样本口径（分母 n−1）；年化波动率约等于日标准差 × √252。历史波动不保证未来风险。")
     if st.session_state.get("learning_mode", True):
-        render_knowledge("variance", float(daily.var(ddof=1)) if len(history)>=3 else None, key="risk")
-        render_knowledge("std", float(daily.std(ddof=1)) if len(history)>=3 else None, key="risk")
-        render_knowledge("volatility", price_stats.annualized_volatility if len(history)>=3 else None, key="risk")
-        render_knowledge("drawdown", price_stats.max_drawdown if len(history)>=3 else None, key="risk")
+        render_knowledge_group(
+            (
+                KnowledgePoint("variance", float(daily.var(ddof=1)) if len(history) >= 3 else None),
+                KnowledgePoint("std", float(daily.std(ddof=1)) if len(history) >= 3 else None),
+                KnowledgePoint("volatility", price_stats.annualized_volatility if len(history) >= 3 else None),
+                KnowledgePoint("drawdown", price_stats.max_drawdown if len(history) >= 3 else None),
+            ),
+            key="risk",
+        )
 
     other = "000001" if bundle.market == "A 股" and bundle.symbol != "000001" else (
         "600519" if bundle.market == "A 股" else "00941" if bundle.symbol != "00941" else "00700"
@@ -96,8 +101,13 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         st.dataframe(result.covariance.rename(index=labels, columns=labels).round(6), width="stretch")
     if st.session_state.get("learning_mode", True):
         st.caption(f"下面解释 {labels[codes[0]]} 与 {labels[codes[1]]} 的共同交易日样本。")
-        render_knowledge("correlation", float(result.correlation.loc[codes[0], codes[1]]), key="portfolio")
-        render_knowledge("covariance", float(result.covariance.loc[codes[0], codes[1]]), key="portfolio")
+        render_knowledge_group(
+            (
+                KnowledgePoint("correlation", float(result.correlation.loc[codes[0], codes[1]])),
+                KnowledgePoint("covariance", float(result.covariance.loc[codes[0], codes[1]])),
+            ),
+            key="portfolio",
+        )
     figure = go.Figure()
     for name, color in (("等权", "#4F8CFF"), ("逆波动率", "#24D6A0")):
         figure.add_trace(go.Scatter(
@@ -186,8 +196,13 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
         st.warning("本次模型 MAE 未低于零收益基线，预测误差尚未优于每天预测 0。")
     st.caption("例如 MAE 1% 表示预测与实际日收益平均相差 1 个百分点。R² 为负时，模型误差比测试样本均值参考更大；方向一致率不计涨跌幅、费用或可成交性。")
     if st.session_state.get("learning_mode", True):
-        render_knowledge("mae", result.mae, key="statistics", observations=result.test_rows)
-        render_knowledge("r_squared", result.r_squared, key="statistics", observations=result.test_rows)
+        render_knowledge_group(
+            (
+                KnowledgePoint("mae", result.mae, observations=result.test_rows),
+                KnowledgePoint("r_squared", result.r_squared, observations=result.test_rows),
+            ),
+            key="statistics_model",
+        )
     st.caption(
         f"训练 {result.train_rows} 行（标签至 {result.train_end:%Y-%m-%d}）；"
         f"测试 {result.test_rows} 行（特征始于 {result.test_start:%Y-%m-%d}）；"

@@ -194,6 +194,13 @@ def _toolbar_back_label() -> str | None:
     return None
 
 
+def _toolbar_back_help() -> str | None:
+    label = _toolbar_back_label()
+    if label is None:
+        return None
+    return label.removeprefix("← ")
+
+
 def _reset_scroll_for_view(view_key: str) -> None:
     token = sha256(view_key.encode("utf-8")).hexdigest()[:16]
     st.html(
@@ -209,7 +216,9 @@ def _reset_scroll_for_view(view_key: str) -> None:
 
 def _render_sticky_toolbar() -> tuple[str, str]:
     with st.container(key="manual_sticky_toolbar"):
-        section_column, back_column = st.columns([3, 2], gap="small")
+        back_help = _toolbar_back_help()
+        columns = st.columns([32, 44, 24] if back_help else [28, 72], gap="small")
+        section_column, search_column = columns[:2]
         with section_column:
             section = st.selectbox(
                 "当前分区",
@@ -218,21 +227,23 @@ def _render_sticky_toolbar() -> tuple[str, str]:
                 label_visibility="collapsed",
                 on_change=_section_changed,
             )
-        with back_column:
-            back_label = _toolbar_back_label()
-            if back_label:
+        with search_column:
+            query = st.text_input(
+                "搜索手册与专业知识",
+                key="manual_search_query",
+                placeholder="搜索标题、别名或正文",
+                label_visibility="collapsed",
+                on_change=_search_changed,
+            ).strip()
+        if back_help:
+            with columns[2]:
                 st.button(
-                    back_label,
+                    "← 返回",
                     key="manual_toolbar_back",
                     width="stretch",
                     on_click=_toolbar_back_action,
+                    help=back_help,
                 )
-        query = st.text_input(
-            "搜索手册与专业知识",
-            key="manual_search_query",
-            placeholder="中文标题、英文名、别名或正文关键词",
-            on_change=_search_changed,
-        ).strip()
     return section, query
 
 

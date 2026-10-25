@@ -76,3 +76,28 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         next(item for item in app.get("button") if item.label == "研究笔记").click().run()
         assert not app.exception
         assert any(item.label == "选择内容" for item in app.selectbox)
+
+
+def test_backtest_knowledge_group_expands_collapses_and_resets(monkeypatch) -> None:
+    bundle = sample_bundle()
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    with patch("quant_lab.ui.fetch_history", return_value=bundle):
+        app = AppTest.from_file(entrypoint, default_timeout=30).run()
+        app.sidebar.button[0].click().run()
+        app.sidebar.radio(key="nav_page").set_value("历史回测").run()
+        next(item for item in app.button if item.label == "运行历史回测").click().run()
+
+        explanations = [item for item in app.expander if item.label.startswith("知识解释：")]
+        assert len(explanations) == 2
+        next(item for item in app.button if item.label == "显示更多（剩余 6 项）").click().run()
+        explanations = [item for item in app.expander if item.label.startswith("知识解释：")]
+        assert len(explanations) == 8
+        next(item for item in app.button if item.label == "收起详细解释").click().run()
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2
+
+        next(item for item in app.button if item.label == "显示更多（剩余 6 项）").click().run()
+        app.button(key="settings_toggle").click().run()
+        app.toggle(key="learning_mode").set_value(False).run()
+        assert not [item for item in app.expander if item.label.startswith("知识解释：")]
+        app.toggle(key="learning_mode").set_value(True).run()
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2

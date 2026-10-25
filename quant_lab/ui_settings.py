@@ -64,6 +64,14 @@ def _close_settings() -> None:
     st.session_state["settings_open"] = False
 
 
+def _learning_mode_changed() -> None:
+    persist_setting("learning_mode")
+    for key in tuple(st.session_state):
+        if str(key).startswith("knowledge_group_expanded_"):
+            st.session_state.pop(key, None)
+    st.session_state["learning_mode_app_rerun_pending"] = True
+
+
 def render_settings_panel() -> None:
     with st.container(key="settings_panel"):
         title, close = st.columns([5, 1], vertical_alignment="center")
@@ -80,7 +88,7 @@ def render_settings_panel() -> None:
             render_connection_settings()
         with preference_tab:
             st.toggle("显示详细解释提示", key="learning_mode",
-                      on_change=persist_setting, args=("learning_mode",))
+                      on_change=_learning_mode_changed)
             st.caption("只调整页面解释密度，不改变行情、策略、回测、统计或组合计算。")
             st.toggle("自动刷新行情（仅市场页）", key="refresh_enabled",
                       on_change=persist_setting, args=("refresh_enabled",))
@@ -90,6 +98,8 @@ def render_settings_panel() -> None:
             st.caption("自动刷新只在软件和市场页会话运行时生效；关闭软件后不更新。")
             if st.session_state.get("settings_error"):
                 st.warning(st.session_state.pop("settings_error"))
+        if st.session_state.pop("learning_mode_app_rerun_pending", False):
+            st.rerun(scope="app")
 
 
 __all__ = ["library_configured", "render_library_setup", "render_settings_panel"]
