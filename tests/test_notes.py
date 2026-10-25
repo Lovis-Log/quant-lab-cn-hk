@@ -108,8 +108,11 @@ def test_notes_panel_opens_on_restored_editor_and_keeps_new_draft(monkeypatch, t
     assert app.button(key="note_new").label == "新建笔记"
     assert not [item for item in app.subheader if item.value == "研究笔记与实验档案"]
     assert {item.label for item in app.expander} >= {
-        "笔记选项与附件", "浏览笔记与实验", "分类管理"
+        "更多选项（分类与附件）", "更多管理（实验 / 分类 / 回收站）"
     }
+    assert app.button(key="notes_panel_history")
+    assert not [item for item in app.selectbox if item.label == "内容类型"]
+    assert not [item for item in app.selectbox if item.label == "分类范围"]
 
     app.text_input(key="note_editor_title").input("更新中的草稿").run()
     app.button(key="note_new").click().run()
@@ -120,8 +123,40 @@ def test_notes_panel_opens_on_restored_editor_and_keeps_new_draft(monkeypatch, t
     assert len(drafts) == 2
     assert any(title == "更新中的草稿" for _, title in drafts)
 
-    app.button(key="item_edit").click().run()
+    app.button(key="notes_panel_history").click().run()
+    assert app.text_input(key="notes_history_search")
+    assert not [item for item in app.selectbox if item.label == "选择实验"]
+    app.button(key=f"note_history_open_{note_id}").click().run()
     assert app.session_state["note_editor_note_id"] == note_id
     assert app.text_input(key="note_editor_title").value == "资料库笔记"
     assert app.text_area(key="note_editor_content").value == "已保存正文"
     assert any("scrollTo" in str(item.value) for item in app.get("html"))
+
+
+def test_notes_panel_falls_back_to_most_recent_saved_note(monkeypatch, tmp_path):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path / "saved-note-resume"))
+    older = notes.save_note(title="较早笔记", content="旧内容")
+    latest = notes.save_note(title="最近笔记", content="继续记录")
+    assert latest > older and notes.latest_draft() is None
+
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    next(item for item in app.button if item.label == "研究笔记").click().run()
+
+    assert app.session_state["notes_view"] == "editor"
+    assert app.session_state["note_editor_note_id"] == latest
+    assert app.text_input(key="note_editor_title").value == "最近笔记"
+    assert app.text_area(key="note_editor_content").value == "继续记录"
+
+
+def test_note_save_keeps_a_resumable_working_copy(monkeypatch, tmp_path):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path / "saved-working-copy"))
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    next(item for item in app.button if item.label == "研究笔记").click().run()
+    app.text_input(key="note_editor_title").input("保存后继续").run()
+    app.text_area(key="note_editor_content").input("下一次仍从这里开始").run()
+    app.button(key="note_save").click().run()
+
+    draft = notes.latest_draft()
+    assert draft and draft["note_id"] == app.session_state["note_editor_note_id"]
+    assert draft["title"] == "保存后继续"
+    assert draft["content"] == "下一次仍从这里开始"

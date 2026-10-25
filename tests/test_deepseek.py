@@ -98,6 +98,27 @@ def test_tutor_mode_uses_system_guidance_and_excludes_private_answers():
     assert "private" not in messages[-1]["content"]
 
 
+def test_conversation_summary_has_dedicated_bounded_instruction():
+    session = Session([streamed("summary-model")])
+    history = [
+        {"role": "user" if index % 2 == 0 else "assistant", "content": f"消息 {index}"}
+        for index in range(24)
+    ]
+    client = DeepSeekClient(SECRET, session)
+    answer, chunks = client.stream(
+        "summary-model", "总结当前对话", history, {},
+        purpose="conversation_summary", history_limit=20,
+    )
+    list(chunks)
+
+    messages = session.calls[0][2]["json"]["messages"]
+    assert answer.complete
+    assert "对话总结" in messages[0]["content"]
+    assert messages[1]["content"] == "消息 4"
+    assert messages[-2]["content"] == "消息 23"
+    assert messages[-1]["content"].startswith("总结当前对话")
+
+
 def test_timeout_and_malformed_models_are_safe(caplog):
     class TimeoutSession:
         def request(self, *args, **kwargs):

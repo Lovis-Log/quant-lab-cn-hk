@@ -141,6 +141,9 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     assert calls == []
     widget(app,"button","发送到 DeepSeek").click().run()
     assert not app.exception and len(calls) == 1 and calls[0]["model"] == "alpha"
+    assert widget(app,"text_area","问题（确认后发送）").value == ""
+    app.run()
+    assert len(calls) == 1
     app.run()
     app.sidebar.radio[0].set_value("Quant Academy").run()
     assert len(calls) == 1
@@ -153,13 +156,15 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     assert not app.exception and len(calls) == 2 and calls[-1]["model"] == "beta"
     assert calls[-1]["history"] == []  # New lesson context, old stock messages retained only for display.
     assert "notes" not in calls[-1]["context"]
-    answer_picker = widget(app,"selectbox","选择回答保存为研究笔记")
-    answer_picker.set_value(answer_picker.options[1]).run()
-    widget(app,"button","保存选定回答到研究笔记").click().run()
+    latest_answer = [message for message in app.session_state["deepseek_chat"] if message["role"] == "assistant"][-1]
+    app.button(key=f"deepseek_save_{latest_answer['turn_id']}").click().run()
     saved = storage.list_learning_notes(tmp_path / "research.sqlite3")[0]
     assert saved["model"] == "beta-actual"
-    assert saved["title"].startswith("AI 研究回答")
+    assert saved["title"].startswith("AI 研究问答")
+    assert "## 问题" in saved["content"] and "## DeepSeek 回答" in saved["content"]
     assert any("研究笔记 #" in item.value for item in app.success)
+    assert app.button(key=f"deepseek_save_{latest_answer['turn_id']}").disabled is True
+    assert any("navigator.clipboard" in str(item.value) for item in app.get("html"))
     assert "sk-only-ui-mock-secret" not in (tmp_path / "research.sqlite3").read_bytes().decode("utf-8", errors="ignore")
     widget(app,"button","⚙").click().run()
     widget(app,"button","清除密钥").click().run()
@@ -192,10 +197,99 @@ def test_research_note_failure_uses_research_copy(tmp_path, monkeypatch):
         "security": "教学问答", "complete": True, "context": {},
     }]
     app.run()
-    widget(app, "button", "保存选定回答到研究笔记").click().run()
+    widget(app, "button", "保存到研究笔记").click().run()
 
     assert any("研究笔记保存失败" in item.value for item in app.error)
     assert not any("学习笔记保存失败" in item.value for item in app.error)
+
+
+def test_multiturn_summary_is_explicit_streamed_and_saved(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    calls = []
+
+    class Client:
+        def __init__(self, key):
+            self.key = key
+        def stream(self, model, prompt, history, context, **kwargs):
+            calls.append({"model": model, "prompt": prompt, "history": history,
+                          "context": context, **kwargs})
+            answer = Answer("summary-model-actual")
+            def chunks():
+                answer.text = "已确认事实、未决问题和下一步行动。"
+                yield answer.text
+                answer.complete = True
+            return answer, chunks()
+
+    monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", Client)
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    app.session_state["deepseek_api_key"] = "sk-summary-mock-secret"
+    app.session_state["deepseek_models"] = [{"id": "summary-model"}]
+    app.session_state["ds_model_select"] = "summary-model"
+    app.session_state["deepseek_chat"] = [
+        {"role": "user", "content": "第一问", "turn_id": "turn-1", "kind": "chat", "scope": "standalone"},
+        {"role": "assistant", "content": "第一答", "turn_id": "turn-1", "kind": "chat",
+         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
+        {"role": "user", "content": "第二问", "turn_id": "turn-2", "kind": "chat", "scope": "standalone"},
+        {"role": "assistant", "content": "第二答", "turn_id": "turn-2", "kind": "chat",
+         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
+    ]
+    app.session_state["deepseek_attach"] = False
+    app.run()
+
+    assert widget(app, "button", "总结并保存本次对话")
+    assert calls == []
+    widget(app, "button", "总结并保存本次对话").click().run()
+
+    assert len(calls) == 1
+    assert calls[0]["purpose"] == "conversation_summary"
+    assert calls[0]["history_limit"] == 20
+    assert [message["content"] for message in calls[0]["history"]] == ["第一问", "第一答", "第二问", "第二答"]
+    saved = storage.list_learning_notes(tmp_path / "research.sqlite3")[0]
+    assert saved["title"].startswith("AI 对话总结 · 第一问")
+    assert "## 对话主题" in saved["content"] and "## 对话总结" in saved["content"]
+    assert saved["model"] == "summary-model-actual"
+    assert len(calls) == 1
+    app.run()
+    assert len(calls) == 1
+
+
+def test_incomplete_multiturn_summary_is_not_saved(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+
+    class Client:
+        def __init__(self, key):
+            self.key = key
+        def stream(self, model, prompt, history, context, **kwargs):
+            answer = Answer("summary-model")
+            def chunks():
+                answer.text = "未完成的总结"
+                yield answer.text
+                answer.complete = False
+            return answer, chunks()
+
+    monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", Client)
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    app.session_state["deepseek_api_key"] = "sk-summary-incomplete"
+    app.session_state["deepseek_models"] = [{"id": "summary-model"}]
+    app.session_state["ds_model_select"] = "summary-model"
+    app.session_state["deepseek_attach"] = False
+    app.session_state["deepseek_chat"] = [
+        {"role": "user", "content": "第一问", "turn_id": "one", "kind": "chat", "scope": "standalone"},
+        {"role": "assistant", "content": "第一答", "turn_id": "one", "kind": "chat",
+         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
+        {"role": "user", "content": "第二问", "turn_id": "two", "kind": "chat", "scope": "standalone"},
+        {"role": "assistant", "content": "第二答", "turn_id": "two", "kind": "chat",
+         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
+    ]
+    app.run()
+    widget(app, "button", "总结并保存本次对话").click().run()
+
+    summaries = [message for message in app.session_state["deepseek_chat"]
+                 if message.get("kind") == "conversation_summary"]
+    assert summaries and summaries[-1]["complete"] is False
+    assert storage.list_learning_notes(tmp_path / "research.sqlite3") == []
 
 
 def test_research_workspace_points_to_actual_connection_location(tmp_path, monkeypatch):

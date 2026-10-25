@@ -420,7 +420,10 @@ def _toggle_manual_panel() -> None:
 
 
 def _toggle_notes_panel() -> None:
-    st.session_state["notes_panel_open"] = not st.session_state.get("notes_panel_open", False)
+    opening = not st.session_state.get("notes_panel_open", False)
+    st.session_state["notes_panel_open"] = opening
+    if opening:
+        st.session_state["notes_view"] = "editor"
 
 
 def _toggle_left_sidebar() -> None:

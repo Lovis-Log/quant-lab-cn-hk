@@ -1,7 +1,7 @@
 """Interact with the actual WebView2 window through its isolated CDP probe.
 
-No paid calls. --mock-ai is permitted only for an installed copy under .tools;
-its app entry is temporarily instrumented with a mock transport and restored.
+No paid calls. --mock-ai instruments either an installed copy under .tools or
+a fresh isolated source copy; the tracked application entry is never changed.
 """
 
 import argparse
@@ -9,6 +9,7 @@ import base64
 import json
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -37,20 +38,31 @@ def main():
     directory = (args.data_dir or ROOT / ".tools" / ("desktop-validation-" + uuid4().hex)).resolve()
     directory.relative_to((ROOT / ".tools").resolve())
     directory.mkdir(parents=True, exist_ok=True)
-    app_file, original = None, None
+    app_file, original, source_root = None, None, None
     vault_target = "QuantLabCNHK/Validation/" + uuid4().hex
     dummy_key = "sk-validation-" + uuid4().hex
     from quant_lab.credentials import remember_key, clear_key
     remember_key(dummy_key, target=vault_target)
     if args.mock_ai:
-        if not args.exe:
-            raise ValueError("Mock GUI mode requires an isolated installed EXE.")
-        exe = args.exe.resolve()
-        exe.relative_to((ROOT / ".tools").resolve())
-        app_file = exe.parent / "_internal" / "app.py"
-        original = app_file.read_bytes()
+        if args.exe:
+            exe = args.exe.resolve()
+            exe.relative_to((ROOT / ".tools").resolve())
+            app_file = exe.parent / "_internal" / "app.py"
+            original = app_file.read_bytes()
+        else:
+            source_root = directory / "source-copy"
+            source_root.mkdir(parents=True, exist_ok=True)
+            for filename in ("app.py", "desktop_launcher.py"):
+                shutil.copy2(ROOT / filename, source_root / filename)
+            for folder in ("quant_lab", ".streamlit", "docs", "assets"):
+                shutil.copytree(
+                    ROOT / folder, source_root / folder, dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+                )
+            app_file = source_root / "app.py"
         fixture = str(ROOT / "tools" / "gui_api_fixture.py")
-        app_file.write_bytes(f"import runpy\nrunpy.run_path({fixture!r})\n".encode("utf-8") + original)
+        payload = app_file.read_bytes()
+        app_file.write_bytes(f"import runpy\nrunpy.run_path({fixture!r})\n".encode("utf-8") + payload)
     # The user data directory is reused to test restarts; the probe file must
     # belong to this launch, not the previous window's now-closed CDP endpoint.
     probe_file = directory / ("probe-" + uuid4().hex + ".json")
@@ -58,7 +70,11 @@ def main():
            "QUANT_LAB_GUI_TEST_SECONDS": "240", "QUANT_LAB_GUI_PROBE": "1",
            "QUANT_LAB_CREDENTIAL_TARGET": vault_target,
            "QUANT_LAB_SMOKE_RESULT": str(probe_file)}
-    command = [str(args.exe.resolve())] if args.exe else [str(ROOT/".venv/Scripts/python.exe"), str(ROOT/"desktop_launcher.py")]
+    command = (
+        [str(args.exe.resolve())]
+        if args.exe else
+        [str(ROOT/".venv/Scripts/python.exe"), str((source_root or ROOT)/"desktop_launcher.py")]
+    )
     child = None
     summary = {"mock_api": args.mock_ai, "data_dir": str(directory)}
     try:
@@ -311,6 +327,9 @@ def main():
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 expect(notes_panel).to_be_visible(timeout=10000)
+                history_button = notes_panel.get_by_role("button", name="历史笔记", exact=True)
+                expect(history_button).to_be_visible(timeout=10000)
+                expect(history_button).to_have_attribute("aria-label", "历史笔记")
                 notes_body = notes_panel.locator(".st-key-notes_panel_body")
                 notes_body_box = notes_body.bounding_box()
                 first_screen_controls = [
@@ -337,7 +356,7 @@ def main():
                     ).fetchone()[0] == 1
                 notes_panel.get_by_label("笔记标题", exact=True).fill("GUI 附件笔记")
                 notes_panel.get_by_label("Markdown 正文", exact=True).fill("# 图表记录\n\n本地托管附件验收。")
-                notes_panel.get_by_text("笔记选项与附件", exact=True).click()
+                notes_panel.get_by_text("更多选项（分类与附件）", exact=True).click()
                 png = base64.b64decode(
                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z2S8AAAAASUVORK5CYII="
                 )
@@ -350,7 +369,7 @@ def main():
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 insert = notes_panel.get_by_role("button", name="插入", exact=True)
                 if not insert.is_visible():
-                    notes_panel.get_by_text("笔记选项与附件", exact=True).click()
+                    notes_panel.get_by_text("更多选项（分类与附件）", exact=True).click()
                 insert.click()
                 settle(page)
                 page.locator(".st-key-notes_side_panel").get_by_role("button", name="保存笔记", exact=True).click()
@@ -365,10 +384,14 @@ def main():
                         "SELECT COUNT(*) FROM note_attachments WHERE note_id=?", (saved_note[0],)
                     ).fetchone()[0] == 2
                 notes_panel = page.locator(".st-key-notes_side_panel")
-                notes_panel.get_by_text("浏览笔记与实验", exact=True).click()
-                notes_body = notes_panel.locator(".st-key-notes_panel_body")
-                notes_body.evaluate("element => { element.scrollTop = element.scrollHeight; }")
-                notes_panel.get_by_role("button", name="编辑", exact=True).click()
+                notes_panel.get_by_role("button", name="历史笔记", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                expect(notes_panel.get_by_placeholder("搜索标题或正文…", exact=True)).to_be_visible()
+                assert notes_panel.get_by_label("内容类型", exact=True).count() == 0
+                assert notes_panel.get_by_label("分类范围", exact=True).count() == 0
+                page.screenshot(path=str(directory/"notes-history-search.png"), full_page=False)
+                notes_panel.get_by_role("button", name="GUI 附件笔记", exact=True).click()
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 expect(notes_panel.get_by_label("笔记标题", exact=True)).to_have_value("GUI 附件笔记")
@@ -522,6 +545,7 @@ def main():
                                 "markdown_note_with_attachments": True,
                                 "notes_editor_first_screen": True,
                                 "notes_new_preserves_draft": True,
+                                "notes_history_search": True,
                                 "notes_library_edit_scrolls_to_editor": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,
@@ -783,14 +807,41 @@ def main():
                     page.get_by_label("问题（确认后发送）", exact=True).fill("解释最大回撤并给出手算例子")
                     page.get_by_role("button", name="发送到 DeepSeek", exact=True).click()
                     settle(page)
-                    page.get_by_text("实际模型：mock-b-actual", exact=True).wait_for(timeout=20000)
+                    page.get_by_text("模型：mock-b-actual", exact=False).last.wait_for(timeout=20000)
                     assert "STREAM_DONE" in page.inner_text("body")
-                    deepseek_panel.get_by_role("button", name="⚙ 设置", exact=True).click()
-                    settle(page)
-                    page.get_by_role("button", name="保存选定回答到研究笔记", exact=True).click()
+                    deepseek_panel = page.locator(".st-key-deepseek_side_panel")
+                    messages = deepseek_panel.locator(".st-key-deepseek_messages")
+                    composer = deepseek_panel.locator(".st-key-deepseek_composer")
+                    messages_box = messages.bounding_box()
+                    composer_box = composer.bounding_box()
+                    panel_box = deepseek_panel.bounding_box()
+                    assert messages_box and composer_box and panel_box
+                    assert composer_box["y"] + composer_box["height"] <= panel_box["y"] + panel_box["height"] + 2
+                    assert messages_box["y"] + messages_box["height"] <= composer_box["y"] + 2
+                    copy_button = deepseek_panel.get_by_role("button", name="复制 DeepSeek 回答", exact=True).last
+                    expect(copy_button).to_be_visible(timeout=10000)
+                    copy_button.click()
+                    expect(deepseek_panel.get_by_text("已复制", exact=True)).to_be_visible(timeout=10000)
+                    deepseek_panel.get_by_role("button", name="保存到研究笔记", exact=True).last.click()
                     settle(page)
                     page.get_by_text("研究笔记 #", exact=False).wait_for(timeout=10000)
-                    summary.update({"model_switch": True, "streamed_answer": True, "answer_saved": True})
+                    page.get_by_label("问题（确认后发送）", exact=True).fill("第二轮：给出下一步验证建议")
+                    page.get_by_role("button", name="发送到 DeepSeek", exact=True).click()
+                    settle(page)
+                    page.get_by_text("模型：mock-b-actual", exact=False).last.wait_for(timeout=20000)
+                    summary_button = deepseek_panel.get_by_role(
+                        "button", name="总结并保存本次对话", exact=True
+                    )
+                    expect(summary_button).to_be_visible(timeout=10000)
+                    summary_button.click()
+                    settle(page)
+                    page.get_by_text("对话总结", exact=True).last.wait_for(timeout=20000)
+                    page.get_by_text("研究笔记 #", exact=False).wait_for(timeout=10000)
+                    page.screenshot(path=str(directory/"deepseek-chat-summary.png"), full_page=False)
+                    summary.update({"model_switch": True, "streamed_answer": True,
+                                    "answer_saved": True, "answer_copied": True,
+                                    "composer_fixed_to_panel_bottom": True,
+                                    "conversation_summary_saved": True})
                     if args.research_fixes:
                         page.get_by_role("button", name="加载真实历史日线", exact=True).click()
                         settle(page)

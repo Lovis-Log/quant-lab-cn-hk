@@ -145,9 +145,12 @@ class DeepSeekClient:
             response.close()
 
     def stream(self, model: str, prompt: str, history: list[dict], context=None,
-               metadata=None, effort=None) -> tuple[Answer, object]:
+               metadata=None, effort=None, *, purpose: str = "chat",
+               history_limit: int = 12) -> tuple[Answer, object]:
         if not model.strip() or not prompt.strip():
             raise AIRequestError("请先选择模型并填写问题。")
+        if purpose not in {"chat", "conversation_summary"}:
+            raise AIRequestError("无法识别本次 DeepSeek 请求类型。")
         if redact(model, (self._key,)) != model:
             raise AIRequestError("模型 ID 不能包含 API Key，请把密钥只填在密码框中。")
         facts = safe_context(context)
@@ -157,11 +160,17 @@ class DeepSeekClient:
             messages[0]["content"] += "教学辅导：每次先问一个可手算的小问题，等学生尝试后再分步解释。不要直接提供当前测验的完整答案；不声称替软件判定课程完成。"
         else:
             messages[0]["content"] += "研究解释：先列明摘要中可核验事实，再解释含义、假设与局限，最后提出下一步独立检验。缺少模型或实验摘要时不能猜测结果。"
+        if purpose == "conversation_summary":
+            messages[0]["content"] += (
+                "对话总结：只总结所附对话中已经出现的内容，按研究问题、可核验事实、"
+                "主要结论、未决问题和下一步行动组织，不补写未知数据，不输出完整逐字稿。"
+            )
         # Do not reuse messages from another stock/experiment in the UI; this
         # helper also bounds all text and excludes metadata/secrets/notes.
         remaining = min(16000, max(500, int(meta.get("context_window", 40000)) // 2))
         recent = []
-        for message in reversed(history[-12:]):
+        bounded_history_limit = max(1, min(20, int(history_limit)))
+        for message in reversed(history[-bounded_history_limit:]):
             text = redact(message.get("content", ""), (self._key,))[:4000]
             if len(text) > remaining:
                 break

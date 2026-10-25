@@ -59,13 +59,13 @@ V2 构建输出到 `dist/packages/<版本>/QuantLab`，manifest 保存 `payload_
 
 `PRAGMA user_version=4` 保留旧实验、行情 BLOB、自选股、名称、非敏感设置和学习记录，新增 `note_categories`、`note_drafts`、`note_attachments` 以及笔记/实验的分类和回收站字段。旧库先一致性备份，再在 `BEGIN IMMEDIATE` 事务中升级；失败回滚，原快照与指纹不重写。
 
-`global_topbar` 固定横跨窗口，并提供使用手册、DeepSeek 和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；各面板外壳不滚动，固定头部下的 `*_panel_body` 独立滚动。手册 sticky 工具栏以 28% 分区选择、弹性搜索和可选紧凑返回按钮组成单行；搜索标签仅视觉隐藏，无障碍名称仍保留。研究笔记面板先渲染最近草稿的标题、360px Markdown 正文和常驻保存/新建操作，再渲染笔记选项、资料库与分类管理三个折叠区；资料库编辑会回到编辑器顶部。`left_sidebar_visible` 控制左侧导航栏显示，完全独立于三个右侧面板状态；ResizeObserver 把左栏实测宽度同步到 `--ql-sidebar-width`，MutationObserver 在 Streamlit 替换侧栏 DOM 后重新绑定当前节点。最大化时只渲染目标面板并清除主区让位宽度：左栏可见则从左栏右缘开始，左栏隐藏则覆盖完整应用宽度，垂直方向始终限制在全局顶栏下方。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
+`global_topbar` 固定横跨窗口，并提供使用手册、DeepSeek 和研究笔记入口。三个独立面板支持 Pointer Events 调宽、三按钮拖拽排序与 FLIP 动画；各面板外壳不滚动，固定头部下的 `*_panel_body` 独立布局。手册 sticky 工具栏以 28% 分区选择、弹性搜索和可选紧凑返回按钮组成单行；搜索标签仅视觉隐藏，无障碍名称仍保留。研究笔记先恢复最近工作草稿，没有草稿时载入最近编辑的正式笔记；标题栏历史按钮切换到只含有效笔记的紧凑搜索视图。编辑器只常驻标题、正文、保存和新建，分类附件与实验/分类/回收站分别收进“更多选项”和“更多管理”。DeepSeek 聊天正文使用满高 flex 布局：工具栏固定在上、消息列表独立滚动、输入区固定在下；一次性待发送状态在消息区消费，保证流式输出位置正确且页面重绘不重复请求。`left_sidebar_visible` 控制左侧导航栏显示，完全独立于三个右侧面板状态；ResizeObserver 把左栏实测宽度同步到 `--ql-sidebar-width`，MutationObserver 在 Streamlit 替换侧栏 DOM 后重新绑定当前节点。最大化时只渲染目标面板并清除主区让位宽度：左栏可见则从左栏右缘开始，左栏隐藏则覆盖完整应用宽度，垂直方向始终限制在全局顶栏下方。非敏感宽度与顺序写入 WebView `localStorage`。`settings_panel` 锚定左上角，集中资料库、Credential Manager、模型与偏好设置。
 
 首次会话默认打开使用手册；用户关闭后不会在同一会话强制重开。设置继续使用兼容键 `learning_mode`，但界面名称为“显示详细解释提示”，只控制解释密度。专用回调先持久化会话值、清除 `knowledge_group_expanded_*` 状态并设置一次性 app rerun 标记；`render_app` 在初始化设置后、渲染任何 fragment 前消费标记并调用 `st.rerun(scope="app")`，避免页尾重绘被局部执行流吞掉。`_protect_session_widgets` 保护 `learning_mode`、自动刷新开关和间隔，使设置面板条件隐藏时 Streamlit 不会清理这些 widget key；关闭再重开设置仍沿用当前会话值。开关旁的“刷新整页”复用同一刷新路径，不重新请求行情或调用 AI。`render_knowledge_group` 按结果区块隔离展开状态，默认渲染前两项，支持一次展开全部及收起；单项仍走 `render_knowledge`。DeepSeek 每次打开都将工作区重置为对话，连接状态、聊天历史和底部输入框直接可见；回答模式、事实摘要、上下文预览、快捷问题、清空和保存回答放入默认关闭的 popover，研究实验以独立按钮进入。AI 客户端、上下文白名单、凭据和显式付费请求边界不变；数据库底层沿用旧 `learning_notes` 表名以保持资料兼容。
 
 文字手册使用自动测试、隔离浏览器和实际 WebView2 三层验收。阶段 5 的 Browser 插件抽样覆盖全部 10 篇手册及跨八类、四状态的专业文章；本轮 ego-browser 进一步覆盖相关度卡片、展开、固定工具栏、术语直达和 DeepSeek 隐藏设置，WebView2 覆盖真实桌面 DOM、滚动、拖宽、排序、最大化和子进程清理。详细证据及未验证范围见 `docs/MANUAL_READING_ACCEPTANCE.md`。
 
-`notes.py` 负责分类树、草稿、统一笔记/实验检索、回收站、附件验证和 ZIP 导出。附件先写临时文件，再原子改名并记录相对路径、MIME、大小与 SHA-256；图片 `attachment://id` 标记在渲染前从 Markdown 中移除并由受控组件显示，避免浏览器请求未知协议。
+`notes.py` 负责分类树、草稿、统一笔记/实验检索、回收站、附件验证和 ZIP 导出。界面保存正式笔记后立即建立与该笔记关联的新工作副本，因此下次打开可继续编辑；没有草稿的旧资料库回退到 `updated_at` 最新的有效笔记。附件先写临时文件，再原子改名并记录相对路径、MIME、大小与 SHA-256；图片 `attachment://id` 标记在渲染前从 Markdown 中移除并由受控组件显示，避免浏览器请求未知协议。
 
 股票选择用一个支持 `accept_new_options` 的搜索下拉框，代码和名称候选排序保持原样；未收录代码统一经过 `normalize_symbol`，无效输入禁用加载，市场切换保留各自选择。`securities.py` 提供市场隔离的目录：内置基础资料快照保证离线候选可用，显式更新取得新目录后原子写入 `user_data_dir()/securities/`。每份目录校验市场、规范代码、名称冲突、来源和带时区接收时间；失败保留原值。目录没有价格、币种换算或买入意见，名称字段不用于证明上市/可交易。`names.py` 独立查询东方财富基础资料，24 小时成功缓存、5 分钟失败冷却，手动名称更新绕过缓存且合并同查询并发，失败保留名称与原成功时间；不改写存档实验。
 
@@ -73,7 +73,7 @@ Key 只存在会话或 Win32 `CredWriteW/CredReadW/CredDeleteW` 管理的本应�
 
 ## 手册导航与教学
 
-`ui_manual.py` 使用原生 Streamlit 控件维护纯会话内的目录、阅读位置、搜索来源和返回栈。搜索直接使用 `manual_content.py` 的确定性本地排名，不发送给 DeepSeek，也不写入 SQLite。内容加载或交叉引用校验失败时显示明确错误，不用演示文本替代。
+`ui_manual.py` 使用原生 Streamlit 控件维护纯会话内的目录、阅读位置、搜索来源和返回栈。搜索直接使用 `manual_content.py` 的确定性本地排名，不发送给 DeepSeek，也不写入 SQLite。内容加载或交叉引用校验失败时显示明确错误，不用演示文本替代。DeepSeek 会话消息以 `turn_id` 关联问题和回答；复制只发生在 WebView，逐条保存写入“问题 / DeepSeek 回答”Markdown。当前作用域至少两轮完成回答后才提供“总结并保存”，该按钮是单独的显式付费请求，最多使用最近 20 条同作用域消息，完整生成后才写笔记。
 
 Quant Academy 继续调用 `learning.py` 的固定样本纯函数，并通过 `ui_knowledge.py` 跳转到对应手册文章。它不再保存教学实验、测验、目标或进度；原学习表仅为跨产品线资料库兼容而保留。
 
