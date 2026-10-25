@@ -468,6 +468,15 @@ def main():
                 sidebar_toggle.click()
                 settle(page)
                 expect(sidebar).not_to_be_visible(timeout=10000)
+                page.wait_for_function(
+                    """() => {
+                      const panel = document.querySelector('.st-key-notes_side_panel');
+                      if (!panel) return false;
+                      const box = panel.getBoundingClientRect();
+                      return box.x <= 2 && box.width >= window.innerWidth - 3;
+                    }""",
+                    timeout=10000,
+                )
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 app_maximized_box = notes_panel.bounding_box()
                 assert app_maximized_box and app_maximized_box["x"] <= 2
@@ -477,6 +486,17 @@ def main():
                 sidebar_toggle.click()
                 settle(page)
                 expect(sidebar).to_be_visible(timeout=10000)
+                page.wait_for_function(
+                    """() => {
+                      const panel = document.querySelector('.st-key-notes_side_panel');
+                      const sidebar = document.querySelector('[data-testid="stSidebar"]');
+                      if (!panel || !sidebar) return false;
+                      const panelBox = panel.getBoundingClientRect();
+                      const sidebarBox = sidebar.getBoundingClientRect();
+                      return Math.abs(panelBox.x - (sidebarBox.x + sidebarBox.width)) <= 3;
+                    }""",
+                    timeout=10000,
+                )
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 restored_maximized_box = notes_panel.bounding_box()
                 restored_sidebar_box = sidebar.bounding_box()
@@ -665,6 +685,20 @@ def main():
                     assert page.get_by_test_id("stExpander").filter(
                         has_text="知识解释："
                     ).count() == 0
+                    page.locator(".st-key-settings_panel").get_by_role(
+                        "button", name="×", exact=True
+                    ).click()
+                    settle(page)
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 0
+                    page.get_by_role("button", name="⚙", exact=True).click()
+                    settle(page)
+                    settings_panel = page.locator(".st-key-settings_panel")
+                    settings_panel.get_by_role("tab", name="偏好设置", exact=True).click()
+                    assert not settings_panel.get_by_label(
+                        "显示详细解释提示", exact=True
+                    ).is_checked()
                     page.locator(".st-key-settings_panel").get_by_text(
                         "显示详细解释提示", exact=True
                     ).click()
@@ -700,7 +734,8 @@ def main():
                     settle(page)
                     summary.update({"knowledge_group_pagination": True,
                                     "learning_mode_immediate_app_rerun": True,
-                                    "learning_mode_manual_refresh": True})
+                                    "learning_mode_manual_refresh": True,
+                                    "learning_mode_close_reopen_persistence": True})
                 sidebar = page.get_by_test_id("stSidebar")
                 assert sidebar.get_by_text("DeepSeek AI 助手", exact=True).count() == 0
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0

@@ -68,6 +68,14 @@ def test_detailed_explanation_setting_uses_product_label_only():
     assert app.session_state["learning_mode"] is False
     assert app.session_state["settings_open"] is True
     assert not [item for item in app.expander if item.label.startswith("知识解释：")]
+    app.button(key="settings_close").click().run()
+    assert app.session_state["settings_open"] is False
+    assert app.session_state["learning_mode"] is False
+    assert not [item for item in app.expander if item.label.startswith("知识解释：")]
+    app.button(key="settings_toggle").click().run()
+    assert app.session_state["settings_open"] is True
+    assert app.toggle(key="learning_mode").value is False
+    assert not [item for item in app.expander if item.label.startswith("知识解释：")]
     app.toggle(key="learning_mode").set_value(True).run()
     assert [item for item in app.expander if item.label.startswith("知识解释：")]
 

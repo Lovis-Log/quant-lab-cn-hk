@@ -261,6 +261,7 @@ def _protect_session_widgets() -> None:
         "academy_lesson", "deepseek_api_key", "deepseek_remember",
         "deepseek_prompt", "deepseek_answer_mode", "deepseek_attach",
         "ds_model_select", "ds_model_manual", "ai_workspace",
+        "learning_mode", "refresh_enabled", "refresh_interval_seconds",
     }
     prefixes = (
         "strategy_", "backtest_", "portfolio_", "model_", "research_",
