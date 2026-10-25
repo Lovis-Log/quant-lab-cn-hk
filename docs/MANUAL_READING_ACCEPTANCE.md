@@ -24,7 +24,7 @@
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-结果：`136 passed`。
+结果：`137 passed`。
 
 覆盖内容包括：
 
@@ -45,6 +45,7 @@
 - 设置专用回调触发 app 级重绘，设置面板保持打开，市场页和其他工作区立即同步。
 - 2026-10-25 刷新加固：一次性 rerun 标记改在应用入口、任何 fragment 之前消费；新增“刷新整页”按钮复用同一刷新路径，手动刷新后展开状态也恢复为默认两项。
 - 2026-10-25 设置生命周期回归：关闭详细解释后关闭设置面板，再重新打开，toggle 保持关闭且知识解释保持 0 项；持久设置控件不会因条件隐藏被 Streamlit 清理会话键。
+- 2026-10-25 资料库路径文案回归：设置页同时显示“当前资料库位置”“选择新的存放文件夹”“迁移后的资料库位置”，并在执行迁移前预览最终 `QuantLabCNHK` 路径；旧“当前资料根目录”“资料库父目录”标签不再出现。
 
 ## 2026-10-25 Browser 插件增量验收
 
@@ -112,6 +113,8 @@
 刷新路径加固后使用隔离目录 `.tools/desktop-validation-d1c18c6a203040c6929c80bfbd769359` 再次执行同一命令。最终结果新增 `learning_mode_manual_refresh=true`：自动开关与“刷新整页”均保持设置面板和会话状态，展开后的 8 项恢复为默认 2 项；未重新调用 AI。验收同时确认 Streamlit 替换侧栏 DOM 后观察器会重新绑定，最大化面板以实际侧栏边界定位。控制台 error/warning、框架覆盖层和 Streamlit 控件状态警告均为 0，子进程正常停止且退出码为 0。
 
 设置生命周期修复后使用隔离目录 `.tools/desktop-validation-45634d2f208b4e078d843a035f59888a` 完整复跑。结果新增 `learning_mode_close_reopen_persistence=true`：关闭详细解释、关闭设置、重新打开设置后，toggle 仍为关闭且知识解释保持 0 项；再开启后恢复默认 2 项。控制台 error/warning 为 0，框架覆盖层和 Streamlit 控件状态警告均不存在，子进程正常停止且退出码为 0。
+
+资料库文案调整后使用隔离目录 `.tools/desktop-validation-c0afde5a98e4400088e0be6a62009780` 完整复跑，`library_location_labels=true`。三个新名称与迁移目标完整路径预览均可见，两个旧名称不存在；控制台 error/warning、框架覆盖层和 Streamlit 控件状态警告均为 0，退出码为 0。
 
 ## 已知限制与未验证范围
 

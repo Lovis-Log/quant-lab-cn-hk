@@ -38,9 +38,18 @@ def _chosen_parent(default: str) -> str:
 
 def _configure_library(prefix: str) -> None:
     default = str(Path.home() / "Documents")
-    parent = st.text_input("资料库父目录", value=_chosen_parent(default), key=f"{prefix}_library_parent",
-                           help="应用会在所选位置创建 QuantLabCNHK 子目录。")
+    parent = st.text_input(
+        "选择新的存放文件夹",
+        value=_chosen_parent(default),
+        key=f"{prefix}_library_parent",
+        help="软件会在所选文件夹内创建 QuantLabCNHK 子文件夹。",
+    )
     _folder_picker_component()
+    target_preview = st.session_state.get("library_restart_required") or str(
+        Path(parent).expanduser() / "QuantLabCNHK"
+    )
+    st.caption("迁移后的资料库位置")
+    st.code(target_preview, language=None)
     if st.button("创建资料库并迁移现有数据", key=f"{prefix}_activate_library", width="stretch"):
         try:
             target = stage_library(Path(parent))
@@ -49,7 +58,6 @@ def _configure_library(prefix: str) -> None:
             st.error(str(exc))
     if st.session_state.get("library_restart_required"):
         st.success("资料库已复制并验证。请关闭并重新启动软件后继续。")
-        st.code(st.session_state["library_restart_required"], language=None)
 
 
 def render_library_setup() -> None:
@@ -96,7 +104,7 @@ def render_settings_panel() -> None:
             st.button("×", key="settings_close", on_click=_close_settings, width="stretch")
         storage_tab, ai_tab, preference_tab = st.tabs(("资料文件夹", "DeepSeek", "偏好设置"))
         with storage_tab:
-            st.caption("当前资料根目录")
+            st.caption("当前资料库位置")
             st.code(str(user_data_dir()), language=None)
             _configure_library("settings")
         with ai_tab:

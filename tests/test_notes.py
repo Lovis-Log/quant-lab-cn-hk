@@ -79,6 +79,20 @@ def test_first_run_requires_library_setup(tmp_path, monkeypatch):
     assert not app.sidebar.radio
 
 
+def test_library_location_labels_are_unambiguous(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path / "library-labels"))
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    next(item for item in app.button if item.label == "⚙").click().run()
+
+    assert app.text_input(key="settings_library_parent").label == "选择新的存放文件夹"
+    captions = [str(item.value) for item in app.caption]
+    assert "当前资料库位置" in captions
+    assert "迁移后的资料库位置" in captions
+    assert "当前资料根目录" not in captions
+    assert not [item for item in app.text_input if item.label == "资料库父目录"]
+    assert any("QuantLabCNHK" in str(item.value) for item in app.code)
+
+
 def test_notes_panel_opens_on_restored_editor_and_keeps_new_draft(monkeypatch, tmp_path):
     data_dir = tmp_path / "notes-ui"
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(data_dir))

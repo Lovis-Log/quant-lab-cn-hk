@@ -61,7 +61,7 @@ python -m venv .venv
 - **免安装版**：双击 `dist/packages/2.0.1-rc.1/QuantLab/QuantLab.exe`。必须保留整个 `QuantLab` 文件夹，不能只复制 EXE。Python 运行时已包含在该文件夹内，目标电脑无需另装 Python。
 - 两种方式都在本机自动启动原有 Streamlit 后端，随机选一个空闲端口并**只监听 `127.0.0.1`**，随后在独立 pywebview 窗口打开；不会自动打开系统浏览器。关闭窗口后只停止本次启动的后端进程。
 - Windows 电脑还需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。本安装包目前不内置它；若缺失，启动器会显示安装提示。当前构建的 EXE 和安装包未做商业代码签名，Windows 可能提示未知发布者。
-- 首次启动必须选择一个本地父目录；应用在其中创建结构化 `QuantLabCNHK` 资料库，分类保存数据库、笔记附件、备份、日志、缓存和 WebView 数据。旧资料复制并校验后下次启动切换，原目录保留。`QUANT_LAB_DATA_DIR` 仍可在开发/测试中直接指定目录。
+- 首次启动在“选择新的存放文件夹”中指定一个本地目录；应用在其中创建结构化 `QuantLabCNHK` 资料库，分类保存数据库、笔记附件、备份、日志、缓存和 WebView 数据。设置页分别显示“当前资料库位置”和复制校验后的“迁移后的资料库位置”；下次启动切换，原目录保留。`QUANT_LAB_DATA_DIR` 仍可在开发/测试中直接指定目录。
 
 ### 开发环境启动桌面窗口
 

@@ -235,6 +235,12 @@ def main():
                 settle(page)
                 settings_panel = page.locator(".st-key-settings_panel")
                 expect(settings_panel).to_be_visible(timeout=10000)
+                expect(settings_panel.get_by_text("当前资料库位置", exact=True)).to_be_visible()
+                expect(settings_panel.get_by_label("选择新的存放文件夹", exact=True)).to_be_visible()
+                expect(settings_panel.get_by_text("迁移后的资料库位置", exact=True)).to_be_visible()
+                assert settings_panel.get_by_text("当前资料根目录", exact=True).count() == 0
+                assert settings_panel.get_by_label("资料库父目录", exact=True).count() == 0
+                summary["library_location_labels"] = True
                 settings_panel.get_by_role("tab", name="偏好设置", exact=True).click()
                 settle(page)
                 expect(settings_panel.get_by_text("显示详细解释提示", exact=True)).to_be_visible(timeout=10000)
