@@ -64,12 +64,27 @@ def _close_settings() -> None:
     st.session_state["settings_open"] = False
 
 
-def _learning_mode_changed() -> None:
-    persist_setting("learning_mode")
+def _queue_learning_mode_refresh() -> None:
     for key in tuple(st.session_state):
         if str(key).startswith("knowledge_group_expanded_"):
             st.session_state.pop(key, None)
     st.session_state["learning_mode_app_rerun_pending"] = True
+
+
+def _learning_mode_changed() -> None:
+    persist_setting("learning_mode")
+    _queue_learning_mode_refresh()
+
+
+def _refresh_learning_mode_page() -> None:
+    persist_setting("learning_mode")
+    _queue_learning_mode_refresh()
+
+
+def rerun_pending_settings() -> None:
+    """Consume settings-triggered app reruns before any fragment is rendered."""
+    if st.session_state.pop("learning_mode_app_rerun_pending", False):
+        st.rerun(scope="app")
 
 
 def render_settings_panel() -> None:
@@ -87,8 +102,20 @@ def render_settings_panel() -> None:
         with ai_tab:
             render_connection_settings()
         with preference_tab:
-            st.toggle("显示详细解释提示", key="learning_mode",
-                      on_change=_learning_mode_changed)
+            learning_toggle, refresh = st.columns(
+                [3, 1], vertical_alignment="bottom", gap="small"
+            )
+            with learning_toggle:
+                st.toggle("显示详细解释提示", key="learning_mode",
+                          on_change=_learning_mode_changed)
+            with refresh:
+                st.button(
+                    "刷新整页",
+                    key="learning_mode_refresh",
+                    width="stretch",
+                    on_click=_refresh_learning_mode_page,
+                    help="强制重绘全部工作区；不会重新请求行情或调用 AI。",
+                )
             st.caption("只调整页面解释密度，不改变行情、策略、回测、统计或组合计算。")
             st.toggle("自动刷新行情（仅市场页）", key="refresh_enabled",
                       on_change=persist_setting, args=("refresh_enabled",))
@@ -98,8 +125,11 @@ def render_settings_panel() -> None:
             st.caption("自动刷新只在软件和市场页会话运行时生效；关闭软件后不更新。")
             if st.session_state.get("settings_error"):
                 st.warning(st.session_state.pop("settings_error"))
-        if st.session_state.pop("learning_mode_app_rerun_pending", False):
-            st.rerun(scope="app")
 
 
-__all__ = ["library_configured", "render_library_setup", "render_settings_panel"]
+__all__ = [
+    "library_configured",
+    "render_library_setup",
+    "render_settings_panel",
+    "rerun_pending_settings",
+]

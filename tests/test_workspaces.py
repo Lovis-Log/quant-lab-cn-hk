@@ -101,3 +101,9 @@ def test_backtest_knowledge_group_expands_collapses_and_resets(monkeypatch) -> N
         assert not [item for item in app.expander if item.label.startswith("知识解释：")]
         app.toggle(key="learning_mode").set_value(True).run()
         assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2
+        next(item for item in app.button if item.label == "显示更多（剩余 6 项）").click().run()
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 8
+        app.button(key="learning_mode_refresh").click().run()
+        assert app.session_state["settings_open"] is True
+        assert "learning_mode_app_rerun_pending" not in app.session_state
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2

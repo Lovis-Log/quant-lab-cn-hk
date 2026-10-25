@@ -35,7 +35,12 @@ from quant_lab.ui_deepseek import initialize_credentials, render_deepseek_panel
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
 from quant_lab.ui_manual import render_manual_panel
-from quant_lab.ui_settings import library_configured, render_library_setup, render_settings_panel
+from quant_lab.ui_settings import (
+    library_configured,
+    render_library_setup,
+    render_settings_panel,
+    rerun_pending_settings,
+)
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
@@ -46,24 +51,33 @@ SIDEBAR_LAYOUT_JS = """
 <script>
 (() => {
   const root = document.documentElement;
-  const sidebar = document.querySelector('[data-testid="stSidebar"]');
+  let observedSidebar = null;
+  window.__quantLabSidebarResizeObserver?.disconnect();
+  const observer = new ResizeObserver(() => sync());
   const sync = () => {
+    const sidebar = document.querySelector('[data-testid="stSidebar"]');
     if (!sidebar || getComputedStyle(sidebar).display === 'none') return;
+    if (sidebar !== observedSidebar) {
+      observer.disconnect();
+      observer.observe(sidebar);
+      observedSidebar = sidebar;
+    }
     const width = sidebar.getBoundingClientRect().width;
     if (width > 0) root.style.setProperty('--ql-sidebar-width', `${width}px`);
   };
-  window.__quantLabSidebarResizeObserver?.disconnect();
-  if (sidebar) {
-    const observer = new ResizeObserver(sync);
-    observer.observe(sidebar);
-    window.__quantLabSidebarResizeObserver = observer;
-  }
+  window.__quantLabSidebarResizeObserver = observer;
+  window.__quantLabSidebarMutationObserver?.disconnect();
+  const mutationObserver = new MutationObserver(sync);
+  mutationObserver.observe(document.body, {childList:true, subtree:true});
+  window.__quantLabSidebarMutationObserver = mutationObserver;
   if (window.__quantLabSidebarWindowResize) {
     window.removeEventListener('resize', window.__quantLabSidebarWindowResize);
   }
   window.__quantLabSidebarWindowResize = sync;
   window.addEventListener('resize', sync);
   sync();
+  window.setTimeout(sync, 100);
+  window.setTimeout(sync, 500);
 })();
 </script>
 """
@@ -766,6 +780,7 @@ def render_app() -> None:
         render_library_setup()
         return
     initialize_settings()
+    rerun_pending_settings()
     initialize_credentials()
     _protect_session_widgets()
     _global_topbar()

@@ -277,9 +277,21 @@ def main():
                     "([x,y]) => { const e=document.elementFromPoint(x,y); return {tag:e?.tagName, cls:e?.className, panel:e?.getAttribute('data-panel')}; }",
                     [resize_box["x"] + 3, resize_box["y"] + 100],
                 )
+                resize_limits = page.evaluate(
+                    """() => {
+                      const sidebar = document.querySelector('[data-testid="stSidebar"]');
+                      const otherWidth = ['manual','notes']
+                        .map(kind => document.querySelector(`.st-key-${kind}_side_panel`))
+                        .reduce((total, item) => total + (item ? item.getBoundingClientRect().width : 0), 0);
+                      const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 0;
+                      return {minimum:240, maximum:Math.max(240, window.innerWidth-sidebarWidth-otherWidth-360)};
+                    }"""
+                )
+                grow_panel = resize_limits["maximum"] >= box["width"] + 35
+                drag_delta = -45 if grow_panel else 45
                 page.mouse.move(resize_box["x"] + 3, resize_box["y"] + 100)
                 page.mouse.down()
-                page.mouse.move(resize_box["x"] - 45, resize_box["y"] + 100, steps=5)
+                page.mouse.move(resize_box["x"] + drag_delta, resize_box["y"] + 100, steps=5)
                 page.mouse.up()
                 page.wait_for_timeout(300)
                 resized_box = panel.bounding_box()
@@ -288,7 +300,7 @@ def main():
                 )
                 assert hit_target.get("panel") == "deepseek"
                 assert resize_state.get("stored") == str(round(resized_box["width"]))
-                assert resized_box and resized_box["width"] >= box["width"] + 35
+                assert resized_box and abs(resized_box["width"] - box["width"]) >= 35
                 page.get_by_role("button", name="研究笔记", exact=True).click()
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
@@ -667,8 +679,28 @@ def main():
                         "button", name="×", exact=True
                     ).click()
                     settle(page)
+                    page.get_by_role("button", name="显示更多（剩余 6 项）", exact=True).click()
+                    settle(page)
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 8
+                    page.get_by_role("button", name="⚙", exact=True).click()
+                    settle(page)
+                    settings_panel = page.locator(".st-key-settings_panel")
+                    settings_panel.get_by_role("tab", name="偏好设置", exact=True).click()
+                    settings_panel.get_by_role("button", name="刷新整页", exact=True).click()
+                    settle(page)
+                    expect(page.locator(".st-key-settings_panel")).to_be_visible(timeout=10000)
+                    assert page.get_by_test_id("stExpander").filter(
+                        has_text="知识解释："
+                    ).count() == 2
+                    page.locator(".st-key-settings_panel").get_by_role(
+                        "button", name="×", exact=True
+                    ).click()
+                    settle(page)
                     summary.update({"knowledge_group_pagination": True,
-                                    "learning_mode_immediate_app_rerun": True})
+                                    "learning_mode_immediate_app_rerun": True,
+                                    "learning_mode_manual_refresh": True})
                 sidebar = page.get_by_test_id("stSidebar")
                 assert sidebar.get_by_text("DeepSeek AI 助手", exact=True).count() == 0
                 assert sidebar.get_by_text("AI 研究助手", exact=True).count() == 0

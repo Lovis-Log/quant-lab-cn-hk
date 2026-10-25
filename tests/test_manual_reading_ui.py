@@ -59,6 +59,9 @@ def test_detailed_explanation_setting_uses_product_label_only():
 
     setting = app.toggle(key="learning_mode")
     assert setting.label == "显示详细解释提示"
+    refresh = app.button(key="learning_mode_refresh")
+    assert refresh.label == "刷新整页"
+    assert "不会重新请求行情或调用 AI" in refresh.help
     assert not [toggle for toggle in app.toggle if "新手模式" in toggle.label]
     setting.set_value(False).run()
     assert not app.exception
