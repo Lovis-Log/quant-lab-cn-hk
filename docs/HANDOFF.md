@@ -11,6 +11,8 @@
 基线 e0114bd8272d8f063be3c091f53b1d140a053514，开始时干净。
 恢复：codex/recovery-desktop-roadmap-20261027-e0114bd；开发：codex/desktop-research-upgrade。
 用户自行启动 Claude；各开发者独立分支/worktree、测试目录和 AppId；公共合同与迁移编号由当前集成人统一。
+
+本轮已验证的实现提交：60770aa47cf5f7e52f9ba290d89e1acbcfe86ad6（feat: keep desktop research responsive with scoped background jobs）。后续回执提交只更新文档，不改变已验收代码；从远程 codex/desktop-research-upgrade 的最新提交继续即可。
 禁止混入其他开发者修改；开始前保护未提交文件。工作包完成后更新文档、回执，完整验证后提交推送并核对远程。
 
 ## 当前状态
