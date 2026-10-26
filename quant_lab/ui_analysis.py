@@ -8,7 +8,9 @@ import streamlit as st
 
 from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
 from quant_lab.metrics import performance_stats
-from quant_lab.portfolio import analyze_portfolio
+from quant_lab.portfolio import analyze_portfolio, collect_portfolio_histories
+from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
+from quant_lab.jobs import JobState
 from quant_lab.processing import DataValidationError
 from quant_lab.statistics import evaluate_linear_model, one_sample_return_test
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
@@ -22,7 +24,7 @@ def render_risk(bundle: HistoryBundle | None) -> None:
     if not require_history(bundle):
         return
     history = bundle.frame
-    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     if len(history) >= 3:
         daily = history["close"].pct_change().dropna()
         price_stats = performance_stats(history["close"])
@@ -46,12 +48,14 @@ def render_risk(bundle: HistoryBundle | None) -> None:
     other = "000001" if bundle.market == "A 股" and bundle.symbol != "000001" else (
         "600519" if bundle.market == "A 股" else "00941" if bundle.symbol != "00941" else "00700"
     )
-    code_text = st.text_input(
-        "组合股票代码（逗号分隔，2–4 只）", value=f"{bundle.symbol},{other}",
-        help="只允许当前市场的股票；A 股六位，港股可输入 1–5 位并自动补足五位。不会混合 CNY 与 HKD。",
-        key=f"portfolio_codes_{bundle.market}_{bundle.symbol}",
-    )
-    fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05, key="portfolio_fraction")
+    with st.form("portfolio_parameters", border=False):
+        code_text = st.text_input(
+            "组合股票代码（逗号分隔，2–4 只）", value=f"{bundle.symbol},{other}",
+            help="只允许当前市场股票，不会混合 CNY 与 HKD。",
+            key=f"portfolio_codes_{bundle.market}_{bundle.symbol}",
+        )
+        fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05, key="portfolio_fraction")
+        requested = st.form_submit_button("分析同市场组合")
     codes = [part.strip() for part in code_text.split(",") if part.strip()]
     pattern = r"\d{6}" if bundle.market == "A 股" else r"\d{5}"
     valid = 2 <= len(codes) <= 4 and len(set(codes)) == len(codes) and all(
@@ -61,36 +65,37 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         st.warning("请输入 2–4 个不重复的当前市场股票代码。")
         return
     key = (bundle_key(bundle), tuple(codes), fraction)
-    if st.button("分析同市场组合"):
-        try:
-            histories: dict[str, pd.DataFrame] = {}
-            first = bundle.frame["date"].iloc[0].date()
-            last = bundle.frame["date"].iloc[-1].date()
-            with st.spinner("读取组合股票并对齐共同交易日…"):
-                for code in codes:
-                    histories[code] = (
-                        bundle.frame if code == bundle.symbol
-                        else fetch_history(bundle.market, code, first, last, bundle.adjustment).frame
-                    )
-                analysis = analyze_portfolio(histories, fraction)
+    if requested:
+        submit_task("portfolio_data", key, collect_portfolio_histories, bundle, codes, fetch_history)
+    prepared = take_result("portfolio_data", key)
+    if prepared:
+        if prepared.state == JobState.SUCCEEDED:
+            submit_task("portfolio", key, analyze_portfolio, prepared.result, fraction, cpu=True)
+        elif prepared.state == JobState.FAILED:
+            st.session_state["portfolio_error"] = prepared.error
+    completed = take_result("portfolio", key)
+    if completed:
+        if completed.state == JobState.SUCCEEDED:
+            analysis = completed.result
             st.session_state["portfolio_key"] = key
             st.session_state["portfolio_result"] = analysis
             st.session_state["portfolio_error"] = None
-        except (ValueError, DataUnavailableError, DataValidationError) as exc:
-            st.session_state["portfolio_key"] = key
-            st.session_state["portfolio_result"] = None
-            st.session_state["portfolio_error"] = str(exc)
-    if st.session_state.get("portfolio_key") != key:
-        return
+        elif completed.state == JobState.FAILED:
+            st.session_state["portfolio_error"] = completed.error
     if st.session_state.get("portfolio_error"):
         st.error(st.session_state["portfolio_error"])
+    if "portfolio_data" in st.session_state.get("_task_tickets", {}) or "portfolio" in st.session_state.get("_task_tickets", {}):
+        st.caption("组合研究进行中，可继续使用其他工作区。")
+        if st.session_state.get("portfolio_result") is None:
+            loading_placeholder()
+    if st.session_state.get("portfolio_key") != key:
         return
     result = st.session_state.get("portfolio_result")
     if result is None:
         return
     st.caption(f"共同交易日 {len(result.closes)} 天；权重只使用截至 {result.train_last_date:%Y-%m-%d} 的训练收益率。")
     st.markdown("#### 组合权重")
-    labels = {code: names.security_label(bundle.market, code) for code in codes}
+    labels = {code: names.cached_security_label(bundle.market, code) for code in codes}
     st.dataframe(result.weights.rename(index=labels).style.format("{:.1%}"), width="stretch")
     cols = st.columns(2)
     with cols[0]:
@@ -160,20 +165,23 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     fraction = st.slider("机器学习训练比例", 0.55, 0.85, 0.70, 0.05, key="model_fraction")
     key = (bundle_key(bundle), fraction)
     if st.button("运行时间序列线性回归"):
-        try:
-            with st.spinner("按日期训练并评估样本外预测…"):
-                evaluation = evaluate_linear_model(bundle.frame, fraction)
+        submit_task("statistics", key, evaluate_linear_model, bundle.frame, fraction, cpu=True)
+    completed = take_result("statistics", key)
+    if completed:
+        if completed.state == JobState.SUCCEEDED:
+            evaluation = completed.result
             st.session_state["model_key"] = key
             st.session_state["model_result"] = evaluation
             st.session_state["model_error"] = None
-        except ValueError as exc:
-            st.session_state["model_key"] = key
-            st.session_state["model_result"] = None
-            st.session_state["model_error"] = str(exc)
-    if st.session_state.get("model_key") != key:
-        return
+        elif completed.state == JobState.FAILED:
+            st.session_state["model_error"] = completed.error
     if st.session_state.get("model_error"):
         st.error(st.session_state["model_error"])
+    if "statistics" in st.session_state.get("_task_tickets", {}):
+        st.caption("模型在后台计算，可继续阅读或切换工作区。")
+        if st.session_state.get("model_result") is None:
+            loading_placeholder()
+    if st.session_state.get("model_key") != key:
         return
     result = st.session_state.get("model_result")
     if result is None:

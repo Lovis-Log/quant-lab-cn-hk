@@ -10,5 +10,22 @@ def offline_ui_names(monkeypatch, tmp_path):
     from quant_lab import names
     from quant_lab import credentials
     monkeypatch.setattr(names, "security_name", lambda market, symbol, **kwargs: "测试证券")
+    monkeypatch.setattr(names, "cached_security_name", lambda market, symbol, **kwargs: "测试证券")
     # Ordinary tests must not inspect the developer's real Windows vault.
     monkeypatch.setattr(credentials, "load_key", lambda: None)
+    yield
+    from quant_lab.jobs import shutdown_jobs
+    shutdown_jobs()
+
+
+def finish_background_jobs(app, timeout=15):
+    """AppTest has no browser timer: explicitly pump real async job completion."""
+    import time
+    deadline = time.monotonic() + timeout
+    while app.session_state["_task_tickets"]:
+        assert not app.exception
+        if time.monotonic() >= deadline:
+            pytest.fail("background UI tasks did not settle")
+        time.sleep(.02)
+        app.run()
+    return app

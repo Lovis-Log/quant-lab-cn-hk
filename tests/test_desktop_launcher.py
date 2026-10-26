@@ -41,6 +41,30 @@ def test_random_port_is_not_the_fixed_web_port() -> None:
     assert all(0 < port < 65536 for port in ports)
 
 
+def test_shutdown_handshake_stops_owned_running_cpu_process(tmp_path):
+    import time
+    from desktop_launcher import start_shutdown_listener
+    from quant_lab.jobs import job_manager, JobState
+    runtime = tmp_path / "cache" / "runtime"
+    runtime.mkdir(parents=True)
+    signal = runtime / "test.stop"
+    manager = job_manager()
+    identifier = manager.submit("desktop-test", "long", "one", time.sleep, 30, cpu=True)
+    deadline = time.monotonic() + 4
+    while identifier not in manager._processes and time.monotonic() < deadline:
+        time.sleep(.01)
+    process = manager._processes[identifier]
+    listener = start_shutdown_listener(signal, tmp_path)
+    signal.write_text("shutdown", encoding="ascii")
+    listener.join(timeout=6)
+    assert not listener.is_alive()
+    assert signal.with_suffix(".done").read_text(encoding="ascii") == "workers-stopped"
+    assert process.poll() is not None
+    assert manager.get(identifier, "desktop-test").state == JobState.CANCELLED
+    with pytest.raises(ValueError):
+        start_shutdown_listener(tmp_path / "outside.stop", tmp_path)
+
+
 def test_existing_8501_listener_keeps_its_port() -> None:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as existing:
         try:

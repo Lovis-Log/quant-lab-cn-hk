@@ -8,6 +8,7 @@ from quant_lab.ui_knowledge import ARTICLE_BY_TOPIC, render_knowledge
 import math
 
 
+@st.fragment
 def render_academy() -> None:
     st.subheader("Quant Academy · 金融数学实验室")
     st.caption("先用可手算的例子理解公式，再回到真实行情检验。下方实验全是固定教学数据。")
@@ -27,6 +28,13 @@ def render_academy() -> None:
     st.session_state["active_learning_context"] = {"course_id": LESSON_TOPICS[choice][0],
         "topic": lesson.title, "parameter": value, "experiment_conclusion": conclusion,
         "status": "固定教学样本，不是股票行情"}
+    # A fragment rerun does not re-enter render_app: refresh the AI whitelist
+    # explicitly so a follow-up never receives the previous lesson's numbers.
+    st.session_state["_current_ai_context"] = {
+        "page": "Quant Academy", "lesson": choice,
+        "data_status": "离线教学实验，不是股票行情。",
+        "learning_context": st.session_state["active_learning_context"],
+    }
     st.dataframe(frame, width="stretch", hide_index=True)
     st.info(conclusion)
     readings = {}

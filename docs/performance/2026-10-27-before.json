@@ -1,0 +1,45 @@
+{
+  "label": "before",
+  "synthetic": true,
+  "source_commit": "e0114bd8272d8f063be3c091f53b1d140a053514",
+  "source_dirty": true,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+  "logical_cpus": 20,
+  "viewport": {
+    "width": 1282,
+    "height": 780
+  },
+  "data_rows": 2520,
+  "measurements": {
+    "page_switch": {
+      "samples": 20,
+      "median_ms": 403.6,
+      "p95_ms": 453.1,
+      "max_ms": 509.5
+    },
+    "lesson_switch": {
+      "samples": 20,
+      "median_ms": 281.2,
+      "p95_ms": 346.5,
+      "max_ms": 390.2
+    },
+    "lesson_parameter": {
+      "samples": 20,
+      "median_ms": 218.2,
+      "p95_ms": 274.7,
+      "max_ms": 333.9
+    },
+    "manual_toggle": {
+      "samples": 20,
+      "median_ms": 359.7,
+      "p95_ms": 407.4,
+      "max_ms": 417.0
+    },
+    "load_2520_synthetic_rows_ms": 1140.9
+  },
+  "errors": [],
+  "scope": "actual source desktop WebView2; synthetic data; not a real-provider or installed-build measurement",
+  "startup_ms": 8869.2,
+  "child_stopped": true
+}

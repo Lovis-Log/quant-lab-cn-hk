@@ -34,6 +34,8 @@ from quant_lab.ui_knowledge import render_knowledge
 from quant_lab.ui_deepseek import initialize_credentials, render_deepseek_panel
 from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
+from quant_lab.ui_jobs import submit_task, take_result, cancel_task, render_background_tasks, loading_placeholder
+from quant_lab.jobs import JobState
 from quant_lab.ui_manual import render_manual_panel
 from quant_lab.ui_settings import (
     library_configured,
@@ -53,7 +55,12 @@ SIDEBAR_LAYOUT_JS = """
   const root = document.documentElement;
   let observedSidebar = null;
   window.__quantLabSidebarResizeObserver?.disconnect();
-  const observer = new ResizeObserver(() => sync());
+  let frame = 0;
+  const schedule = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => { frame = 0; sync(); });
+  };
+  const observer = new ResizeObserver(schedule);
   const sync = () => {
     const sidebar = document.querySelector('[data-testid="stSidebar"]');
     if (!sidebar || getComputedStyle(sidebar).display === 'none') return;
@@ -63,18 +70,21 @@ SIDEBAR_LAYOUT_JS = """
       observedSidebar = sidebar;
     }
     const width = sidebar.getBoundingClientRect().width;
-    if (width > 0) root.style.setProperty('--ql-sidebar-width', `${width}px`);
+    if (width > 0 && root.style.getPropertyValue('--ql-sidebar-width') !== `${width}px`) {
+      root.style.setProperty('--ql-sidebar-width', `${width}px`);
+    }
   };
   window.__quantLabSidebarResizeObserver = observer;
   window.__quantLabSidebarMutationObserver?.disconnect();
-  const mutationObserver = new MutationObserver(sync);
-  mutationObserver.observe(document.body, {childList:true, subtree:true});
+  const mutationObserver = new MutationObserver(schedule);
+  const view = document.querySelector('[data-testid="stAppViewContainer"]');
+  if (view) mutationObserver.observe(view, {childList:true});
   window.__quantLabSidebarMutationObserver = mutationObserver;
   if (window.__quantLabSidebarWindowResize) {
     window.removeEventListener('resize', window.__quantLabSidebarWindowResize);
   }
-  window.__quantLabSidebarWindowResize = sync;
-  window.addEventListener('resize', sync);
+  window.__quantLabSidebarWindowResize = schedule;
+  window.addEventListener('resize', schedule);
   sync();
   window.setTimeout(sync, 100);
   window.setTimeout(sync, 500);
@@ -95,7 +105,7 @@ DOCK_RESIZE_JS = """
     const storageKey = `quantlab.${kind}.panelWidth`;
     const stored = Number.parseFloat(localStorage.getItem(storageKey));
 
-    const applyWidth = (requested) => {
+    const applyWidth = (requested, persist=false) => {
       const otherWidth = ['manual','deepseek','notes'].filter(value => value !== kind)
         .map(value => document.querySelector(`.st-key-${value}_side_panel`))
         .reduce((total, other) => total + (other ? other.getBoundingClientRect().width : 0), 0);
@@ -104,7 +114,7 @@ DOCK_RESIZE_JS = """
       const maximum = Math.max(minimum, window.innerWidth - sidebarWidth - otherWidth - 360);
       const width = Math.round(Math.min(maximum, Math.max(minimum, requested)));
       root.style.setProperty(property, `${width}px`);
-      localStorage.setItem(storageKey, String(width));
+      if (persist) localStorage.setItem(storageKey, String(width));
       window.__quantLabApplyPanelOrder?.();
     };
     if (Number.isFinite(stored)) applyWidth(stored);
@@ -113,9 +123,16 @@ DOCK_RESIZE_JS = """
       event.preventDefault();
       const startX = event.clientX;
       const startWidth = panel.getBoundingClientRect().width;
+      let pendingWidth = startWidth;
+      let frame = 0;
       handle.classList.add("is-dragging");
-      const move = (next) => applyWidth(startWidth - (next.clientX - startX));
+      const move = (next) => {
+        pendingWidth = startWidth - (next.clientX - startX);
+        if (!frame) frame = requestAnimationFrame(() => { frame = 0; applyWidth(pendingWidth); });
+      };
       const stop = () => {
+        if (frame) cancelAnimationFrame(frame);
+        applyWidth(pendingWidth, true);
         handle.classList.remove("is-dragging");
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", stop);
@@ -129,12 +146,13 @@ DOCK_RESIZE_JS = """
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
       event.preventDefault();
       const delta = event.key === 'ArrowLeft' ? 24 : -24;
-      applyWidth(panel.getBoundingClientRect().width + delta);
+      applyWidth(panel.getBoundingClientRect().width + delta, true);
     });
   };
   setup("manual", 240);
   setup("deepseek", 240);
   setup("notes", 260);
+  requestAnimationFrame(() => window.__quantLabApplyPanelOrder?.());
 })();
 </script>
 """
@@ -152,11 +170,12 @@ TOPBAR_REORDER_JS = """
     } catch (_) { return [...kinds]; }
   };
   let order = readOrder();
+  let savedOrder = JSON.stringify(order);
 
   const applyOrder = (animate=true) => {
     const buttons = Object.fromEntries(kinds.map(kind => [kind,
       document.querySelector(`.st-key-${kind}_panel_toggle button`)]));
-    const before = Object.fromEntries(kinds.map(kind => [kind, buttons[kind]?.getBoundingClientRect()]));
+    const before = animate ? Object.fromEntries(kinds.map(kind => [kind, buttons[kind]?.getBoundingClientRect()])) : {};
     order.forEach((kind, index) => {
       const column = buttons[kind]?.closest('[data-testid="stColumn"]');
       if (column) column.style.order = String(index + 3);
@@ -170,7 +189,11 @@ TOPBAR_REORDER_JS = """
     });
     root.dataset.qlDockOrder = order.join('-');
     root.style.setProperty('--ql-dock-total-width', `${right}px`);
-    localStorage.setItem(storageKey, JSON.stringify(order));
+    const serializedOrder = JSON.stringify(order);
+    if (savedOrder !== serializedOrder) {
+      localStorage.setItem(storageKey, serializedOrder);
+      savedOrder = serializedOrder;
+    }
     if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       requestAnimationFrame(() => kinds.forEach(kind => {
         const button = buttons[kind];
@@ -240,8 +263,14 @@ TOPBAR_REORDER_JS = """
   };
   initialize();
   window.__quantLabTopbarObserver?.disconnect();
-  window.__quantLabTopbarObserver = new MutationObserver(initialize);
-  window.__quantLabTopbarObserver.observe(document.body, {childList:true, subtree:true});
+  let pending = false;
+  window.__quantLabTopbarObserver = new MutationObserver(() => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; initialize(); });
+  });
+  const topbar = document.querySelector('.st-key-global_topbar');
+  if (topbar) window.__quantLabTopbarObserver.observe(topbar, {childList:true, subtree:true});
   if (!window.__quantLabFullscreenEscapeBound) {
     window.__quantLabFullscreenEscapeBound = true;
     window.addEventListener('keydown', event => {
@@ -338,19 +367,27 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             st.caption(f"目录快照：{len(labels)} 只 · {directory.source} · 获取于 {beijing(directory.received_at)}；不含行情，不验证当前上市状态。")
             if directory.error:
                 st.warning(directory.error)
+        directory_result = take_result("directory", market)
+        if directory_result and directory_result.state == JobState.FAILED:
+            st.warning(directory_result.error)
         if st.button("更新股票候选目录", key="refresh_security_directory"):
             try:
-                refreshed = security_directory(market, force=True)
-                if refreshed.error:
-                    st.warning(refreshed.error)
-                else:
-                    st.rerun()
+                submit_task("directory", market, security_directory, market, force=True)
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 st.warning(str(exc))
         if valid_symbol:
+            name_key = (market, symbol)
+            name_result = take_result("name", name_key)
+            if name_result and name_result.state == JobState.FAILED:
+                st.warning(name_result.error)
+            seen_names = st.session_state.setdefault("_name_checks", set())
+            if name_key not in seen_names:
+                submit_task("name", name_key, names.security_name, market, symbol)
+                seen_names.add(name_key)
             if st.button("重新获取证券名称", key="refresh_security_name"):
-                names.security_name(market, symbol, force=True)
-            st.caption("当前选择：" + names.security_label(market, symbol))
+                cancel_task("name")
+                submit_task("name", name_key, names.security_name, market, symbol, force=True)
+            st.caption("当前选择：" + names.cached_security_label(market, symbol))
             try:
                 name_record = names.storage.cached_security_name(market, symbol)
                 if name_record:
@@ -371,7 +408,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
                     st.session_state["market_selection"] = chosen[0]
                     st.session_state[f"symbol_{chosen[0]}"] = chosen[1]
             st.selectbox("从自选股选择", [None] + watch_items, key="sidebar_watch", on_change=choose_watch,
-                         format_func=lambda item: "手动输入" if item is None else names.security_label(*item))
+                         format_func=lambda item: "手动输入" if item is None else names.cached_security_label(*item))
         if st.session_state.get("settings_error"):
             st.warning(st.session_state.pop("settings_error"))
         if not valid_symbol:
@@ -400,7 +437,7 @@ def _header(page: str, market: str, symbol: str, latest_date: str | None) -> Non
         '<p>中国 A 股与港股量化研究 · 历史数据与模拟实验</p></div>'
         '<div class="ql-header-context">'
         '<span class="ql-context-label">当前研究标的</span>'
-        f'<strong>{escape(names.security_label(market, symbol) if symbol else "未填写")}</strong>'
+        f'<strong>{escape(names.cached_security_label(market, symbol) if symbol else "未填写")}</strong>'
         f'<span class="ql-context-status {status_class}">{escape(status)}</span>'
         '</div></div>'
     )
@@ -494,6 +531,7 @@ def _render_right_dock(context: dict, bundle) -> None:
         deepseek_open = maximized == "deepseek"
         notes_open = maximized == "notes"
     if not (manual_open or deepseek_open or notes_open):
+        st.html('<script>requestAnimationFrame(() => window.__quantLabApplyPanelOrder?.());</script>', unsafe_allow_javascript=True)
         return
     with st.container(key="right_dock"):
         if maximized:
@@ -542,6 +580,17 @@ def _display_history(history: pd.DataFrame, currency: str) -> pd.DataFrame:
     ).copy()
     table["日期"] = table["日期"].dt.strftime("%Y-%m-%d")
     return table
+
+
+def _render_history_chart(bundle, *, candlestick=False):
+    builder = history_candlestick_chart if candlestick else history_price_chart
+    figure = builder(bundle.frame, bundle.currency)
+    figure.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name),
+                         uirevision=repr(st.session_state.get("_current_query")))
+    st.plotly_chart(figure, width="stretch", theme=None,
+        key="market_candle" if candlestick else "market_price",
+        config={"displaylogo": False, "scrollZoom": False},
+        alt="当前选中区间的历史日线 K 线与成交量。" if candlestick else "当前选中区间的历史收盘价与成交量。")
 
 
 def _main_page(
@@ -628,19 +677,13 @@ def _main_page(
                 f'<h2>行情图表</h2></div><span class="ql-legend">{legend}</span></div>'
             )
             if has_data:
-                price_tab, candle_tab = st.tabs(("收盘价与成交量", "日 K 线"))
+                price_tab, candle_tab = st.tabs(("收盘价与成交量", "日 K 线"), key="market_chart_tabs", on_change="rerun")
                 with price_tab:
-                    st.plotly_chart(
-                        history_price_chart(history, currency).update_layout(title_text=names.security_label(market, symbol, bundle.company_name)), width="stretch", theme=None,
-                        config={"displaylogo": False, "scrollZoom": False},
-                        alt=f"{source}{'模拟/教学' if demonstration else '真实历史'}日线的收盘价（{unit}每股）和成交量（股）。",
-                    )
+                    if price_tab.open:
+                        _render_history_chart(bundle)
                 with candle_tab:
-                    st.plotly_chart(
-                        history_candlestick_chart(history, currency).update_layout(title_text=names.security_label(market, symbol, bundle.company_name)), width="stretch", theme=None,
-                        config={"displaylogo": False, "scrollZoom": False},
-                        alt=f"{source}{'模拟/教学' if demonstration else '真实历史'}日线的开高低收 K 线及成交量。红色上涨，绿色下跌。",
-                    )
+                    if candle_tab.open:
+                        _render_history_chart(bundle, candlestick=True)
                 provenance_note = "模拟/教学数据，不是上游真实行情。" if demonstration else "图表不是实时行情。"
                 st.caption(f"来源：{source}；{adjustment_label}价格；红涨绿跌。{provenance_note}")
             else:
@@ -706,7 +749,7 @@ def _main_page(
         )
         if has_data:
             table = _display_history(history, currency)
-            table.insert(0, "股票", names.security_label(market, symbol, bundle.company_name))
+            table.insert(0, "股票", names.cached_security_label(market, symbol, bundle.company_name))
             st.dataframe(table, width="stretch", hide_index=True, height=280)
             first = table["日期"].iloc[0].replace("-", "")
             last = table["日期"].iloc[-1].replace("-", "")
@@ -749,27 +792,45 @@ def _market_workspace(query, market, symbol, adjustment):
         if manual or (auto and bundle is not None and next_attempt and now >= next_attempt):
             if manual:
                 st.session_state["history_manual_at"] = time.monotonic()
-            previous = bundle
-            try:
-                new_bundle = fetch_history(*query, force=True)
-                bundle = replace(new_bundle, company_name=names.security_name(market, symbol))
-                error = bundle.update_error
-                updated = True
-            except (DataUnavailableError, DataValidationError, ValueError):
-                error = "历史日线更新失败；保留上次有效数据，数据可能过期。"
-                if previous is not None:
-                    bundle = replace(previous, update_result="请求失败", update_error=error,
-                                     last_attempt_at=now, cached=True)
-            st.session_state["loaded_bundle"] = bundle
-            st.session_state["loaded_query"] = query
-            st.session_state["load_error"] = error
-            next_attempt = now + timedelta(seconds=interval)
-            st.session_state["history_next_attempt"] = next_attempt
+            _submit_history(query, force=True)
+            st.rerun(scope="app")
         latest = str(bundle.frame.date.iloc[-1].date()) if bundle is not None and not bundle.frame.empty else None
         _header("市场数据", market, symbol, latest)
         show_history_status(bundle, next_attempt, session_cache=not updated)
+        if "history" in st.session_state.get("_task_tickets", {}) and bundle is None:
+            loading_placeholder(350)
         _main_page(bundle, error, market, symbol, adjustment)
     body()
+
+
+def _submit_history(query, *, force=False):
+    if force:
+        submit_task("history", query, fetch_history, *query, force=True)
+    else:
+        submit_task("history", query, fetch_history, *query)
+    st.session_state["_history_task_query"] = query
+    st.session_state["history_next_attempt"] = datetime.now(ZoneInfo("Asia/Shanghai")) + timedelta(seconds=st.session_state["refresh_interval_seconds"])
+
+
+def _consume_history(query):
+    outcome = take_result("history", query)
+    if outcome is None:
+        return
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    if outcome.state == JobState.SUCCEEDED:
+        fetched = outcome.result
+        st.session_state["loaded_bundle"] = replace(fetched, company_name=names.cached_security_name(fetched.market, fetched.symbol))
+        st.session_state["loaded_query"] = query
+        st.session_state["load_error"] = fetched.update_error
+        st.session_state["_history_loaded_this_run"] = True
+    elif outcome.state == JobState.FAILED:
+        error = outcome.error
+        previous = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
+        if previous is not None:
+            previous = replace(previous, update_result="请求失败", update_error=error, last_attempt_at=now, cached=True)
+        st.session_state["loaded_bundle"] = previous
+        st.session_state["loaded_query"] = query
+        st.session_state["load_error"] = error
 
 
 def render_app() -> None:
@@ -800,25 +861,13 @@ def render_app() -> None:
     if dates is not None:
         query = (market, symbol, dates[0], dates[1], adjustment)
         if clicked:
-            try:
-                with st.spinner("正在获取并验证真实历史日线…"):
-                    fetched = fetch_history(
-                        market, symbol, *dates, adjustment
-                    )
-                    st.session_state["loaded_bundle"] = replace(fetched, company_name=names.security_name(market, symbol))
-                    st.session_state["_history_loaded_this_run"] = True
-                st.session_state["load_error"] = fetched.update_error
-            except (DataUnavailableError, DataValidationError, ValueError) as exc:
-                if st.session_state.get("loaded_query") != query:
-                    st.session_state["loaded_bundle"] = None
-                st.session_state["load_error"] = str(exc)
-            st.session_state["loaded_query"] = query
-            st.session_state["history_next_attempt"] = datetime.now(ZoneInfo("Asia/Shanghai")) + timedelta(seconds=st.session_state["refresh_interval_seconds"])
+            _submit_history(query)
+        _consume_history(query)
         if st.session_state.get("loaded_query") == query:
             bundle = st.session_state.get("loaded_bundle")
             error = st.session_state.get("load_error")
             if bundle is not None:
-                current_name = names.security_name(market, symbol)
+                current_name = names.cached_security_name(market, symbol)
                 if current_name and current_name != bundle.company_name:
                     bundle = replace(bundle, company_name=current_name)
                     st.session_state["loaded_bundle"] = bundle
@@ -865,3 +914,4 @@ def render_app() -> None:
     _render_right_dock(context, bundle)
     if st.session_state.get("settings_open"):
         render_settings_panel()
+    render_background_tasks()

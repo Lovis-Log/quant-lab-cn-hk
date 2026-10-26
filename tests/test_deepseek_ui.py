@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import finish_background_jobs
 
 from quant_lab.deepseek import Answer
 from quant_lab import ai_chat, storage
@@ -325,6 +326,7 @@ def test_research_workspace_points_to_actual_connection_location(tmp_path, monke
     monkeypatch.setattr("quant_lab.ui.fetch_history", lambda *args: sample_bundle())
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究实验").click().run()
     text = "\n".join(str(item.value) for item in (*app.caption, *app.info))
@@ -349,6 +351,7 @@ def test_history_manual_failure_keeps_previous_data(tmp_path, monkeypatch):
     monkeypatch.setattr("quant_lab.ui.fetch_history", fetch)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
     widget(app,"button","立即更新历史日线").click().run()
     assert calls[-1] == {"force": True}
     app.session_state["history_manual_at"] = float('-inf')

@@ -1,5 +1,11 @@
 # Quant Lab CN/HK 开发规范
 
+## 当前升级任务入口
+
+- 2026-10-27 起的桌面研究与学习升级先读 `docs/ROADMAP.md`、`docs/HANDOFF.md` 和对应 `docs/tasks/` 工作单。
+- 旧 Claude/Codex 文字手册交接只适用于其历史任务，不限制本轮按工作单修改程序。
+- 三张视觉稿须经用户确认后才全面应用；本轮不包含打包、标签或 Release。
+
 ## 项目边界
 
 - 保持 Python 模块化单体与 Streamlit 前端；计算模块不能导入 Streamlit。未来 FastAPI 只调用同一组服务和模型。

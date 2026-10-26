@@ -24,6 +24,7 @@ def require_history(bundle: HistoryBundle | None) -> bool:
 
 def style_figure(fig: go.Figure, height: int = 410) -> go.Figure:
     fig.update_layout(
+        uirevision=repr(st.session_state.get("_current_query")),
         height=height, paper_bgcolor="#151E2D", plot_bgcolor="#151E2D",
         font={"color": "#94A3B8", "size": 11},
         margin={"l": 25, "r": 20, "t": 25, "b": 30},

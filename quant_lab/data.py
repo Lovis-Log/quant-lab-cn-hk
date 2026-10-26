@@ -196,3 +196,15 @@ class SnapshotCache:
 
 
 SNAPSHOT_CACHE = SnapshotCache(DEFAULT_PROVIDER)
+
+
+def snapshot_batch(items):
+    """Keep per-symbol failures visible; rate limiting stays in SnapshotCache."""
+    quotes, errors = {}, {}
+    for item in items:
+        try:
+            quote, _ = SNAPSHOT_CACHE.get(*item, force=True)
+            quotes[item] = quote
+        except (DataUnavailableError, ValueError):
+            errors[item] = "更新失败；保留上次有效参考价格和成功获取时间。"
+    return quotes, errors

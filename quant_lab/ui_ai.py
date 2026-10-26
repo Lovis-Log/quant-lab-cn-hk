@@ -51,7 +51,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     if not require_history(bundle):
         return
     data_key = bundle_key(bundle)
-    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     api_key = st.session_state.get("deepseek_api_key", "")
     model = st.session_state.get("ds_model_select") if st.session_state.get("deepseek_models") else st.session_state.get("ds_model_manual", st.session_state.get("deepseek_model", ""))
     metadata = next((m for m in st.session_state.get("deepseek_models", []) if m["id"] == model), {})
@@ -156,7 +156,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
                 st.write(f"• {item}")
     report_text = (
         f"# Quant Lab CN/HK 研究审计\n\n"
-        f"标的：{names.security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
+        f"标的：{names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
         f"来源：{bundle.source}；价格口径：{bundle.adjustment_label}；币种：{bundle.currency}\n\n"
         f"实际交易日：{bundle.frame['date'].iloc[0]:%Y-%m-%d} 至 "
         f"{bundle.frame['date'].iloc[-1]:%Y-%m-%d}；记录数：{len(bundle.frame)}\n\n"

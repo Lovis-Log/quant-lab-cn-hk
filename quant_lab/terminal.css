@@ -157,3 +157,8 @@ header[data-testid="stHeader"] { display:none; }
   .ql-topbar-workspace { display:none; }
   [data-testid="stAppViewContainer"]:has(.st-key-right_dock) [data-testid="stMain"] { padding-right:0; }
 }
+/* Loading feedback reserves the final content area without fabricating data. */
+.ql-loading-placeholder { position:relative; overflow:hidden; border-radius:4px; background:#19212B; margin:12px 0; }
+.ql-loading-placeholder::after { content:""; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,rgba(190,205,220,.09),transparent); animation:ql-loading 1.5s ease-in-out infinite; }
+@keyframes ql-loading { to { transform:translateX(100%); } }
+@media(prefers-reduced-motion:reduce) { .ql-loading-placeholder::after { animation:none; } }

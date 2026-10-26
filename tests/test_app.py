@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import finish_background_jobs
 
 from quant_lab.data import DataUnavailableError, HistoryBundle
 
@@ -40,12 +41,13 @@ def test_loaded_history_replaces_demo_metrics(monkeypatch) -> None:
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("+10.00%" in item.value for item in app.get("html"))
     assert any("已加载真实历史数据" in item.value for item in app.get("html"))
     assert any("来源：腾讯证券" in item.value for item in app.get("caption"))
-    assert len(app.get("plotly_chart")) == 2
+    assert len(app.get("plotly_chart")) == 1
 
     app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
     assert not app.exception
@@ -60,6 +62,7 @@ def test_provider_error_keeps_metrics_empty(monkeypatch) -> None:
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("暂时无法获取" in item.value for item in app.get("error"))
@@ -78,6 +81,7 @@ def test_simulated_history_is_never_labeled_real(monkeypatch) -> None:
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("已加载模拟/教学数据" in item.value for item in app.get("html"))
@@ -98,6 +102,7 @@ def test_hk_history_uses_hkd_and_its_own_source(monkeypatch) -> None:
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.selectbox[0].select("港股").run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("HK$" in item.value for item in app.get("html"))

@@ -420,6 +420,7 @@ def _render_search_results(library: ManualContentLibrary, query: str) -> None:
         )
 
 
+@st.fragment
 def render_manual() -> None:
     st.caption("离线使用手册 · 阅读和搜索不会调用 AI")
     try:

@@ -103,8 +103,40 @@ class NameCache:
         with self._lock:
             return self.errors.get(key)
 
+    def peek(self, market: str, symbol: str) -> str:
+        """Read known names without ever asking the upstream service."""
+        symbol = normalize_symbol(market, symbol)
+        key = (str(storage.database_path()), market, symbol)
+        with self._lock:
+            previous = self._values.get(key)
+            if previous is not None:
+                return previous[0]
+        try:
+            row = storage.cached_security_name(market, symbol)
+        except (OSError, ValueError, sqlite3.Error):
+            row = None
+        if row:
+            with self._lock:
+                self._values[key] = (row["name"], datetime.fromisoformat(row["fetched_at"]))
+            return row["name"]
+        return ""
+
 
 NAME_CACHE = NameCache()
+
+
+def cached_security_name(market: str, symbol: str) -> str:
+    try:
+        return NAME_CACHE.peek(market, symbol)
+    except ValueError:
+        return ""
+
+
+def cached_security_label(market: str, symbol: str, name: str | None = None) -> str:
+    try:
+        return display_security(market, symbol, name if name is not None else cached_security_name(market, symbol))
+    except ValueError:
+        return f"{market} {symbol}（名称暂不可用）"
 
 
 def security_name(market: str, symbol: str, *, force: bool = False) -> str:
