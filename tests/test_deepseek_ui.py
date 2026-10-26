@@ -5,7 +5,7 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 
 from quant_lab.deepseek import Answer
-from quant_lab import storage
+from quant_lab import ai_chat, storage
 
 
 def widget(app, kind, label):
@@ -118,7 +118,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
             self.key = key
         def list_models(self):
             return [{"id":"alpha"}, {"id":"beta"}]
-        def stream(self, model, prompt, history, context, **kwargs):
+        def stream_with_recovery(self, model, prompt, history, context, **kwargs):
             calls.append({"model":model,"history":history,"context":context})
             answer = Answer(model + "-actual")
             def chunks():
@@ -184,6 +184,34 @@ def test_knowledge_followup_only_creates_draft(tmp_path, monkeypatch):
     assert "简单收益率" in widget(app,"text_area","问题（确认后发送）").value
 
 
+def test_history_and_new_chat_switch_without_model_calls(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    conversation = ai_chat.create_conversation("standalone", title="旧收益问答")
+    ai_chat.add_message(conversation["id"], turn_id="one", role="user", content="什么是复权")
+    ai_chat.add_message(conversation["id"], turn_id="one", role="assistant", content="回答内容",
+                        model="deepseek-flash")
+    calls = []
+
+    class NeverCalled:
+        def __init__(self, *args, **kwargs):
+            calls.append("client")
+
+    monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", NeverCalled)
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    widget(app, "button", "DeepSeek 助手").click().run()
+    app.button(key="deepseek_history").click().run()
+    assert app.text_input(key="deepseek_history_search")
+    app.button(key=f"deepseek_history_open_{conversation['id']}").click().run()
+    assert app.session_state["deepseek_conversation_id"] == conversation["id"]
+    assert any(message["content"] == "回答内容" for message in app.session_state["deepseek_chat"])
+
+    app.button(key="deepseek_new_chat").click().run()
+    assert app.session_state["deepseek_chat"] == []
+    app.run()
+    assert app.session_state["deepseek_chat"] == []
+    assert calls == []
+
+
 def test_research_note_failure_uses_research_copy(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(
@@ -210,7 +238,7 @@ def test_multiturn_summary_is_explicit_streamed_and_saved(tmp_path, monkeypatch)
     class Client:
         def __init__(self, key):
             self.key = key
-        def stream(self, model, prompt, history, context, **kwargs):
+        def stream_with_recovery(self, model, prompt, history, context, **kwargs):
             calls.append({"model": model, "prompt": prompt, "history": history,
                           "context": context, **kwargs})
             answer = Answer("summary-model-actual")
@@ -226,14 +254,13 @@ def test_multiturn_summary_is_explicit_streamed_and_saved(tmp_path, monkeypatch)
     app.session_state["deepseek_api_key"] = "sk-summary-mock-secret"
     app.session_state["deepseek_models"] = [{"id": "summary-model"}]
     app.session_state["ds_model_select"] = "summary-model"
-    app.session_state["deepseek_chat"] = [
-        {"role": "user", "content": "第一问", "turn_id": "turn-1", "kind": "chat", "scope": "standalone"},
-        {"role": "assistant", "content": "第一答", "turn_id": "turn-1", "kind": "chat",
-         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
-        {"role": "user", "content": "第二问", "turn_id": "turn-2", "kind": "chat", "scope": "standalone"},
-        {"role": "assistant", "content": "第二答", "turn_id": "turn-2", "kind": "chat",
-         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
-    ]
+    conversation = ai_chat.create_conversation("standalone")
+    for turn, question, answer in (("turn-1", "第一问", "第一答"), ("turn-2", "第二问", "第二答")):
+        ai_chat.add_message(conversation["id"], turn_id=turn, role="user", content=question)
+        ai_chat.add_message(conversation["id"], turn_id=turn, role="assistant", content=answer,
+                            model="summary-model")
+    app.session_state["deepseek_conversation_id"] = conversation["id"]
+    app.session_state["deepseek_history_locked"] = True
     app.session_state["deepseek_attach"] = False
     app.run()
 
@@ -260,7 +287,7 @@ def test_incomplete_multiturn_summary_is_not_saved(tmp_path, monkeypatch):
     class Client:
         def __init__(self, key):
             self.key = key
-        def stream(self, model, prompt, history, context, **kwargs):
+        def stream_with_recovery(self, model, prompt, history, context, **kwargs):
             answer = Answer("summary-model")
             def chunks():
                 answer.text = "未完成的总结"
@@ -275,14 +302,13 @@ def test_incomplete_multiturn_summary_is_not_saved(tmp_path, monkeypatch):
     app.session_state["deepseek_models"] = [{"id": "summary-model"}]
     app.session_state["ds_model_select"] = "summary-model"
     app.session_state["deepseek_attach"] = False
-    app.session_state["deepseek_chat"] = [
-        {"role": "user", "content": "第一问", "turn_id": "one", "kind": "chat", "scope": "standalone"},
-        {"role": "assistant", "content": "第一答", "turn_id": "one", "kind": "chat",
-         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
-        {"role": "user", "content": "第二问", "turn_id": "two", "kind": "chat", "scope": "standalone"},
-        {"role": "assistant", "content": "第二答", "turn_id": "two", "kind": "chat",
-         "scope": "standalone", "model": "summary-model", "complete": True, "context": {}},
-    ]
+    conversation = ai_chat.create_conversation("standalone")
+    for turn, question, answer in (("one", "第一问", "第一答"), ("two", "第二问", "第二答")):
+        ai_chat.add_message(conversation["id"], turn_id=turn, role="user", content=question)
+        ai_chat.add_message(conversation["id"], turn_id=turn, role="assistant", content=answer,
+                            model="summary-model")
+    app.session_state["deepseek_conversation_id"] = conversation["id"]
+    app.session_state["deepseek_history_locked"] = True
     app.run()
     widget(app, "button", "总结并保存本次对话").click().run()
 

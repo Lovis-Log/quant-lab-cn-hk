@@ -80,6 +80,25 @@ def _open_note(note_id: int) -> None:
     st.session_state["notes_view"] = "editor"
 
 
+def _read_note(note_id: int) -> None:
+    st.session_state["notes_read_id"] = note_id
+    st.session_state["notes_view"] = "reader"
+
+
+def _back_to_history() -> None:
+    st.session_state["notes_view"] = "history"
+
+
+def _filter_category(category_id: int) -> None:
+    st.session_state["notes_history_category"] = category_id
+    st.session_state["notes_history_search"] = ""
+    st.session_state["notes_view"] = "history"
+
+
+def _clear_category_filter() -> None:
+    st.session_state.pop("notes_history_category", None)
+
+
 def _show_history() -> None:
     draft_id = st.session_state.get("note_editor_draft_id")
     if draft_id:
@@ -105,35 +124,76 @@ def _discard_and_reset(draft_id: str) -> None:
 
 def _render_categories(categories: list[dict]) -> None:
     by_id = {row["id"]: row for row in categories}
-    st.markdown("#### 分类管理")
-    parent = st.selectbox("父分类", [None] + list(by_id),
-                          format_func=lambda value: "根目录" if value is None else _category_label(by_id[value]),
-                          key="category_parent")
-    name = st.text_input("分类名称", max_chars=80, key="category_name")
-    if st.button("新增分类", key="category_add", disabled=not name.strip()):
+    mode = st.session_state.get("category_action")
+    if mode == "new":
+        st.button("← 返回分类", key="category_back_new", on_click=_set_category_action,
+                  args=(None,))
+        name = st.text_input("分类名称", max_chars=80, key="category_name")
+        parent = st.selectbox("父分类", [None] + list(by_id),
+                              format_func=lambda value: "根目录" if value is None else _category_label(by_id[value]),
+                              key="category_parent")
+        if st.button("创建分类", key="category_add", disabled=not name.strip()):
+            try:
+                notes.create_category(name, parent)
+                st.session_state["category_action"] = None
+                st.rerun()
+            except (ValueError, OSError, sqlite3.Error) as exc:
+                st.warning(str(exc))
+        return
+    chosen = st.session_state.get("category_selected")
+    if chosen not in by_id:
+        st.session_state["category_selected"] = None
+        chosen = None
+    if chosen is None:
+        st.markdown("#### 分类")
+        st.button("＋ 新建分类", key="category_new", on_click=_set_category_action,
+                  args=("new",), width="stretch")
+        for row in categories:
+            count = len(notes.list_library_items(kind="笔记", category_id=row["id"]))
+            st.button(f"{_category_label(row)} · {count} 篇", key=f"category_select_{row['id']}",
+                      on_click=_select_category, args=(row["id"],), width="stretch")
+        return
+    row = by_id[chosen]
+    st.button("← 返回分类", key="category_back_selected", on_click=_select_category,
+              args=(None,))
+    st.markdown(f"#### {row['name']}")
+    if row["is_system"]:
+        st.caption("系统分类不能修改。")
+        return
+    new_name = st.text_input("新名称", value=row["name"], key=f"category_new_name_{chosen}")
+    if st.button("重命名", key="category_rename"):
         try:
-            notes.create_category(name, parent)
+            notes.rename_category(chosen, new_name)
             st.rerun()
         except (ValueError, OSError, sqlite3.Error) as exc:
             st.warning(str(exc))
-    editable = [row for row in categories if not row["is_system"]]
-    if editable:
-        chosen = st.selectbox("编辑分类", [row["id"] for row in editable],
-                              format_func=lambda value: _category_label(by_id[value]), key="category_edit")
-        new_name = st.text_input("新名称", value=by_id[chosen]["name"], key="category_new_name")
-        move_parent = st.selectbox("移动到", [None] + [row["id"] for row in categories if row["id"] != chosen],
-                                   format_func=lambda value: "根目录" if value is None else _category_label(by_id[value]),
-                                   key="category_move_parent")
-        a, b, c = st.columns(3)
-        if a.button("重命名", key="category_rename"):
-            notes.rename_category(chosen, new_name); st.rerun()
-        if b.button("移动", key="category_move"):
-            try:
-                notes.move_category(chosen, move_parent); st.rerun()
-            except (ValueError, OSError, sqlite3.Error) as exc:
-                st.warning(str(exc))
-        if c.button("删除", key="category_delete"):
-            notes.delete_category(chosen); st.rerun()
+    move_parent = st.selectbox("移动到", [None] + [key for key in by_id if key != chosen],
+                               format_func=lambda value: "根目录" if value is None else _category_label(by_id[value]),
+                               key=f"category_move_parent_{chosen}")
+    if st.button("移动分类", key="category_move"):
+        try:
+            notes.move_category(chosen, move_parent)
+            st.rerun()
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            st.warning(str(exc))
+    confirm = st.checkbox("确认删除此分类", key="category_delete_confirm")
+    if st.button("删除分类", key="category_delete", disabled=not confirm):
+        notes.delete_category(chosen)
+        st.session_state["category_selected"] = None
+        st.rerun()
+
+
+def _set_category_action(action: str | None) -> None:
+    st.session_state["category_action"] = action
+
+
+def _select_category(category_id: int | None) -> None:
+    st.session_state["category_selected"] = category_id
+
+
+def _show_management(mode: str = "home") -> None:
+    st.session_state["notes_management_mode"] = mode
+    st.session_state["notes_view"] = "management"
 
 
 def _render_markdown(content: str, attachments: list[dict]) -> None:
@@ -150,6 +210,84 @@ def _render_markdown(content: str, attachments: list[dict]) -> None:
                 st.image(notes.attachment_bytes(item), caption=item["original_name"])
             except (OSError, ValueError) as exc:
                 st.warning(str(exc))
+
+
+def _visible_attachments(attachments: list[dict]) -> list[dict]:
+    seen: set[str] = set()
+    output = []
+    for item in attachments:
+        if item["sha256"] in seen:
+            continue
+        seen.add(item["sha256"])
+        output.append(item)
+    return output
+
+
+def _attachment_open_button(item: dict) -> None:
+    encoded_path = json.dumps(item["stored_relpath"])
+    encoded_digest = json.dumps(item["sha256"])
+    encoded_id = json.dumps(f"ql-attachment-{item['id']}")
+    st.html(f"""
+    <div class="ql-attachment-open">
+      <button type="button" id="ql-attachment-{item['id']}" aria-label="打开附件 {escape(item['original_name'])}">打开</button>
+      <span aria-live="polite"></span>
+    </div>
+    <script>(()=>{{
+      const button=document.getElementById({encoded_id});
+      if(!button || button.dataset.bound==='1') return;
+      button.dataset.bound='1';
+      const status=button.nextElementSibling;
+      button.addEventListener('click',async()=>{{
+        const api=window.pywebview?.api;
+        if(!api?.open_managed_attachment){{status.textContent='请在桌面版打开；浏览器中可另存副本。';return;}}
+        try{{await api.open_managed_attachment({encoded_path},{encoded_digest});status.textContent='已交给 Windows 默认应用。';}}
+        catch(_){{status.textContent='打开失败，请检查附件是否仍在资料库中。';}}
+      }});
+    }})();</script>
+    """, unsafe_allow_javascript=True)
+
+
+def _render_attachment_list(attachments: list[dict]) -> None:
+    for item in _visible_attachments(attachments):
+        with st.container(key=f"attachment_item_{item['id']}"):
+            st.caption(f"📎 {item['original_name']} · {item['size_bytes']/1024:.1f} KB")
+            open_col, save_col = st.columns(2)
+            with open_col:
+                _attachment_open_button(item)
+            with save_col:
+                st.download_button(
+                    "另存副本", notes.attachment_bytes(item), file_name=item["original_name"],
+                    mime=item["mime_type"], key=f"save_attachment_copy_{item['id']}",
+                    width="stretch",
+                )
+
+
+def _render_reader(categories: list[dict]) -> None:
+    note_id = st.session_state.get("notes_read_id")
+    try:
+        note = notes.get_note(note_id)
+        if note.get("deleted_at"):
+            raise KeyError("笔记已在回收站。")
+        attachments = notes.list_attachments(note_id=note_id)
+    except (KeyError, OSError, ValueError, sqlite3.Error) as exc:
+        st.error(f"无法打开笔记：{exc}")
+        st.button("← 返回历史", key="notes_reader_back", on_click=_back_to_history)
+        return
+    back, edit = st.columns(2)
+    back.button("← 返回历史", key="notes_reader_back", on_click=_back_to_history,
+                width="stretch")
+    edit.button("继续编辑", key="notes_reader_edit", on_click=_open_note,
+                args=(note_id,), width="stretch")
+    st.markdown(f"### {note['title']}")
+    category = next((row for row in categories if row["id"] == note["category_id"]), None)
+    if category:
+        st.button(f"分类：{category['name']}", key="notes_reader_category",
+                  on_click=_filter_category, args=(category["id"],))
+    st.caption(f"更新于 {str(note['updated_at'] or note['created_at']).replace('T', ' ')[:16]}")
+    _render_markdown(note["content"], attachments)
+    if attachments:
+        st.markdown("#### 附件")
+        _render_attachment_list(attachments)
 
 
 def _render_editor(categories: list[dict]) -> None:
@@ -238,31 +376,35 @@ def _render_editor(categories: list[dict]) -> None:
         st.selectbox("笔记分类", list(by_id), key="note_editor_category",
                      format_func=lambda value: _category_label(by_id[value]),
                      on_change=_autosave_draft, args=(draft_id,))
+        st.session_state.setdefault("note_upload_generation", 0)
+        upload_key = f"note_attachment_upload_{st.session_state['note_upload_generation']}"
         uploads = st.file_uploader("添加附件", accept_multiple_files=True,
-            type=[ext[1:] for ext in sorted(notes.ALLOWED_EXTENSIONS)], key="note_attachment_upload")
-        if st.button("保存所选附件到草稿", disabled=not uploads, key="note_attachment_save"):
+            type=[ext[1:] for ext in sorted(notes.ALLOWED_EXTENSIONS)], key=upload_key)
+        if st.button("添加到笔记", disabled=not uploads, key="note_attachment_save"):
             try:
                 _autosave_draft(draft_id)
+                added, duplicates = 0, 0
                 for uploaded in uploads:
-                    notes.save_attachment(uploaded.getvalue(), uploaded.name, draft_id=draft_id)
-                st.success("附件已复制到托管资料目录。")
+                    result = notes.save_attachment(
+                        uploaded.getvalue(), uploaded.name, draft_id=draft_id,
+                        related_note_id=note_id,
+                    )
+                    duplicates += bool(result.get("duplicate"))
+                    added += not result.get("duplicate")
+                st.session_state["note_editor_notice"] = f"已添加 {added} 个附件；跳过 {duplicates} 个重复文件。"
+                st.session_state["note_upload_generation"] += 1
                 st.rerun()
             except (OSError, ValueError, sqlite3.Error) as exc:
                 st.error(str(exc))
         attachments = notes.list_attachments(draft_id=draft_id)
         if note_id:
             attachments = notes.list_attachments(note_id=note_id) + attachments
-        for item in attachments:
-            row = st.columns([3, 1, 1])
-            row[0].caption(f"📎 {item['original_name']} · {item['size_bytes']/1024:.1f} KB")
+        for item in _visible_attachments(attachments):
             if Path(item["original_name"]).suffix.lower() in notes.IMAGE_EXTENSIONS:
-                row[1].button("插入", key=f"insert_attachment_{item['id']}",
-                              on_click=_insert_attachment,
-                              args=(draft_id, item["id"], item["original_name"]))
-            row[2].download_button(
-                "下载", notes.attachment_bytes(item), file_name=item["original_name"],
-                mime=item["mime_type"], key=f"download_attachment_{item['id']}",
-            )
+                st.button("插入图片到正文", key=f"insert_attachment_{item['id']}",
+                          on_click=_insert_attachment,
+                          args=(draft_id, item["id"], item["original_name"]))
+        _render_attachment_list(attachments)
         st.markdown("#### Markdown 预览")
         _render_markdown(st.session_state.get("note_editor_content", ""), attachments)
         if note_id:
@@ -292,9 +434,25 @@ def _render_history() -> None:
     st.button("← 返回编辑", key="notes_history_back", on_click=_show_editor)
     query = st.text_input(
         "搜索历史笔记", key="notes_history_search", label_visibility="collapsed",
-        placeholder="搜索标题或正文…",
+        placeholder="搜索笔记或分类…",
     )
-    items = notes.list_library_items(query=query, kind="笔记")
+    categories = notes.list_categories()
+    selected_category = st.session_state.get("notes_history_category")
+    if selected_category:
+        selected = next((row for row in categories if row["id"] == selected_category), None)
+        if selected:
+            st.caption(f"当前分类：{selected['name']}（包含子分类）")
+            st.button("清除分类", key="notes_history_clear_category",
+                      on_click=_clear_category_filter)
+        else:
+            st.session_state.pop("notes_history_category", None)
+            selected_category = None
+    if query.strip() and not selected_category:
+        matching = [row for row in categories if query.strip().casefold() in row["name"].casefold()]
+        for row in matching:
+            st.button(f"📁 {row['name']}", key=f"notes_history_category_{row['id']}",
+                      on_click=_filter_category, args=(row["id"],), width="stretch")
+    items = notes.list_library_items(query=query, kind="笔记", category_id=selected_category)
     if not items:
         st.info("没有找到历史笔记。" if query.strip() else "还没有已保存的研究笔记。")
         return
@@ -306,7 +464,7 @@ def _render_history() -> None:
         with st.container(border=True, key=f"note_history_card_{item['id']}"):
             st.button(
                 item["title"], key=f"note_history_open_{item['id']}", width="stretch",
-                on_click=_open_note, args=(item["id"],), help="打开并继续编辑这篇笔记",
+                on_click=_read_note, args=(item["id"],), help="阅读这篇笔记",
             )
             st.caption(f"更新于 {updated}")
             if snippet:
@@ -380,18 +538,28 @@ def _render_recycle_bin() -> None:
 
 
 def _render_management(categories: list[dict]) -> dict | None:
-    selected = None
-    with st.expander("更多管理（实验 / 分类 / 回收站）", expanded=False):
-        mode = st.selectbox(
-            "管理内容", ("实验档案", "分类管理", "回收站"), key="notes_management_mode",
-        )
-        if mode == "实验档案":
-            selected = _render_experiment_archive(categories)
-        elif mode == "分类管理":
-            _render_categories(categories)
-        else:
-            _render_recycle_bin()
-    return selected
+    mode = st.session_state.setdefault("notes_management_mode", "home")
+    if mode == "home":
+        st.button("← 返回笔记", key="notes_management_back_editor", on_click=_show_editor)
+        st.markdown("### 管理资料库")
+        st.button("实验档案", key="notes_manage_experiments", width="stretch",
+                  on_click=_show_management, args=("experiments",))
+        st.button("分类", key="notes_manage_categories", width="stretch",
+                  on_click=_show_management, args=("categories",))
+        st.button("回收站", key="notes_manage_recycle", width="stretch",
+                  on_click=_show_management, args=("recycle",))
+        return None
+    st.button("← 返回管理", key="notes_management_back_home",
+              on_click=_show_management, args=("home",))
+    if mode == "experiments":
+        st.markdown("### 实验档案")
+        return _render_experiment_archive(categories)
+    if mode == "categories":
+        _render_categories(categories)
+    elif mode == "recycle":
+        st.markdown("### 回收站")
+        _render_recycle_bin()
+    return None
 
 
 def render_research_notes() -> dict | None:
@@ -400,8 +568,15 @@ def render_research_notes() -> dict | None:
     if st.session_state["notes_view"] == "history":
         _render_history()
         return None
+    if st.session_state["notes_view"] == "reader":
+        _render_reader(categories)
+        return None
+    if st.session_state["notes_view"] == "management":
+        return _render_management(categories)
     _render_editor(categories)
-    return _render_management(categories)
+    st.button("管理资料库", key="notes_open_management", on_click=_show_management,
+              width="stretch")
+    return None
 
 
 def _close_panel() -> None:

@@ -75,7 +75,8 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         assert len(list_experiments(tmp_path / "research.sqlite3")) == 1
         next(item for item in app.get("button") if item.label == "研究笔记").click().run()
         assert not app.exception
-        assert app.selectbox(key="notes_management_mode").value == "实验档案"
+        app.button(key="notes_open_management").click().run()
+        app.button(key="notes_manage_experiments").click().run()
         assert any(item.label == "选择实验" for item in app.selectbox)
         assert any("从存档数据重新计算" == item.label for item in app.button)
 

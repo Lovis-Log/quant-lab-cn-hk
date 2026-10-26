@@ -24,6 +24,12 @@ class Response:
         return iter(self.lines)
 
 
+class InterruptedResponse(Response):
+    def iter_lines(self, **kwargs):
+        yield chunk("deepseek-flash", "部分回答")
+        raise requests.ConnectionError("transport detail")
+
+
 class Session:
     def __init__(self, responses):
         self.responses, self.calls = iter(responses), []
@@ -35,6 +41,13 @@ class Session:
 def streamed(model, content="程序事实应核对，缺少数据不能猜测。"):
     return Response(lines=["data: " + json.dumps({"model": model,
         "choices": [{"delta": {"content": content}, "finish_reason": "stop"}]}, ensure_ascii=False), "data: [DONE]"])
+
+
+def chunk(model, content="", finish_reason=None, reasoning=""):
+    return "data: " + json.dumps({"model": model, "choices": [{
+        "delta": {"content": content, "reasoning_content": reasoning},
+        "finish_reason": finish_reason,
+    }]}, ensure_ascii=False)
 
 
 def test_dynamic_models_switch_and_supported_parameters():
@@ -52,6 +65,61 @@ def test_dynamic_models_switch_and_supported_parameters():
     assert payloads[0]["reasoning_effort"] == "low"
     assert payloads[1]["model"] == "beta" and "reasoning_effort" not in payloads[1]
     assert not ({"temperature", "top_p", "thinking"} & payloads[1].keys())
+
+
+def test_stream_accepts_stop_without_done_and_hides_reasoning():
+    session = Session([Response(lines=[
+        chunk("deepseek-flash", reasoning="不要展示的思考过程"),
+        chunk("deepseek-flash", "最终回答", "stop"),
+    ])])
+    client = DeepSeekClient(SECRET, session)
+    answer, chunks = client.stream(
+        "deepseek-flash", "问题", [], metadata={"max_output_tokens": 393216}
+    )
+
+    assert "".join(chunks) == "最终回答"
+    assert answer.text == "最终回答" and answer.complete is True
+    assert "思考过程" not in answer.text
+    assert session.calls[0][2]["json"]["max_tokens"] == 393216
+
+
+def test_stream_omits_output_limit_when_model_does_not_declare_one():
+    session = Session([streamed("manual-model")])
+    client = DeepSeekClient(SECRET, session)
+    _, chunks = client.stream("manual-model", "问题", [], metadata={})
+    list(chunks)
+    assert "max_tokens" not in session.calls[0][2]["json"]
+
+
+def test_stream_automatically_merges_length_continuation():
+    first = Response(lines=[chunk("deepseek-flash", "第一段内容", "length"), "data: [DONE]"])
+    second = Response(lines=[chunk("deepseek-flash", "内容继续完成", "stop")])
+    session = Session([first, second])
+    client = DeepSeekClient(SECRET, session)
+    answer, chunks = client.stream_with_recovery(
+        "deepseek-flash", "完整解释", [], metadata={"max_output_tokens": 393216}
+    )
+
+    assert "".join(chunks) == "第一段内容继续完成"
+    assert answer.text == "第一段内容继续完成"
+    assert answer.complete is True and answer.recovery_count == 1
+    payloads = [call[2]["json"] for call in session.calls]
+    assert len(payloads) == 2
+    assert payloads[1]["messages"][-2]["content"] == "第一段内容"
+    assert "中断的位置" in payloads[1]["messages"][-1]["content"]
+
+
+def test_stream_recovery_is_bounded_after_network_interruptions():
+    session = Session([InterruptedResponse(), InterruptedResponse(), InterruptedResponse()])
+    client = DeepSeekClient(SECRET, session)
+    answer, chunks = client.stream_with_recovery("deepseek-flash", "问题", [])
+    output = "".join(chunks)
+
+    assert output.startswith("部分回答")
+    assert answer.complete is False and answer.recovery_count == 2
+    assert answer.error == "流式连接中断；当前回答可能不完整。"
+    assert len(session.calls) == 3
+    assert "transport detail" not in answer.error
 
 
 @pytest.mark.parametrize("status,word", [(401,"鉴权"),(402,"余额"),(429,"频繁"),(404,"模型"),(503,"繁忙")])

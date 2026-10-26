@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import ctypes
+import hashlib
 import json
 import logging
 from logging.handlers import RotatingFileHandler
@@ -117,6 +118,27 @@ def app_script() -> Path:
     if not path.is_file():
         raise LaunchError(f"缺少应用入口文件：{path}")
     return path
+
+
+def managed_attachment_path(relative_path: str, expected_sha256: str,
+                            root: Path | None = None) -> Path:
+    """Resolve and verify one managed attachment before handing it to Windows."""
+    library = (root or user_data_dir()).resolve()
+    target = (library / str(relative_path)).resolve()
+    try:
+        target.relative_to(library)
+    except ValueError:
+        raise LaunchError("附件路径不属于当前资料库。") from None
+    if not target.is_file():
+        raise LaunchError("附件文件不存在。")
+    hasher = hashlib.sha256()
+    with target.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            hasher.update(block)
+    digest = hasher.hexdigest()
+    if digest != str(expected_sha256):
+        raise LaunchError("附件校验失败，文件可能已被外部修改。")
+    return target
 
 
 def child_command(port: int) -> list[str]:
@@ -275,16 +297,10 @@ def run_desktop(smoke_test: bool = False) -> int:
                         return None
                     result = self._window.create_file_dialog(webview.FileDialog.FOLDER)
                     return str(result[0]) if result else None
-                def open_managed_attachment(self, relative_path):
-                    root = user_data_dir().resolve()
-                    target = (root / str(relative_path)).resolve()
-                    try:
-                        target.relative_to(root)
-                    except ValueError:
-                        raise LaunchError("附件路径不属于当前资料库。")
-                    if not target.is_file():
-                        raise LaunchError("附件文件不存在。")
-                    os.startfile(target)
+                def open_managed_attachment(self, relative_path, expected_sha256):
+                    target = managed_attachment_path(relative_path, expected_sha256)
+                    if os.environ.get("QUANT_LAB_GUI_PROBE") != "1":
+                        os.startfile(target)
                     return True
             probe_api = DesktopAPI()
 

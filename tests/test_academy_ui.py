@@ -24,4 +24,5 @@ def test_academy_and_empty_notes_render(tmp_path: Path, monkeypatch) -> None:
     assert not [button for button in app.button if button.label in {"保存交互实验记录", "提交课程测验"}]
     next(item for item in app.get("button") if item.label == "研究笔记").click().run()
     assert not app.exception
-    assert any("没有符合条件" in item.value for item in app.get("info"))
+    assert app.text_input(key="note_editor_title")
+    assert app.button(key="notes_panel_history")

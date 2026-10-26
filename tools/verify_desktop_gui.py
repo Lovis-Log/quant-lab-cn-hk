@@ -16,9 +16,9 @@ import sys
 import time
 from uuid import uuid4
 
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from quant_lab import notes as note_store
 
 
 def settle(page):
@@ -364,10 +364,10 @@ def main():
                     {"name":"chart.png", "mimeType":"image/png", "buffer":png},
                     {"name":"evidence.pdf", "mimeType":"application/pdf", "buffer":b"%PDF-1.4\n%%EOF"},
                 ])
-                notes_panel.get_by_role("button", name="保存所选附件到草稿", exact=True).click()
+                notes_panel.get_by_role("button", name="添加到笔记", exact=True).click()
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
-                insert = notes_panel.get_by_role("button", name="插入", exact=True)
+                insert = notes_panel.get_by_role("button", name="插入图片到正文", exact=True)
                 if not insert.is_visible():
                     notes_panel.get_by_text("更多选项（分类与附件）", exact=True).click()
                 insert.click()
@@ -383,15 +383,34 @@ def main():
                     assert db.execute(
                         "SELECT COUNT(*) FROM note_attachments WHERE note_id=?", (saved_note[0],)
                     ).fetchone()[0] == 2
+                category_id = note_store.create_category("图表分类", path=directory / "research.sqlite3")
+                note_store.set_item_category(
+                    "笔记", saved_note[0], category_id, path=directory / "research.sqlite3"
+                )
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 notes_panel.get_by_role("button", name="历史笔记", exact=True).click()
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
-                expect(notes_panel.get_by_placeholder("搜索标题或正文…", exact=True)).to_be_visible()
+                expect(notes_panel.get_by_placeholder("搜索笔记或分类…", exact=True)).to_be_visible()
                 assert notes_panel.get_by_label("内容类型", exact=True).count() == 0
                 assert notes_panel.get_by_label("分类范围", exact=True).count() == 0
+                notes_panel.get_by_placeholder("搜索笔记或分类…", exact=True).fill("图表分类")
+                notes_panel.get_by_placeholder("搜索笔记或分类…", exact=True).press("Tab")
+                settle(page)
+                notes_panel.get_by_role("button", name="📁 图表分类", exact=True).click()
+                settle(page)
+                expect(notes_panel.get_by_role("button", name="GUI 附件笔记", exact=True)).to_be_visible()
                 page.screenshot(path=str(directory/"notes-history-search.png"), full_page=False)
                 notes_panel.get_by_role("button", name="GUI 附件笔记", exact=True).click()
+                settle(page)
+                notes_panel = page.locator(".st-key-notes_side_panel")
+                expect(notes_panel.get_by_text("图表记录", exact=True)).to_be_visible(timeout=10000)
+                assert notes_panel.get_by_label("Markdown 正文", exact=True).count() == 0
+                open_attachment = notes_panel.get_by_role("button", name="打开附件 evidence.pdf", exact=True)
+                open_attachment.click()
+                expect(notes_panel.get_by_text("已交给 Windows 默认应用。", exact=True)).to_be_visible(timeout=10000)
+                expect(notes_panel.get_by_role("button", name="另存副本", exact=True).first).to_be_visible()
+                notes_panel.get_by_role("button", name="继续编辑", exact=True).click()
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
                 expect(notes_panel.get_by_label("笔记标题", exact=True)).to_have_value("GUI 附件笔记")
@@ -546,6 +565,8 @@ def main():
                                 "notes_editor_first_screen": True,
                                 "notes_new_preserves_draft": True,
                                 "notes_history_search": True,
+                                "notes_reader_rendered": True,
+                                "attachment_desktop_open": True,
                                 "notes_library_edit_scrolls_to_editor": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,
@@ -804,8 +825,12 @@ def main():
                     settle(page)
                     page.locator(".st-key-settings_panel").get_by_role("button", name="×", exact=True).click()
                     settle(page)
-                    page.get_by_label("问题（确认后发送）", exact=True).fill("解释最大回撤并给出手算例子")
-                    page.get_by_role("button", name="发送到 DeepSeek", exact=True).click()
+                    question_box = page.get_by_label("问题（确认后发送）", exact=True)
+                    question_box.fill("解释最大回撤")
+                    question_box.press("Shift+Enter")
+                    question_box.type("并给出手算例子")
+                    assert "\n" in question_box.input_value()
+                    question_box.press("Enter")
                     settle(page)
                     page.get_by_text("模型：mock-b-actual", exact=False).last.wait_for(timeout=20000)
                     assert "STREAM_DONE" in page.inner_text("body")
@@ -837,11 +862,20 @@ def main():
                     settle(page)
                     page.get_by_text("对话总结", exact=True).last.wait_for(timeout=20000)
                     page.get_by_text("研究笔记 #", exact=False).wait_for(timeout=10000)
+                    deepseek_panel.get_by_role("button", name="历史会话", exact=True).click()
+                    settle(page)
+                    expect(deepseek_panel.get_by_placeholder("搜索标题或消息…", exact=True)).to_be_visible()
+                    expect(deepseek_panel.get_by_role("button", name="解释最大回撤", exact=True)).to_be_visible()
+                    deepseek_panel.get_by_role("button", name="解释最大回撤", exact=True).click()
+                    settle(page)
+                    expect(deepseek_panel.get_by_text("STREAM_DONE", exact=False).last).to_be_visible()
                     page.screenshot(path=str(directory/"deepseek-chat-summary.png"), full_page=False)
                     summary.update({"model_switch": True, "streamed_answer": True,
                                     "answer_saved": True, "answer_copied": True,
                                     "composer_fixed_to_panel_bottom": True,
-                                    "conversation_summary_saved": True})
+                                    "conversation_summary_saved": True,
+                                    "chat_enter_send_shift_enter_newline": True,
+                                    "chat_history_reopened": True})
                     if args.research_fixes:
                         page.get_by_role("button", name="加载真实历史日线", exact=True).click()
                         settle(page)

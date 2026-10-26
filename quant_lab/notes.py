@@ -195,6 +195,7 @@ def save_note(*, title: str, content: str, category_id: int = UNCATEGORIZED_ID,
         raise ValueError("笔记标题与内容不能为空。")
     now = _now()
     moved: list[tuple[Path, Path]] = []
+    redundant: list[Path] = []
     try:
         with _connect(path) as db:
             _category(db, category_id)
@@ -212,12 +213,20 @@ def save_note(*, title: str, content: str, category_id: int = UNCATEGORIZED_ID,
                            deleted_at=NULL WHERE id=?""",
                            (redact(title, secrets), redact(content, secrets), category_id, now, note_id))
             if draft_id:
-                rows = db.execute("SELECT id,stored_relpath FROM note_attachments WHERE draft_id=?",
+                rows = db.execute("SELECT id,stored_relpath,sha256 FROM note_attachments WHERE draft_id=?",
                                   (draft_id,)).fetchall()
                 final_dir = attachments_dir() / str(note_id)
                 final_dir.mkdir(parents=True, exist_ok=True)
                 for row in rows:
                     source = user_data_dir() / row["stored_relpath"]
+                    duplicate = db.execute(
+                        "SELECT 1 FROM note_attachments WHERE note_id=? AND sha256=?",
+                        (note_id, row["sha256"]),
+                    ).fetchone()
+                    if duplicate:
+                        db.execute("DELETE FROM note_attachments WHERE id=?", (row["id"],))
+                        redundant.append(source)
+                        continue
                     target = final_dir / source.name
                     if source.exists() and source.resolve() != target.resolve():
                         shutil.move(str(source), str(target))
@@ -232,6 +241,11 @@ def save_note(*, title: str, content: str, category_id: int = UNCATEGORIZED_ID,
             if target.exists():
                 shutil.move(str(target), str(source))
         raise
+    for path_to_remove in redundant:
+        try:
+            path_to_remove.unlink(missing_ok=True)
+        except OSError:
+            pass
     return note_id
 
 
@@ -342,15 +356,27 @@ def _validate_attachment(name: str, data: bytes) -> tuple[str, str]:
 
 
 def save_attachment(data: bytes, original_name: str, *, draft_id: str | None = None,
-                    note_id: int | None = None, path: Path | None = None) -> dict:
+                    note_id: int | None = None, related_note_id: int | None = None,
+                    path: Path | None = None) -> dict:
     if (draft_id is None) == (note_id is None):
         raise ValueError("附件必须且只能关联草稿或正式笔记。")
     suffix, mime_type = _validate_attachment(original_name, data)
+    digest = hashlib.sha256(data).hexdigest()
     with _connect(path) as db:
         where, owner = ("draft_id", draft_id) if draft_id else ("note_id", note_id)
-        count, total = db.execute(
-            f"SELECT COUNT(*),COALESCE(SUM(size_bytes),0) FROM note_attachments WHERE {where}=?",
-            (owner,)).fetchone()
+        clauses, params = [f"{where}=?"], [owner]
+        if draft_id and related_note_id is not None:
+            clauses.append("note_id=?")
+            params.append(related_note_id)
+        rows = db.execute(
+            f"SELECT * FROM note_attachments WHERE {' OR '.join(clauses)} ORDER BY created_at",
+            params,
+        ).fetchall()
+        duplicate = next((dict(row) for row in rows if row["sha256"] == digest), None)
+        if duplicate:
+            duplicate["duplicate"] = True
+            return duplicate
+        count, total = len(rows), sum(row["size_bytes"] for row in rows)
         if count >= MAX_NOTE_ATTACHMENTS or total + len(data) > MAX_NOTE_ATTACHMENT_BYTES:
             raise ValueError("每篇笔记最多 20 个附件且总大小不超过 1GB。")
     attachment_id = uuid4().hex
@@ -365,7 +391,7 @@ def save_attachment(data: bytes, original_name: str, *, draft_id: str | None = N
         "id": attachment_id, "note_id": note_id, "draft_id": draft_id,
         "original_name": Path(original_name).name, "stored_relpath": relative,
         "mime_type": mime_type, "size_bytes": len(data),
-        "sha256": hashlib.sha256(data).hexdigest(), "created_at": _now(),
+        "sha256": digest, "created_at": _now(),
     }
     try:
         with _connect(path) as db:

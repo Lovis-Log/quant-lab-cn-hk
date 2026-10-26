@@ -54,6 +54,37 @@ def test_attachment_validation_hash_export_and_permanent_delete(tmp_path, monkey
     assert not managed.exists()
 
 
+def test_attachment_deduplicates_across_saved_note_and_active_draft(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
+    data = b"%PDF-1.4\n%%EOF"
+    note_id = notes.save_note(title="附件去重", content="正文")
+    original = notes.save_attachment(data, "evidence.pdf", note_id=note_id)
+    notes.save_draft("resume-draft", title="附件去重", content="正文", note_id=note_id)
+
+    duplicate = notes.save_attachment(
+        data, "renamed.pdf", draft_id="resume-draft", related_note_id=note_id,
+    )
+    assert duplicate["duplicate"] is True and duplicate["id"] == original["id"]
+    assert notes.list_attachments(draft_id="resume-draft") == []
+
+    second = notes.save_attachment(b"%PDF-1.4\nsecond", "second.pdf", draft_id="resume-draft")
+    notes.save_note(
+        title="附件去重", content="正文", note_id=note_id, draft_id="resume-draft",
+    )
+    saved = notes.list_attachments(note_id=note_id)
+    assert {item["id"] for item in saved} == {original["id"], second["id"]}
+
+    notes.save_draft("legacy-duplicate", title="附件去重", content="正文", note_id=note_id)
+    legacy = notes.save_attachment(data, "legacy-copy.pdf", draft_id="legacy-duplicate")
+    legacy_path = tmp_path / legacy["stored_relpath"]
+    notes.save_note(
+        title="附件去重", content="正文", note_id=note_id, draft_id="legacy-duplicate",
+    )
+    assert not legacy_path.exists()
+    assert len([item for item in notes.list_attachments(note_id=note_id)
+                if item["sha256"] == original["sha256"]]) == 1
+
+
 def test_stage_library_copies_database_and_writes_nonsecret_pointer(tmp_path, monkeypatch):
     local = tmp_path / "local"
     monkeypatch.delenv("QUANT_LAB_DATA_DIR", raising=False)
@@ -107,9 +138,8 @@ def test_notes_panel_opens_on_restored_editor_and_keeps_new_draft(monkeypatch, t
     assert app.button(key="note_save").label == "保存笔记"
     assert app.button(key="note_new").label == "新建笔记"
     assert not [item for item in app.subheader if item.value == "研究笔记与实验档案"]
-    assert {item.label for item in app.expander} >= {
-        "更多选项（分类与附件）", "更多管理（实验 / 分类 / 回收站）"
-    }
+    assert any(item.label == "更多选项（分类与附件）" for item in app.expander)
+    assert app.button(key="notes_open_management")
     assert app.button(key="notes_panel_history")
     assert not [item for item in app.selectbox if item.label == "内容类型"]
     assert not [item for item in app.selectbox if item.label == "分类范围"]
@@ -127,6 +157,9 @@ def test_notes_panel_opens_on_restored_editor_and_keeps_new_draft(monkeypatch, t
     assert app.text_input(key="notes_history_search")
     assert not [item for item in app.selectbox if item.label == "选择实验"]
     app.button(key=f"note_history_open_{note_id}").click().run()
+    assert app.session_state["notes_view"] == "reader"
+    assert not [item for item in app.text_area if item.label == "Markdown 正文"]
+    app.button(key="notes_reader_edit").click().run()
     assert app.session_state["note_editor_note_id"] == note_id
     assert app.text_input(key="note_editor_title").value == "资料库笔记"
     assert app.text_area(key="note_editor_content").value == "已保存正文"
@@ -160,3 +193,29 @@ def test_note_save_keeps_a_resumable_working_copy(monkeypatch, tmp_path):
     assert draft and draft["note_id"] == app.session_state["note_editor_note_id"]
     assert draft["title"] == "保存后继续"
     assert draft["content"] == "下一次仍从这里开始"
+
+
+def test_history_reader_renders_markdown_and_category_search_includes_children(monkeypatch, tmp_path):
+    monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path / "reader-category"))
+    parent = notes.create_category("收益")
+    child = notes.create_category("港股收益", parent)
+    note_id = notes.save_note(
+        title="复权说明", content="## 已渲染标题\n\n|列|值|\n|---|---|\n|A|1|",
+        category_id=child,
+    )
+    app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    next(item for item in app.button if item.label == "研究笔记").click().run()
+    app.button(key="notes_panel_history").click().run()
+
+    app.text_input(key="notes_history_search").input("收益").run()
+    assert app.button(key=f"notes_history_category_{parent}")
+    app.button(key=f"notes_history_category_{parent}").click().run()
+    assert app.button(key=f"note_history_open_{note_id}")
+    app.button(key=f"note_history_open_{note_id}").click().run()
+
+    assert app.session_state["notes_view"] == "reader"
+    assert not [item for item in app.text_area if item.label == "Markdown 正文"]
+    assert any("已渲染标题" in item.value for item in app.markdown)
+    assert app.button(key="notes_reader_edit")
+    app.button(key="notes_reader_edit").click().run()
+    assert app.text_area(key="note_editor_content").value.startswith("## 已渲染标题")

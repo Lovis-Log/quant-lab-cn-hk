@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 import json
 import re
-import time
 
 import requests
 
@@ -61,6 +60,22 @@ class Answer:
     text: str = ""
     complete: bool = False
     finish_reason: str | None = None
+    error: str | None = None
+    recovery_count: int = 0
+
+
+CONTINUATION_PROMPT = "请从上次回答中断的位置直接继续，不要重复已经给出的内容，只输出续写部分。"
+
+
+def merge_continuation(existing: str, continuation: str, *, overlap_limit: int = 2000) -> str:
+    """Append a continuation while removing an identical boundary overlap."""
+    if not existing:
+        return continuation
+    maximum = min(len(existing), len(continuation), overlap_limit)
+    for size in range(maximum, 0, -1):
+        if existing[-size:] == continuation[:size]:
+            return existing + continuation[size:]
+    return existing + continuation
 
 
 class DeepSeekClient:
@@ -149,7 +164,7 @@ class DeepSeekClient:
                history_limit: int = 12) -> tuple[Answer, object]:
         if not model.strip() or not prompt.strip():
             raise AIRequestError("请先选择模型并填写问题。")
-        if purpose not in {"chat", "conversation_summary"}:
+        if purpose not in {"chat", "conversation_summary", "continuation"}:
             raise AIRequestError("无法识别本次 DeepSeek 请求类型。")
         if redact(model, (self._key,)) != model:
             raise AIRequestError("模型 ID 不能包含 API Key，请把密钥只填在密码框中。")
@@ -165,6 +180,8 @@ class DeepSeekClient:
                 "对话总结：只总结所附对话中已经出现的内容，按研究问题、可核验事实、"
                 "主要结论、未决问题和下一步行动组织，不补写未知数据，不输出完整逐字稿。"
             )
+        elif purpose == "continuation":
+            messages[0]["content"] += "续答：从上一条助手消息末尾继续，不重复已完成内容。"
         # Do not reuse messages from another stock/experiment in the UI; this
         # helper also bounds all text and excludes metadata/secrets/notes.
         remaining = min(16000, max(500, int(meta.get("context_window", 40000)) // 2))
@@ -181,8 +198,10 @@ class DeepSeekClient:
         if facts:
             user_text += "\n\n当前程序事实摘要（不含完整行情或私人笔记）：\n" + redact(json.dumps(facts, ensure_ascii=False), (self._key,))
         messages.append({"role": "user", "content": user_text})
-        payload = {"model": model.strip(), "messages": messages, "stream": True,
-                   "max_tokens": min(4096, max(1, int(meta.get("max_output_tokens", 4096))))}
+        payload = {"model": model.strip(), "messages": messages, "stream": True}
+        output_limit = meta.get("max_output_tokens")
+        if isinstance(output_limit, int) and output_limit > 0:
+            payload["max_tokens"] = min(393216, output_limit)
         levels = (meta.get("effort") or {}).get("supported_levels", [])
         if effort and effort in levels:
             payload["reasoning_effort"] = effort
@@ -194,17 +213,21 @@ class DeepSeekClient:
             response = self._request("POST", "/chat/completions", json=payload, stream=True)
             response.encoding = "utf-8"
             scrub = StreamRedactor((self._key,))
-            started = time.monotonic()
-            consumed = 0
+            def flush_tail() -> str:
+                tail = scrub.feed("", final=True)
+                answer.text += tail
+                return tail
             try:
                 for line in response.iter_lines(decode_unicode=True):
-                    if time.monotonic() - started > 180:
-                        raise AIRequestError("回答等待超过三分钟，已停止本次请求；可稍后手动发送。")
                     if not line or not line.startswith("data:"):
                         continue
                     raw = line[5:].strip()
                     if raw == "[DONE]":
-                        answer.complete = True
+                        if answer.finish_reason not in {
+                            "length", "content_filter", "tool_calls",
+                            "insufficient_system_resource", "aborted",
+                        }:
+                            answer.complete = True
                         break
                     item = json.loads(raw)
                     if "error" in item:
@@ -213,35 +236,129 @@ class DeepSeekClient:
                         answer.model_used = redact(str(item["model"]), (self._key,))[:128]
                     for choice in item.get("choices", []):
                         text = choice.get("delta", {}).get("content") or ""
-                        consumed += len(text)
-                        if consumed > 24000:
-                            answer.finish_reason = "length"
-                            break
                         safe = scrub.feed(text)
                         if safe:
                             answer.text += safe
                             yield safe
                         if choice.get("finish_reason"):
                             answer.finish_reason = choice["finish_reason"]
-                    if consumed > 24000:
-                        break
-                tail = scrub.feed("", final=True)
-                answer.text += tail
+                            if answer.finish_reason == "stop":
+                                answer.complete = True
+                tail = flush_tail()
                 if tail:
                     yield tail
-                if not answer.complete and answer.finish_reason != "length":
-                    raise AIRequestError("流式连接在完成前结束；当前回答可能不完整，请手动重试。")
+                if answer.finish_reason == "length":
+                    answer.error = "回答达到模型输出长度限制，正在自动继续。"
+                elif answer.finish_reason == "insufficient_system_resource":
+                    answer.error = "DeepSeek 推理资源暂时不足，正在自动恢复。"
+                elif answer.finish_reason == "aborted":
+                    answer.error = "DeepSeek 中断了本次生成，正在自动恢复。"
+                elif answer.finish_reason == "content_filter":
+                    answer.error = "DeepSeek 因内容安全策略停止生成。"
+                elif not answer.complete:
+                    answer.error = "流式连接在完成前结束；当前回答可能不完整。"
+                    raise AIRequestError(answer.error)
                 if not answer.text.strip():
                     raise AIRequestError("模型未返回可阅读的答案，可能耗尽思考/输出额度；可选择模型声明的较低思考强度后手动重试。")
             except requests.Timeout:
-                raise AIRequestError("流式回答超时；没有自动重试。") from None
+                tail = flush_tail()
+                if tail:
+                    yield tail
+                answer.error = "流式回答长时间没有返回数据。"
+                raise AIRequestError(answer.error) from None
             except requests.RequestException:
-                raise AIRequestError("流式连接中断；当前回答可能不完整。") from None
+                tail = flush_tail()
+                if tail:
+                    yield tail
+                answer.error = "流式连接中断；当前回答可能不完整。"
+                raise AIRequestError(answer.error) from None
             except (ValueError, KeyError, TypeError, AttributeError):
-                raise AIRequestError("无法解析模型回答；请刷新模型列表后手动重试。") from None
+                tail = flush_tail()
+                if tail:
+                    yield tail
+                answer.error = "无法解析模型回答；请刷新模型列表后重试。"
+                raise AIRequestError(answer.error) from None
             finally:
                 response.close()
         return answer, chunks()
+
+    def stream_with_recovery(self, model: str, prompt: str, history: list[dict], context=None,
+                             metadata=None, effort=None, *, purpose: str = "chat",
+                             history_limit: int = 12, max_recoveries: int = 2) -> tuple[Answer, object]:
+        """Stream one user turn and transparently continue recoverable interruptions."""
+        aggregate = Answer(model.strip())
+        max_recoveries = max(0, min(2, int(max_recoveries)))
+
+        def chunks():
+            current_prompt = prompt
+            current_history = list(history)
+            current_purpose = purpose
+            for attempt in range(max_recoveries + 1):
+                segment = None
+                failure = None
+                streamed_addition = ""
+                previous = aggregate.text
+                try:
+                    segment, stream = self.stream(
+                        model, current_prompt, current_history, context,
+                        metadata=metadata, effort=effort, purpose=current_purpose,
+                        history_limit=history_limit,
+                    )
+                    if attempt == 0:
+                        for piece in stream:
+                            yield piece
+                    else:
+                        for _ in stream:
+                            if len(segment.text) < min(len(previous), 2000):
+                                continue
+                            candidate = merge_continuation(previous, segment.text)
+                            addition = candidate[len(previous):]
+                            if addition.startswith(streamed_addition):
+                                new_part = addition[len(streamed_addition):]
+                                if new_part:
+                                    streamed_addition = addition
+                                    yield new_part
+                except AIRequestError as exc:
+                    failure = str(exc)
+                if segment is not None:
+                    aggregate.text = (
+                        segment.text if attempt == 0
+                        else merge_continuation(aggregate.text, segment.text)
+                    )
+                    if attempt > 0:
+                        addition = aggregate.text[len(previous):]
+                        new_part = addition[len(streamed_addition):]
+                        if new_part:
+                            yield new_part
+                    aggregate.model_used = segment.model_used
+                    aggregate.finish_reason = segment.finish_reason
+                    aggregate.complete = segment.complete
+                    aggregate.error = segment.error or failure
+                else:
+                    aggregate.error = failure
+                if aggregate.complete:
+                    aggregate.error = None
+                    break
+                recoverable_reason = aggregate.finish_reason in {
+                    "length", "insufficient_system_resource", "aborted",
+                }
+                recoverable_failure = failure is not None and segment is not None
+                if attempt >= max_recoveries or not (recoverable_reason or recoverable_failure):
+                    break
+                aggregate.recovery_count += 1
+                if aggregate.text:
+                    current_history = [
+                        *history,
+                        {"role": "user", "content": prompt},
+                        {"role": "assistant", "content": aggregate.text},
+                    ]
+                    current_prompt = CONTINUATION_PROMPT
+                    current_purpose = "continuation"
+                else:
+                    current_history = list(history)
+                    current_prompt = prompt
+                    current_purpose = purpose
+        return aggregate, chunks()
 
 
 def _validate_object(value, schema):

@@ -7,7 +7,7 @@ from threading import RLock
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 _LOCK = RLock()
 BASE_SCHEMA = (
     """CREATE TABLE IF NOT EXISTS watchlist (
@@ -80,9 +80,26 @@ def _upgrade(db: sqlite3.Connection) -> None:
         created_at TEXT NOT NULL,
         CHECK((note_id IS NOT NULL AND draft_id IS NULL) OR
               (note_id IS NULL AND draft_id IS NOT NULL)))""")
+    db.execute("""CREATE TABLE IF NOT EXISTS ai_conversations (
+        id TEXT PRIMARY KEY, title TEXT NOT NULL, scope TEXT NOT NULL,
+        context_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL, opened_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS ai_messages (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+        turn_id TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+        kind TEXT NOT NULL DEFAULT 'chat', content TEXT NOT NULL,
+        model TEXT NOT NULL DEFAULT '', requested_model TEXT NOT NULL DEFAULT '',
+        security TEXT NOT NULL DEFAULT '', complete INTEGER NOT NULL DEFAULT 1
+            CHECK(complete IN (0,1)), finish_reason TEXT, error TEXT,
+        context_json TEXT NOT NULL DEFAULT '{}', saved_note_id INTEGER,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(saved_note_id) REFERENCES learning_notes(id) ON DELETE SET NULL)""")
     db.execute("CREATE INDEX IF NOT EXISTS idx_notes_category ON learning_notes(category_id,deleted_at)")
     db.execute("CREATE INDEX IF NOT EXISTS idx_experiments_category ON experiments(category_id,deleted_at)")
     db.execute("CREATE INDEX IF NOT EXISTS idx_categories_parent ON note_categories(parent_id,sort_order,name)")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_ai_conversations_scope ON ai_conversations(scope,opened_at DESC)")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation ON ai_messages(conversation_id,created_at)")
     db.execute("UPDATE learning_notes SET category_id=1 WHERE category_id IS NULL")
     db.execute("UPDATE experiments SET category_id=1 WHERE category_id IS NULL")
 

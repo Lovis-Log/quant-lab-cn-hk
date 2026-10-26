@@ -45,15 +45,17 @@ def test_populated_legacy_migration_and_replay(tmp_path):
     with ZipFile(BytesIO(storage.export_experiment_zip(record))) as archive:
         assert archive.read("raw_history.csv") == record["raw_csv_bytes"]
     with sqlite3.connect(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_conversations'").fetchone()
+        assert db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_messages'").fetchone()
         assert db.execute("SELECT raw_csv,signal_csv,notes FROM experiments").fetchone() == prior
-    backups = list((tmp_path / "backups").glob("research.pre-v4.*.sqlite3"))
+    backups = list((tmp_path / "backups").glob("research.pre-v5.*.sqlite3"))
     assert len(backups) == 1
     with sqlite3.connect(backups[0]) as backup:
         assert backup.execute("PRAGMA user_version").fetchone()[0] == 0
         assert backup.execute("SELECT raw_csv,signal_csv,notes FROM experiments").fetchone() == prior
     storage.list_experiments(old)
-    assert len(list((tmp_path / "backups").glob("research.pre-v4.*.sqlite3"))) == 1
+    assert len(list((tmp_path / "backups").glob("research.pre-v5.*.sqlite3"))) == 1
 
 
 def test_migration_failure_rolls_back_schema_and_rows(tmp_path, monkeypatch):
@@ -89,13 +91,33 @@ def test_manual_branch_preserves_legacy_learning_rows(tmp_path):
     storage.list_watchlist(path)
 
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
         assert db.execute("SELECT kind,item_id,status FROM learning_progress").fetchone() == (
             "course", "drawdown", "completed"
         )
         assert db.execute("SELECT course_id,answer,correct FROM learning_quiz_attempts").fetchone() == (
             "drawdown", -20.0, 1
         )
+
+
+def test_v4_notes_upgrade_to_v5_without_rewriting(tmp_path):
+    path = tmp_path / "research.sqlite3"
+    storage.save_learning_note("旧笔记", "保留正文", path=path)
+    with sqlite3.connect(path) as db:
+        db.execute("DROP TABLE ai_messages")
+        db.execute("DROP TABLE ai_conversations")
+        db.execute("PRAGMA user_version=4")
+        prior_note = db.execute("SELECT title,content FROM learning_notes").fetchone()
+    storage.list_learning_notes(path)
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert db.execute("SELECT title,content FROM learning_notes").fetchone() == prior_note
+        assert db.execute("SELECT name FROM sqlite_master WHERE name='ai_messages'").fetchone()
+    backups = list((tmp_path / "backups").glob("research.pre-v5.*.sqlite3"))
+    assert len(backups) == 1
+    with sqlite3.connect(backups[0]) as backup:
+        assert backup.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert backup.execute("SELECT title,content FROM learning_notes").fetchone() == prior_note
 
 
 def test_new_settings_notes_and_snapshot_are_isolated(tmp_path):

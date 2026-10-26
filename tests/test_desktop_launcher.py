@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import socket
+import hashlib
 
 import pytest
 
@@ -10,7 +11,8 @@ import pytest
 pytestmark = pytest.mark.skipif(os.name != "nt", reason="Windows desktop launcher")
 
 if os.name == "nt":
-    from desktop_launcher import LaunchError, choose_loopback_port, prepare_user_data, single_instance
+    from desktop_launcher import (LaunchError, choose_loopback_port, managed_attachment_path,
+                                  prepare_user_data, single_instance)
 
 
 def test_user_files_live_in_writable_profile_and_config_is_preserved(tmp_path: Path) -> None:
@@ -47,3 +49,16 @@ def test_existing_8501_listener_keeps_its_port() -> None:
             # Another application is already proving that 8501 is occupied.
             pass
         assert choose_loopback_port() != 8501
+
+
+def test_managed_attachment_path_stays_in_library_and_checks_hash(tmp_path: Path) -> None:
+    attachment = tmp_path / "notes" / "attachments" / "one.pdf"
+    attachment.parent.mkdir(parents=True)
+    attachment.write_bytes(b"%PDF-1.4\n%%EOF")
+    digest = hashlib.sha256(attachment.read_bytes()).hexdigest()
+
+    assert managed_attachment_path("notes/attachments/one.pdf", digest, tmp_path) == attachment
+    with pytest.raises(LaunchError, match="校验失败"):
+        managed_attachment_path("notes/attachments/one.pdf", "0" * 64, tmp_path)
+    with pytest.raises(LaunchError, match="不属于"):
+        managed_attachment_path("../outside.pdf", digest, tmp_path)

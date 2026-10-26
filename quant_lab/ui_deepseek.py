@@ -3,12 +3,13 @@
 import json
 import re
 import sqlite3
+import time
 from uuid import uuid4
 
 import streamlit as st
 
-from quant_lab import credentials
-from quant_lab.deepseek import DeepSeekClient, AIRequestError, safe_context
+from quant_lab import ai_chat, credentials
+from quant_lab.deepseek import DeepSeekClient, AIRequestError, CONTINUATION_PROMPT, merge_continuation, safe_context
 from quant_lab.ai_context import context_scope
 from quant_lab.security import redact
 from quant_lab.storage import save_learning_note as save_research_note, save_setting
@@ -67,7 +68,40 @@ def _draft(question):
 
 
 def _clear_chat() -> None:
+    _new_chat()
+
+
+def _new_chat() -> None:
+    st.session_state.pop("deepseek_conversation_id", None)
     st.session_state["deepseek_chat"] = []
+    st.session_state["deepseek_prompt"] = ""
+    st.session_state["deepseek_view"] = "chat"
+    st.session_state["deepseek_history_locked"] = False
+    st.session_state["deepseek_new_chat_pending"] = True
+    st.session_state["ai_workspace"] = "对话与辅导"
+
+
+def _show_chat_history() -> None:
+    st.session_state["deepseek_view"] = "history"
+    st.session_state["ai_workspace"] = "对话与辅导"
+
+
+def _show_chat() -> None:
+    st.session_state["deepseek_view"] = "chat"
+
+
+def _open_conversation(conversation_id: str) -> None:
+    conversation = ai_chat.get_conversation(conversation_id)
+    ai_chat.touch_conversation(conversation_id)
+    st.session_state["deepseek_conversation_id"] = conversation_id
+    st.session_state["deepseek_new_chat_pending"] = False
+    st.session_state["deepseek_chat"] = ai_chat.list_messages(conversation_id)
+    st.session_state["deepseek_history_locked"] = True
+    st.session_state["deepseek_view"] = "chat"
+
+
+def _retry_incomplete_message(message_id: str) -> None:
+    st.session_state["deepseek_retry_message_id"] = message_id
 
 
 def _save_model(widget_key):
@@ -114,6 +148,12 @@ def _note_title(prefix: str, question: str) -> str:
 def _paired_question(records: list[dict], index: int, message: dict) -> str:
     if message.get("question"):
         return message["question"]
+    if message.get("kind") == "conversation_summary":
+        return next(
+            (item.get("content", "") for item in records[:index]
+             if item.get("role") == "user" and item.get("kind", "chat") == "chat"),
+            "当前对话",
+        )
     turn_id = message.get("turn_id")
     for candidate in reversed(records[:index]):
         if candidate.get("role") != "user":
@@ -140,6 +180,8 @@ def _save_message_as_note(records: list[dict], index: int, key: str) -> None:
         experiment_id=note_context.get("experiment_id"), secrets=(key,),
     )
     message["saved_note_id"] = note_id
+    if message.get("id"):
+        ai_chat.update_message(message["id"], saved_note_id=note_id)
     st.session_state["deepseek_chat_notice"] = f"研究笔记 #{note_id} 已保存。"
 
 
@@ -290,6 +332,101 @@ def render_connection_settings() -> None:
         st.warning(st.session_state.pop("deepseek_credential_error"))
 
 
+def _activate_chat(scope: str, context: dict) -> dict | None:
+    st.session_state.setdefault("deepseek_view", "chat")
+    if st.session_state.get("deepseek_new_chat_pending", False):
+        st.session_state["deepseek_current_scope"] = scope
+        st.session_state["deepseek_chat"] = []
+        return None
+    locked = st.session_state.get("deepseek_history_locked", False)
+    previous_scope = st.session_state.get("deepseek_current_scope")
+    scope_changed = bool(previous_scope and previous_scope != scope and not locked)
+    if scope_changed:
+        st.session_state.pop("deepseek_conversation_id", None)
+        st.session_state["deepseek_chat"] = []
+    st.session_state["deepseek_current_scope"] = scope
+    conversation_id = st.session_state.get("deepseek_conversation_id")
+    if conversation_id:
+        try:
+            conversation = ai_chat.get_conversation(conversation_id)
+        except (KeyError, OSError, sqlite3.Error, ValueError):
+            st.session_state.pop("deepseek_conversation_id", None)
+            st.session_state["deepseek_chat"] = []
+        else:
+            if locked or conversation["scope"] == scope:
+                st.session_state["deepseek_chat"] = ai_chat.list_messages(conversation_id)
+                return conversation
+            st.session_state.pop("deepseek_conversation_id", None)
+            st.session_state["deepseek_chat"] = []
+    if scope_changed:
+        return None
+    try:
+        conversation = ai_chat.latest_conversation(scope)
+    except (OSError, sqlite3.Error, ValueError):
+        conversation = None
+    if conversation:
+        st.session_state["deepseek_conversation_id"] = conversation["id"]
+        st.session_state["deepseek_chat"] = ai_chat.list_messages(conversation["id"])
+    else:
+        st.session_state.setdefault("deepseek_chat", [])
+    return conversation
+
+
+def _render_chat_history() -> None:
+    st.button("← 返回对话", key="deepseek_history_back", on_click=_show_chat)
+    query = st.text_input(
+        "搜索历史会话", key="deepseek_history_search", label_visibility="collapsed",
+        placeholder="搜索标题或消息…",
+    )
+    try:
+        conversations = ai_chat.list_conversations(query)
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        st.error(f"读取历史会话失败：{exc}")
+        return
+    if not conversations:
+        st.info("没有找到历史会话。" if query.strip() else "还没有历史会话。")
+        return
+    st.caption(f"{len(conversations)} 个本地会话，按最近更新排序。")
+    for item in conversations[:50]:
+        updated = str(item["updated_at"]).replace("T", " ")[:16]
+        with st.container(border=True, key=f"deepseek_history_card_{item['id']}"):
+            st.button(
+                item["title"], key=f"deepseek_history_open_{item['id']}", width="stretch",
+                on_click=_open_conversation, args=(item["id"],),
+            )
+            st.caption(f"{item['message_count']} 条消息 · 更新于 {updated}")
+    with st.expander("整理历史会话", expanded=False):
+        ids = [item["id"] for item in conversations]
+        by_id = {item["id"]: item for item in conversations}
+        selected = st.selectbox(
+            "选择会话", ids, key="deepseek_history_manage",
+            format_func=lambda value: by_id[value]["title"],
+        )
+        title = st.text_input(
+            "会话标题", value=by_id[selected]["title"],
+            key=f"deepseek_history_title_{selected}", max_chars=80,
+        )
+        rename, delete = st.columns(2)
+        if rename.button("重命名", key="deepseek_history_rename", width="stretch"):
+            try:
+                ai_chat.rename_conversation(selected, title)
+                st.rerun()
+            except (KeyError, ValueError, OSError, sqlite3.Error) as exc:
+                st.error(str(exc))
+        confirm = st.checkbox("确认删除所选会话", key="deepseek_history_delete_confirm")
+        if delete.button(
+            "删除", key="deepseek_history_delete", width="stretch", disabled=not confirm,
+        ):
+            try:
+                ai_chat.delete_conversation(selected)
+                if st.session_state.get("deepseek_conversation_id") == selected:
+                    _new_chat()
+                    st.session_state["deepseek_view"] = "history"
+                st.rerun()
+            except (KeyError, OSError, sqlite3.Error) as exc:
+                st.error(str(exc))
+
+
 def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                     connection_expanded: bool = True, compact: bool = False):
     from quant_lab.ui_ai import render_ai, current_experiment_context
@@ -307,16 +444,18 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
     context.update(current_experiment_context(bundle))
     context = safe_context(followup or context)
     st.session_state.setdefault("deepseek_attach", True)
-    records = st.session_state.setdefault("deepseek_chat", [])
+    st.session_state.setdefault("deepseek_chat", [])
     if st.session_state.pop("deepseek_clear_prompt_pending", False):
         st.session_state["deepseek_prompt"] = ""
     st.html('<span class="ql-deepseek-chat-mode" aria-hidden="true"></span>')
     with st.container(key="deepseek_chat_toolbar"):
-        status_column, settings_column, experiment_column = st.columns(
-            [2.1, 1, 1.15], gap="small", vertical_alignment="center"
-        )
-        with status_column:
-            st.caption(status)
+        st.caption(status)
+        new_column, history_column = st.columns(2, gap="small")
+        with new_column:
+            st.button("新对话", key="deepseek_new_chat", width="stretch", on_click=_new_chat)
+        with history_column:
+            st.button("历史会话", key="deepseek_history", width="stretch", on_click=_show_chat_history)
+        settings_column, experiment_column = st.columns(2, gap="small", vertical_alignment="center")
         with settings_column:
             with st.popover("⚙ 设置", use_container_width=True):
                 st.caption("连接与模型设置位于左上角 `⚙ → DeepSeek`。")
@@ -367,6 +506,17 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
     attach = st.session_state.get("deepseek_attach", True)
     scope = context_scope(context)
     outgoing_scope = scope if attach else "standalone"
+    conversation = _activate_chat(outgoing_scope, context if attach else {})
+    records = st.session_state.setdefault("deepseek_chat", [])
+    selected_context = context if attach else {}
+    if conversation and st.session_state.get("deepseek_history_locked"):
+        outgoing_scope = conversation["scope"]
+        selected_context = conversation["context"]
+    if st.session_state.get("deepseek_view") == "history":
+        with st.container(key="deepseek_chat_surface"):
+            with st.container(key="deepseek_messages"):
+                _render_chat_history()
+        return
     active_answers = [
         message for message in records
         if message.get("role") == "assistant"
@@ -397,12 +547,38 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                 st.success(st.session_state.pop("deepseek_chat_notice"))
             if st.session_state.get("deepseek_chat_error"):
                 st.error(st.session_state.pop("deepseek_chat_error"))
+            st.html(
+                """
+                <script>(() => {
+                  const bind = () => {
+                    const area = document.querySelector('textarea[aria-label="问题（确认后发送）"]');
+                    const send = document.querySelector('.st-key-deepseek_send button');
+                    if (!area || !send || area.dataset.enterSendBound === '1') return;
+                    area.dataset.enterSendBound = '1';
+                    area.addEventListener('keydown', event => {
+                      if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+                      event.preventDefault();
+                      if (!send.disabled && area.value.trim()) {
+                        area.blur();
+                        window.setTimeout(() => {
+                          const current = document.querySelector('.st-key-deepseek_send button');
+                          if (current && !current.disabled) current.click();
+                        }, 250);
+                      }
+                    });
+                  };
+                  bind();
+                  requestAnimationFrame(bind);
+                })();</script>
+                """,
+                unsafe_allow_javascript=True,
+            )
         if submitted:
             if prompt.strip():
                 st.session_state["deepseek_pending_request"] = {
                     "id": uuid4().hex, "kind": "chat", "prompt": redact(prompt, (key,)),
-                    "scope": outgoing_scope, "context": context if attach else {},
-                    "security": context.get("security", "教学问答") if attach else "教学问答（未附带行情）",
+                    "scope": outgoing_scope, "context": selected_context,
+                    "security": selected_context.get("security", "教学问答") if selected_context else "教学问答（未附带行情）",
                 }
                 st.session_state["deepseek_clear_prompt_pending"] = True
             else:
@@ -421,10 +597,22 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
             )
             st.session_state["deepseek_pending_request"] = {
                 "id": uuid4().hex, "kind": "conversation_summary", "prompt": SUMMARY_PROMPT,
-                "scope": outgoing_scope, "context": context if attach else {},
-                "security": context.get("security", "教学问答") if attach else "教学问答（未附带行情）",
+                "scope": outgoing_scope, "context": selected_context,
+                "security": selected_context.get("security", "教学问答") if selected_context else "教学问答（未附带行情）",
                 "question": first_question,
             }
+        retry_message_id = st.session_state.pop("deepseek_retry_message_id", None)
+        if retry_message_id:
+            target = next((message for message in records if message.get("id") == retry_message_id), None)
+            if target:
+                st.session_state["deepseek_pending_request"] = {
+                    "id": uuid4().hex, "kind": "manual_continuation",
+                    "prompt": CONTINUATION_PROMPT, "target_message_id": retry_message_id,
+                    "scope": target.get("scope", outgoing_scope),
+                    "context": target.get("context", selected_context),
+                    "security": target.get("security", "教学问答"),
+                    "question": _paired_question(records, records.index(target), target),
+                }
         with st.container(key="deepseek_messages"):
             st.html(
                 """
@@ -458,8 +646,21 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                             f"模型：{message.get('model', '未知')} · {message.get('security', '教学问答')}"
                             + (" · 回答不完整" if not message.get("complete", True) else "")
                         )
+                        if not message.get("complete", True) and message.get("error"):
+                            st.warning(message["error"])
                         if message.get("complete", True) and message.get("content"):
                             _render_answer_actions(records, index, key)
+                        elif message.get("content"):
+                            copy_col, retry_col = st.columns(2, gap="small")
+                            with copy_col:
+                                _render_copy_button(message["content"], str(message.get("turn_id", index)))
+                            with retry_col:
+                                st.button(
+                                    "重新继续", key=f"deepseek_retry_{message.get('id', index)}",
+                                    width="stretch", on_click=_retry_incomplete_message,
+                                    args=(message.get("id", ""),),
+                                    help="从已保留的回答末尾继续生成。",
+                                )
             pending = st.session_state.pop("deepseek_pending_request", None)
             if pending:
                 if st.session_state.get("deepseek_busy"):
@@ -468,7 +669,7 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                     st.session_state["deepseek_busy"] = True
                     answer = None
                     kind = pending["kind"]
-                    selected_context = pending["context"]
+                    request_context = pending["context"]
                     history = [
                         message for message in records
                         if message.get("scope", pending["scope"]) == pending["scope"]
@@ -477,47 +678,129 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                     ]
                     if kind == "conversation_summary":
                         history = history[-20:]
-                    else:
+                    elif kind == "chat":
                         turn_id = pending["id"]
-                        user_message = {
-                            "role": "user", "content": pending["prompt"], "turn_id": turn_id,
-                            "kind": "chat", "scope": pending["scope"], "security": pending["security"],
-                        }
-                        records.append(user_message)
-                        with st.chat_message("user"):
-                            st.markdown(user_message["content"])
+                    conversation_id = st.session_state.get("deepseek_conversation_id")
+                    partial_message_id = None
+                    last_persisted_at = 0.0
                     try:
-                        answer, chunks = DeepSeekClient(key).stream(
-                            model_id, pending["prompt"], history, selected_context,
+                        if not conversation_id:
+                            created = ai_chat.create_conversation(
+                                pending["scope"], request_context, title=pending.get("question", pending["prompt"]),
+                            )
+                            conversation_id = created["id"]
+                            st.session_state["deepseek_conversation_id"] = conversation_id
+                            st.session_state["deepseek_new_chat_pending"] = False
+                        if kind == "chat":
+                            user_message = ai_chat.add_message(
+                                conversation_id, turn_id=turn_id, role="user",
+                                content=pending["prompt"], kind="chat", security=pending["security"],
+                                context=request_context, secrets=(key,),
+                            )
+                            records.append(user_message)
+                            with st.chat_message("user"):
+                                st.markdown(user_message["content"])
+                        request_purpose = "continuation" if kind == "manual_continuation" else kind
+                        answer, chunks = DeepSeekClient(key).stream_with_recovery(
+                            model_id, pending["prompt"], history, request_context,
                             metadata=metadata, effort=effort,
-                            purpose=kind, history_limit=20 if kind == "conversation_summary" else 12,
+                            purpose=request_purpose,
+                            history_limit=20 if kind == "conversation_summary" else 12,
                         )
+                        def persisted_chunks():
+                            nonlocal partial_message_id, last_persisted_at
+                            for piece in chunks:
+                                now = time.monotonic()
+                                if answer.text and (partial_message_id is None or now - last_persisted_at >= 0.4):
+                                    try:
+                                        if kind == "manual_continuation":
+                                            target = next(
+                                                (item for item in records
+                                                 if item.get("id") == pending.get("target_message_id")), None
+                                            )
+                                            if target:
+                                                ai_chat.update_message(
+                                                    target["id"],
+                                                    content=merge_continuation(target["content"], answer.text),
+                                                    complete=False, secrets=(key,),
+                                                )
+                                        elif partial_message_id is None:
+                                            partial = ai_chat.add_message(
+                                                conversation_id, turn_id=pending["id"], role="assistant",
+                                                content=answer.text, model=answer.model_used,
+                                                requested_model=model_id, kind=kind,
+                                                security=pending["security"], complete=False,
+                                                context=request_context, secrets=(key,),
+                                            )
+                                            partial_message_id = partial["id"]
+                                        else:
+                                            ai_chat.update_message(
+                                                partial_message_id, content=answer.text,
+                                                complete=False, secrets=(key,),
+                                            )
+                                        last_persisted_at = now
+                                    except (KeyError, ValueError, OSError, sqlite3.Error):
+                                        st.session_state["deepseek_chat_error"] = "流式回答暂时无法保存到资料库。"
+                                yield piece
                         with st.chat_message("assistant"):
                             if kind == "conversation_summary":
                                 st.caption("正在总结当前对话…")
-                            st.write_stream(chunks)
+                            elif kind == "manual_continuation":
+                                st.caption("正在从上次中断处继续…")
+                            else:
+                                st.caption("DeepSeek 正在思考并生成最终回答…")
+                            st.write_stream(persisted_chunks())
                             st.caption(f"实际模型：{answer.model_used}")
-                    except AIRequestError as exc:
+                    except (AIRequestError, KeyError, ValueError, OSError, sqlite3.Error) as exc:
                         st.session_state["deepseek_chat_error"] = str(exc)
                     finally:
                         if answer and answer.text:
-                            message = {
-                                "role": "assistant", "content": redact(answer.text, (key,)),
-                                "model": answer.model_used, "requested_model": model_id,
-                                "turn_id": pending["id"], "kind": kind,
-                                "scope": pending["scope"], "security": pending["security"],
-                                "complete": answer.complete, "context": selected_context,
-                                "question": pending.get("question", pending["prompt"]),
-                            }
-                            records.append(message)
-                            if kind == "conversation_summary" and answer.complete:
-                                try:
-                                    _save_message_as_note(records, len(records) - 1, key)
-                                except (ValueError, OSError, sqlite3.Error):
-                                    st.session_state["deepseek_chat_error"] = (
-                                        "对话总结已生成，但研究笔记保存失败；可在回答下方手动保存。"
+                            try:
+                                if kind == "manual_continuation":
+                                    target = next(
+                                        (item for item in records
+                                         if item.get("id") == pending.get("target_message_id")), None
                                     )
-                        st.session_state["deepseek_chat"] = records[-40:]
+                                    if target:
+                                        combined = merge_continuation(target["content"], answer.text)
+                                        ai_chat.update_message(
+                                            target["id"], content=combined, complete=answer.complete,
+                                            finish_reason=answer.finish_reason or "stop",
+                                            error=answer.error or "", secrets=(key,),
+                                        )
+                                else:
+                                    if partial_message_id:
+                                        ai_chat.update_message(
+                                            partial_message_id, content=answer.text,
+                                            complete=answer.complete,
+                                            finish_reason=answer.finish_reason or ("stop" if answer.complete else "aborted"),
+                                            error=answer.error or "", secrets=(key,),
+                                        )
+                                        message = ai_chat.get_message(partial_message_id)
+                                    else:
+                                        message = ai_chat.add_message(
+                                            conversation_id, turn_id=pending["id"], role="assistant",
+                                            content=answer.text, model=answer.model_used,
+                                            requested_model=model_id, kind=kind, security=pending["security"],
+                                            complete=answer.complete, finish_reason=answer.finish_reason,
+                                            error=answer.error, context=request_context, secrets=(key,),
+                                        )
+                                    message["question"] = pending.get("question", pending["prompt"])
+                                    records.append(message)
+                                    if kind == "conversation_summary" and answer.complete:
+                                        try:
+                                            _save_message_as_note(records, len(records) - 1, key)
+                                        except (ValueError, OSError, sqlite3.Error):
+                                            st.session_state["deepseek_chat_error"] = (
+                                                "对话总结已生成，但研究笔记保存失败；可在回答下方手动保存。"
+                                            )
+                            except (KeyError, ValueError, OSError, sqlite3.Error) as exc:
+                                st.session_state["deepseek_chat_error"] = f"对话保存失败：{exc}"
+                        if conversation_id:
+                            try:
+                                st.session_state["deepseek_chat"] = ai_chat.list_messages(conversation_id)
+                            except (OSError, sqlite3.Error, ValueError):
+                                st.session_state["deepseek_chat"] = records
                         st.session_state["deepseek_busy"] = False
                     st.rerun()
 
