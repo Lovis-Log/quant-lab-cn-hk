@@ -1,0 +1,39 @@
+{
+  "version": "1.2.1-rc.1",
+  "isolated_app_id": "F5E41987-BA73-4352-8E7E-3185956BD754",
+  "isolated_install_uninstall": true,
+  "actual_webview_dom_and_candidates": true,
+  "deepseek_shared_research_json_mock": true,
+  "legacy_migration_and_replay": true,
+  "raw_snapshot_unchanged": true,
+  "restart_key_not_restored": true,
+  "entry_restored_after_mock": true,
+  "user_database_preserved_after_uninstall": true,
+  "dummy_key_absent_from_database_logs": true,
+  "real_paid_api_tested": false,
+  "record_dir": "D:\\Projects\\quant-lab\\.tools\\delivery-1.2.1-b397917869bf4c3b9b63c4c1d750696f",
+  "source_commit": "903fee7f35b6f02c3eee8e30e51b01e0a47d26f8",
+  "pytest": {
+    "passed": 83,
+    "skipped": 0,
+    "failed": 0
+  },
+  "packaged_offline_browser": {
+    "service_ready": true,
+    "browser_loaded": true,
+    "academy_course_switch": true,
+    "watchlist_persisted": true,
+    "research_notes_loaded": true,
+    "child_stopped": true
+  },
+  "live_security_names": {
+    "600519": "贵州茅台",
+    "000001": "平安银行",
+    "00700": "腾讯控股"
+  },
+  "unmodified_shipped_entry_verified": true,
+  "fixture_not_shipped": true,
+  "remote_push": false,
+  "release_tag": null,
+  "release_url": null
+}

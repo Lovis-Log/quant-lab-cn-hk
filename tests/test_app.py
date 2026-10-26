@@ -16,7 +16,7 @@ def test_terminal_boots_with_clear_data_status() -> None:
     assert app.sidebar.radio[0].value == "市场数据"
     assert len(app.get("plotly_chart")) == 2
     assert any("固定随机种子" in item.value for item in app.get("caption"))
-    assert app.sidebar.selectbox[1].value == "不复权"
+    assert next(w for w in app.sidebar.selectbox if w.label == "价格口径").value == "不复权"
     assert any("腾讯证券" in item.value for item in app.get("caption"))
 
     app.sidebar.selectbox[0].select("港股").run()
@@ -47,7 +47,7 @@ def test_loaded_history_replaces_demo_metrics(monkeypatch) -> None:
     assert any("来源：腾讯证券" in item.value for item in app.get("caption"))
     assert len(app.get("plotly_chart")) == 2
 
-    app.sidebar.text_input[0].input("000001").run()
+    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
     assert not app.exception
     assert not any("+10.00%" in item.value for item in app.get("html"))
 
@@ -65,6 +65,24 @@ def test_provider_error_keeps_metrics_empty(monkeypatch) -> None:
     assert any("暂时无法获取" in item.value for item in app.get("error"))
     assert any("区间简单价格收益率" in item.value and "--" in item.value
                for item in app.get("html"))
+
+
+def test_simulated_history_is_never_labeled_real(monkeypatch) -> None:
+    history = pd.DataFrame(
+        {"date": pd.to_datetime(["2026-10-08", "2026-10-09"]),
+         "open": [9.5, 10.5], "high": [10.5, 12.0], "low": [9.0, 10.0],
+         "close": [10.0, 11.0], "volume": [1000, 2000], "amount": [10000, 22000]}
+    )
+    bundle = HistoryBundle(history, "A 股", "600519", "明确模拟教学数据", "CNY", "")
+    monkeypatch.setattr("quant_lab.ui.fetch_history", lambda *_: bundle)
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(entrypoint, default_timeout=20).run()
+    app.sidebar.button[0].click().run()
+
+    assert not app.exception
+    assert any("已加载模拟/教学数据" in item.value for item in app.get("html"))
+    assert not any("已加载真实历史数据" in item.value for item in app.get("html"))
+    assert any("不是上游真实行情" in item.value for item in app.get("caption"))
 
 
 def test_hk_history_uses_hkd_and_its_own_source(monkeypatch) -> None:

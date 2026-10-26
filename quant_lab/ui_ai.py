@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from quant_lab.ai_research import (
-    AIUnavailableError, api_configured, audit_snapshot, draft_hypothesis, draft_report,
+    AIUnavailableError, audit_snapshot, draft_hypothesis, draft_report,
 )
 from quant_lab.backtest import illustrative_config
 from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
@@ -15,6 +15,10 @@ from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec
 from quant_lab.ui_helpers import bundle_key, require_history
+from quant_lab import names
+from quant_lab.security import redact
+from quant_lab.deepseek import DeepSeekClient, AIRequestError
+from quant_lab.ai_context import bundle_context
 
 
 def _raw_history(bundle: HistoryBundle) -> pd.DataFrame:
@@ -27,26 +31,49 @@ def _raw_history(bundle: HistoryBundle) -> pd.DataFrame:
     ).frame
 
 
+def current_experiment_context(bundle: HistoryBundle | None) -> dict:
+    """Expose only the local experiment matching the current data and strategy."""
+    if bundle is None:
+        return {}
+    data_key = bundle_key(bundle)
+    hypothesis = st.session_state.get("ai_hypothesis") if st.session_state.get("ai_hypothesis_key") == data_key else None
+    spec = hypothesis.strategy if hypothesis is not None else StrategySpec()
+    experiment = st.session_state.get("ai_experiment")
+    if experiment is None or st.session_state.get("ai_experiment_key") != (data_key, spec):
+        return {}
+    return {"strategy": asdict(spec), "costs": asdict(illustrative_config(bundle.market)),
+            "audit_id": experiment.audit_id, "performance": audit_snapshot(experiment)}
+
+
 def render_ai(bundle: HistoryBundle | None) -> None:
-    st.subheader("AI 量化研究助手")
+    st.subheader("DeepSeek 量化研究助手")
     st.caption("模型只草拟可检验假设与文字报告；所有计算在本地内置函数中执行，模型生成的代码永不自动运行。")
     if not require_history(bundle):
         return
     data_key = bundle_key(bundle)
-    configured = api_configured()
+    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    api_key = st.session_state.get("deepseek_api_key", "")
+    model = st.session_state.get("ds_model_select") if st.session_state.get("deepseek_models") else st.session_state.get("ds_model_manual", st.session_state.get("deepseek_model", ""))
+    metadata = next((m for m in st.session_state.get("deepseek_models", []) if m["id"] == model), {})
+    configured = bool(api_key and model)
+    st.caption(f"使用 `⚙ → DeepSeek` 中的连接 · 当前模型：{model or '尚未选择'}。生成假设和审阅按钮会发送付费请求；本地实验免费。")
     if not configured:
-        st.info("未配置 OPENAI_API_KEY。你仍可运行下方的受控实验并查看确定性审计记录；AI 草拟与审阅需要自行配置 API Key。")
+        st.info("请在左上角 `⚙ → DeepSeek` 配置密钥并选择模型；也可先运行不调用模型的本地受控实验。")
     question = st.text_area(
         "研究问题", value="双均线过滤能否改善这只股票的历史回撤？",
         max_chars=600, height=95,
+        key="ai_question",
     )
     if st.button("生成 AI 假设", disabled=not configured):
         try:
-            hypothesis = draft_hypothesis(question, bundle.market, bundle.symbol)
+            client = DeepSeekClient(api_key)
+            hypothesis = draft_hypothesis(question, bundle.market, bundle.symbol, client,
+                model=model, metadata=metadata, context=bundle_context("AI 研究助手", bundle))
             st.session_state["ai_hypothesis_key"] = data_key
             st.session_state["ai_hypothesis"] = hypothesis
             st.session_state["ai_error"] = None
-        except (AIUnavailableError, ValueError) as exc:
+            st.session_state["ai_hypothesis_model"] = client.model_used
+        except (AIUnavailableError, AIRequestError, ValueError) as exc:
             st.session_state["ai_hypothesis_key"] = data_key
             st.session_state["ai_hypothesis"] = None
             st.session_state["ai_error"] = str(exc)
@@ -58,6 +85,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     )
     spec = hypothesis.strategy if hypothesis is not None else StrategySpec()
     if hypothesis is not None:
+        st.caption("假设实际模型：" + st.session_state.get("ai_hypothesis_model", "未记录"))
         st.markdown(f"#### {hypothesis.title}")
         st.write(hypothesis.rationale)
         st.caption(f"通过本地验证的内置策略：{STRATEGY_NAMES[spec.kind]}，短周期 {spec.short_window}，长周期 {spec.long_window}。")
@@ -95,28 +123,28 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     if experiment is None:
         return
     evidence = audit_snapshot(experiment)
+    st.session_state["active_backtest_context"] = {"strategy": asdict(spec), "costs": asdict(config),
+        "audit_id": experiment.audit_id, "performance": evidence}
     st.markdown("#### 可独立复核的实验数据")
     st.json(evidence)
     st.caption(f"实验指纹 `{experiment.audit_id}` 由行情、信号、参数和成本假设计算。数值来自本地回测代码，不由 AI 生成。")
     if st.button("让 AI 审阅实验", disabled=not configured):
         try:
-            context = {
-                "market": bundle.market, "symbol": bundle.symbol,
-                "source": bundle.source, "adjustment": bundle.adjustment_label,
-                "currency": bundle.currency,
-                "first_date": str(bundle.frame["date"].iloc[0].date()),
-                "last_date": str(bundle.frame["date"].iloc[-1].date()),
-                "strategy": STRATEGY_NAMES[spec.kind],
-            }
-            st.session_state["ai_report"] = draft_report(experiment, context)
+            context = bundle_context("AI 研究助手", bundle)
+            context.update({"strategy": STRATEGY_NAMES[spec.kind], "audit_id": experiment.audit_id,
+                            "costs": asdict(config)})
+            client = DeepSeekClient(api_key)
+            st.session_state["ai_report"] = draft_report(experiment, context, client, model=model, metadata=metadata)
+            st.session_state["ai_report_model"] = client.model_used
             st.session_state["ai_report_error"] = None
-        except AIUnavailableError as exc:
+        except (AIUnavailableError, AIRequestError) as exc:
             st.session_state["ai_report"] = None
             st.session_state["ai_report_error"] = str(exc)
     if st.session_state.get("ai_report_error"):
         st.error(st.session_state["ai_report_error"])
     report = st.session_state.get("ai_report")
     if report is not None:
+        st.caption("审阅实际模型：" + st.session_state.get("ai_report_model", "未记录"))
         st.markdown("#### AI 审阅意见（需要人工核对）")
         st.write(report.summary)
         for heading, items in (
@@ -128,7 +156,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
                 st.write(f"• {item}")
     report_text = (
         f"# Quant Lab CN/HK 研究审计\n\n"
-        f"标的：{bundle.market} {bundle.symbol}\n\n"
+        f"标的：{names.security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
         f"来源：{bundle.source}；价格口径：{bundle.adjustment_label}；币种：{bundle.currency}\n\n"
         f"实际交易日：{bundle.frame['date'].iloc[0]:%Y-%m-%d} 至 "
         f"{bundle.frame['date'].iloc[-1]:%Y-%m-%d}；记录数：{len(bundle.frame)}\n\n"
@@ -141,9 +169,9 @@ def render_ai(bundle: HistoryBundle | None) -> None:
         f"## 局限\n\n日线成交、成本、公司行动、幸存者偏差及参数过拟合会影响解释。"
     )
     if report is not None:
-        report_text += f"\n\n## AI 审阅（未经独立核实）\n\n{report.summary}\n"
+        report_text += f"\n\n## DeepSeek 审阅（未经独立核实）\n\n模型：{st.session_state.get('ai_report_model', '未记录')}\n\n{report.summary}\n"
     st.download_button(
-        "下载可复核研究报告", report_text.encode("utf-8-sig"),
+        "下载可复核研究报告", redact(report_text, (api_key,)).encode("utf-8-sig"),
         file_name=f"quant_lab_{bundle.symbol}_{experiment.audit_id}.md",
         mime="text/markdown",
     )

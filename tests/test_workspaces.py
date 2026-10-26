@@ -29,9 +29,11 @@ def test_all_workspaces_boot_without_extra_network_calls() -> None:
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
         assert not app.exception
-        for page in ("策略实验室", "历史回测", "风险与组合", "统计与机器学习", "AI 研究助手"):
+        for page in ("策略实验室", "历史回测", "风险与组合", "统计与机器学习"):
             app.sidebar.radio[0].set_value(page).run()
             assert not app.exception, page
+        next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
+        assert not app.exception
 
 
 def test_research_actions_run_from_loaded_history() -> None:
@@ -46,13 +48,17 @@ def test_research_actions_run_from_loaded_history() -> None:
             ("历史回测", "运行历史回测"),
             ("风险与组合", "分析同市场组合"),
             ("统计与机器学习", "运行时间序列线性回归"),
-            ("AI 研究助手", "运行受控实验（内置策略）"),
         ):
             app.sidebar.radio[0].set_value(page).run()
             button = next(item for item in app.get("button") if item.label == button_label)
             button.click().run()
             assert not app.exception, page
             assert not app.get("error"), page
+        next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
+        next(item for item in app.get("button") if item.label == "研究实验").click().run()
+        next(item for item in app.get("button") if item.label == "运行受控实验（内置策略）").click().run()
+        assert not app.exception
+        assert not app.get("error")
 
 
 def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch) -> None:
@@ -67,6 +73,40 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         next(item for item in app.get("button") if item.label == "保存实验").click().run()
         assert not app.exception
         assert len(list_experiments(tmp_path / "research.sqlite3")) == 1
-        app.sidebar.radio[0].set_value("研究笔记").run()
+        next(item for item in app.get("button") if item.label == "研究笔记").click().run()
         assert not app.exception
-        assert any("实验指纹" in item.value for item in app.get("caption"))
+        app.button(key="notes_open_management").click().run()
+        app.button(key="notes_manage_experiments").click().run()
+        assert any(item.label == "选择实验" for item in app.selectbox)
+        assert any("从存档数据重新计算" == item.label for item in app.button)
+
+
+def test_backtest_knowledge_group_expands_collapses_and_resets(monkeypatch) -> None:
+    bundle = sample_bundle()
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    with patch("quant_lab.ui.fetch_history", return_value=bundle):
+        app = AppTest.from_file(entrypoint, default_timeout=30).run()
+        app.sidebar.button[0].click().run()
+        app.sidebar.radio(key="nav_page").set_value("历史回测").run()
+        next(item for item in app.button if item.label == "运行历史回测").click().run()
+
+        explanations = [item for item in app.expander if item.label.startswith("知识解释：")]
+        assert len(explanations) == 2
+        next(item for item in app.button if item.label == "显示更多（剩余 6 项）").click().run()
+        explanations = [item for item in app.expander if item.label.startswith("知识解释：")]
+        assert len(explanations) == 8
+        next(item for item in app.button if item.label == "收起详细解释").click().run()
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2
+
+        next(item for item in app.button if item.label == "显示更多（剩余 6 项）").click().run()
+        app.button(key="settings_toggle").click().run()
+        app.toggle(key="learning_mode").set_value(False).run()
+        assert not [item for item in app.expander if item.label.startswith("知识解释：")]
+        app.toggle(key="learning_mode").set_value(True).run()
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2
+        next(item for item in app.button if item.label == "显示更多（剩余 6 项）").click().run()
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 8
+        app.button(key="learning_mode_refresh").click().run()
+        assert app.session_state["settings_open"] is True
+        assert "learning_mode_app_rerun_pending" not in app.session_state
+        assert len([item for item in app.expander if item.label.startswith("知识解释：")]) == 2

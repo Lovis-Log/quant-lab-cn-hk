@@ -72,8 +72,8 @@ def performance_stats(
     sharpe: float | None = None
     if len(returns) >= 2:
         daily_std = float(returns.std(ddof=1))
+        volatility = daily_std * math.sqrt(periods_per_year)
         if daily_std > 1e-12:
-            volatility = daily_std * math.sqrt(periods_per_year)
             daily_rf = (1 + annual_risk_free) ** (1 / periods_per_year) - 1
             sharpe = (float(returns.mean()) - daily_rf) / daily_std * math.sqrt(periods_per_year)
     return PerformanceStats(total, annual, volatility, float(drawdown.min()), sharpe, float(values.iloc[-1]))

@@ -1,0 +1,22 @@
+﻿{
+    "payload_dir":  "D:\\Projects\\quant-lab\\dist\\packages\\2.0.0-rc.1\\QuantLab",
+    "completed_at_utc":  "2026-10-14T16:00:42.9206965Z",
+    "python":  "Python 3.12.10",
+    "started_at_utc":  "2026-10-14T15:57:27.9634086Z",
+    "version":  "2.0.0-rc.1",
+    "source_commit":  "7c003180ae31acb9ad01a217b717a52a1b801a04",
+    "tests":  "passed",
+    "assets":  [
+                   {
+                       "sha256":  "b05f0305d3831b120208ba094a23d53ae6e9aa4c8b207bb5916c59b9117b6d5e",
+                       "name":  "QuantLab.exe",
+                       "size":  32351916
+                   },
+                   {
+                       "sha256":  "b6749346372be3498c889ee8e815945a73a5c62faf5e1bc9e34b98ecdfaf0647",
+                       "name":  "QuantLab-CN-HK-2.0.0-rc.1-Setup.exe",
+                       "size":  100942978
+                   }
+               ],
+    "source_dirty":  false
+}

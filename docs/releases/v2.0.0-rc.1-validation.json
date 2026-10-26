@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0-rc.1",
+  "isolated_app_id": "B28FCBE9-A207-4564-B670-9AFD0448DDD3",
+  "record_dir": "D:\\Projects\\quant-lab\\.tools\\learning-delivery-3eeab7b1b7f24f0d908461ba5cf58311",
+  "actual_learning_center_webview": true,
+  "v2_to_v3_backup_and_migration": true,
+  "progress_goal_notes_resumed_in_dom": true,
+  "legacy_snapshot_and_replay_preserved": true,
+  "professional_mode_control": true,
+  "deepseek_research_mock": true,
+  "entry_restored_after_mock": true,
+  "mock_data_not_counted_as_real_task": true,
+  "key_absent_from_database_and_logs": true,
+  "isolated_install_uninstall": true,
+  "user_data_retained_after_uninstall": true,
+  "real_paid_api_tested": false,
+  "source_commit": "7c003180ae31acb9ad01a217b717a52a1b801a04",
+  "pytest": {
+    "passed": 104,
+    "failed": 0,
+    "skipped": 0
+  },
+  "offline_browser": {
+    "passed": true,
+    "academy_switch": true,
+    "watchlist_persisted": true,
+    "notes_page": true,
+    "child_stopped": true
+  },
+  "shipped_entry_unmodified": true,
+  "fixture_not_shipped": true,
+  "verification_sync": "Actual Streamlit notRunning DOM state + searchable market input; visible alert selector for browser smoke.",
+  "failed_attempts_retained": true,
+  "first_build_old_payload_locked": true
+}
