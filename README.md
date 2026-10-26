@@ -43,22 +43,22 @@ CHANGELOG.md             里程碑记录
 
 阶段 5 及后续搜索/面板优化的自动测试、ego-browser 抽样、实际 WebView2 DOM 验收、已知限制和外部来源状态见 [文字手册版验收记录](docs/MANUAL_READING_ACCEPTANCE.md)。该验收不包含打包或 Release。
 
-## Windows 启动
+## 本地浏览器运行（Windows）
 
-在项目目录下的 PowerShell 执行：
+先在 PowerShell 进入仓库根目录（包含 `app.py` 的文件夹），首次运行时执行：
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --no-cache-dir -r requirements.txt
-.\.venv\Scripts\python.exe -m streamlit run app.py
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
 ```
 
-浏览器通常打开 `http://localhost:8501`。不必激活虚拟环境，直接使用其 Python 可避免 PowerShell 执行策略问题。查询真实行情需要联网。
+以后只需运行最后一条命令。浏览器没有自动打开时，在本机访问 `http://127.0.0.1:8501`；按 `Ctrl+C` 停止服务。若 8501 被占用，把命令末尾端口改为 8502，并访问 `http://127.0.0.1:8502`。不必激活虚拟环境；真实历史行情和 DeepSeek 请求需要联网。浏览器模式的笔记附件可下载副本，Windows 默认程序打开附件的按钮只在桌面窗口可用。
 
 ## Windows 桌面版
 
 - **安装版**：双击 `dist\installer\QuantLab-CN-HK-Setup.exe`，默认安装到 Windows 程序目录。安装后从开始菜单的 **Quant Lab CN-HK** 启动；安装时可选桌面快捷方式。正常卸载不会删除个人研究数据。
-- **免安装版**：双击 `dist/packages/2.0.1-rc.1/QuantLab/QuantLab.exe`。必须保留整个 `QuantLab` 文件夹，不能只复制 EXE。Python 运行时已包含在该文件夹内，目标电脑无需另装 Python。
+- **免安装版**：双击 `dist/packages/2.2.0-rc.1/QuantLab/QuantLab.exe`。必须保留整个 `QuantLab` 文件夹，不能只复制 EXE。Python 运行时已包含在该文件夹内，目标电脑无需另装 Python。
 - 两种方式都在本机自动启动原有 Streamlit 后端，随机选一个空闲端口并**只监听 `127.0.0.1`**，随后在独立 pywebview 窗口打开；不会自动打开系统浏览器。关闭窗口后只停止本次启动的后端进程。
 - Windows 电脑还需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。本安装包目前不内置它；若缺失，启动器会显示安装提示。当前构建的 EXE 和安装包未做商业代码签名，Windows 可能提示未知发布者。
 - 首次启动在“选择新的存放文件夹”中指定一个本地目录；应用在其中创建结构化 `QuantLabCNHK` 资料库，分类保存数据库、笔记附件、备份、日志、缓存和 WebView 数据。设置页分别显示“当前资料库位置”和复制校验后的“迁移后的资料库位置”；下次启动切换，原目录保留。`QUANT_LAB_DATA_DIR` 仍可在开发/测试中直接指定目录。
@@ -91,7 +91,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -Bui
 
 `1.2.1-rc.1` 名称和 DeepSeek 修复曾仅在本地交付，记录保留。当前 V2 独立升级遵循项目通用同步与预发布流程；实际发布状态见 [发布记录](docs/RELEASES.md)。
 
-当前候选版构建路径为 `dist/packages/2.1.0-rc.1/QuantLab/QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.1.0-rc.1-Setup.exe`，发布与验收记录见 [v2.1.0-rc.1](docs/releases/v2.1.0-rc.1.md)。[V2 初版验收](docs/V2_ACCEPTANCE.md)、[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为当前候选版的新验收证据。
+当前源码对应的版本化路径为 `dist/packages/2.2.0-rc.1/QuantLab/QuantLab.exe` 和 `dist\installer\QuantLab-CN-HK-2.2.0-rc.1-Setup.exe`，发布与验收记录见 [v2.2.0-rc.1](docs/releases/v2.2.0-rc.1.md)。[V2 初版验收](docs/V2_ACCEPTANCE.md)、[1.2.1 记录](docs/releases/v1.2.1-rc.1.md)和[1.2.0 升级记录](docs/UPGRADE_1.2.0.md)保留历史事实，不作为当前版本的新验收证据。
 
 ### 常见问题
 
