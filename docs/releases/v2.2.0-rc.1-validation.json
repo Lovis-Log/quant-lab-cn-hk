@@ -1,0 +1,12 @@
+{
+  "version": "2.2.0-rc.1",
+  "source_commit": "f410f0c3e5267840330b4c907a968691b5c141c0",
+  "full_pytest": "154 passed",
+  "packaged_offline_browser": "passed",
+  "actual_webview_dom": "passed",
+  "desktop_manual_notes_attachments": "passed",
+  "isolated_install_gui_uninstall": "passed",
+  "real_paid_deepseek": "not_run",
+  "live_market_feed": "not_run",
+  "code_signed": false
+}

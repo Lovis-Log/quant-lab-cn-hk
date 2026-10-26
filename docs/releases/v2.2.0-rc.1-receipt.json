@@ -1,0 +1,33 @@
+{
+  "tag": "v2.2.0-rc.1",
+  "commit": "f410f0c3e5267840330b4c907a968691b5c141c0",
+  "url": "https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.2.0-rc.1",
+  "prerelease": true,
+  "assets": [
+    {
+      "name": "QuantLab-CN-HK-2.2.0-rc.1-Setup.exe",
+      "size": 101252525,
+      "sha256": "9a9358aafea88e21064fde235c1c24f34db0cabaaf12e4c13c9d69d26070c67c",
+      "url": "https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.2.0-rc.1/QuantLab-CN-HK-2.2.0-rc.1-Setup.exe"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 102,
+      "sha256": "8d364a9d2ed0cbf93af1b9ed03402069fb32d5dbad6ce23824c31d553b7f2a63",
+      "url": "https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.2.0-rc.1/SHA256SUMS.txt"
+    },
+    {
+      "name": "build-manifest.json",
+      "size": 932,
+      "sha256": "9dad9b96b224290436f37de59938c7854ff639703579cd9951dbd37641ef7c59",
+      "url": "https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.2.0-rc.1/build-manifest.json"
+    },
+    {
+      "name": "validation.json",
+      "size": 384,
+      "sha256": "954e260ee20e03242e89067b18192cd0ee10895869d0378559e28f49c560e129",
+      "url": "https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.2.0-rc.1/validation.json"
+    }
+  ],
+  "verified_at_utc": "2026-10-26T15:32:00.566058+00:00"
+}

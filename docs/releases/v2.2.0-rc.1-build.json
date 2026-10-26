@@ -1,0 +1,21 @@
+{
+  "version": "2.2.0-rc.1",
+  "source_commit": "f410f0c3e5267840330b4c907a968691b5c141c0",
+  "source_dirty": false,
+  "python": "Python 3.12.10",
+  "started_at_utc": "2026-10-26T10:31:08.5843102Z",
+  "completed_at_utc": "2026-10-26T10:35:56.2688529Z",
+  "tests": "passed",
+  "assets": [
+    {
+      "name": "QuantLab.exe",
+      "size": 32420081,
+      "sha256": "d13fb5e2e947bcfcaa7d04373bd5adcfa04c711d145ec3f956b4272ae99b686e"
+    },
+    {
+      "name": "QuantLab-CN-HK-2.2.0-rc.1-Setup.exe",
+      "size": 101252525,
+      "sha256": "9a9358aafea88e21064fde235c1c24f34db0cabaaf12e4c13c9d69d26070c67c"
+    }
+  ]
+}
