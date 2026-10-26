@@ -127,6 +127,10 @@ header[data-testid="stHeader"] { display:none; }
 .ql-copy-action button { min-height:34px; width:100%; border:1px solid #34435A; border-radius:6px; background:#111927; color:#DCE6F3; cursor:pointer; font:600 12px/1.2 sans-serif; white-space:nowrap; }
 .ql-copy-action button:hover,.ql-copy-action button:focus-visible { border-color:#2F8B72; color:#A7F3D0; outline:none; }
 .ql-copy-action span { position:absolute; transform:translateY(28px); color:#7AE7BC; font-size:10px; white-space:nowrap; }
+.ql-attachment-save button { width:100%; min-height:38px; border:1px solid #34435A; border-radius:6px; background:#111927; color:#DCE6F3; cursor:pointer; font:600 12px/1.2 sans-serif; }
+.ql-attachment-save button:hover,.ql-attachment-save button:focus-visible { border-color:#2F8B72; color:#A7F3D0; }
+.ql-attachment-save button:disabled { opacity:.6; cursor:wait; }
+.ql-attachment-save span { display:block; margin-top:5px; color:#94A3B8; font-size:11px; line-height:1.4; overflow-wrap:anywhere; }
 .st-key-notes_panel_body textarea[aria-label="Markdown 正文"] { min-height:360px; }
 [class*="st-key-note_history_card_"] button { text-align:left; justify-content:flex-start; white-space:normal; line-height:1.35; }
 .ql-note-history-snippet { margin:0; color:#94A3B8; font-size:11px; line-height:1.55; overflow-wrap:anywhere; }

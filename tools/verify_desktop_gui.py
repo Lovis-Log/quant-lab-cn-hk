@@ -409,7 +409,11 @@ def main():
                 open_attachment = notes_panel.get_by_role("button", name="打开附件 evidence.pdf", exact=True)
                 open_attachment.click()
                 expect(notes_panel.get_by_text("已交给 Windows 默认应用。", exact=True)).to_be_visible(timeout=10000)
-                expect(notes_panel.get_by_role("button", name="另存副本", exact=True).first).to_be_visible()
+                save_copy = notes_panel.locator(".ql-attachment-save button").last
+                expect(save_copy).to_be_visible(timeout=10000)
+                save_copy.click()
+                expect(notes_panel.get_by_text("已保存：evidence.pdf", exact=True)).to_be_visible(timeout=10000)
+                assert (directory / "validation-export" / "evidence.pdf").read_bytes() == b"%PDF-1.4\n%%EOF"
                 notes_panel.get_by_role("button", name="继续编辑", exact=True).click()
                 settle(page)
                 notes_panel = page.locator(".st-key-notes_side_panel")
@@ -567,6 +571,7 @@ def main():
                                 "notes_history_search": True,
                                 "notes_reader_rendered": True,
                                 "attachment_desktop_open": True,
+                                "attachment_desktop_save_copy": True,
                                 "notes_library_edit_scrolls_to_editor": True,
                                 "panels_reordered_by_drag": True, "panel_maximize_restore": True,
                                 "panel_drag_resize": True, "workspace_resized_for_panel": True,

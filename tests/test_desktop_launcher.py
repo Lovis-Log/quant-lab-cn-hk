@@ -12,7 +12,8 @@ pytestmark = pytest.mark.skipif(os.name != "nt", reason="Windows desktop launche
 
 if os.name == "nt":
     from desktop_launcher import (LaunchError, choose_loopback_port, managed_attachment_path,
-                                  prepare_user_data, single_instance)
+                                  prepare_user_data, save_managed_attachment_copy,
+                                  single_instance)
 
 
 def test_user_files_live_in_writable_profile_and_config_is_preserved(tmp_path: Path) -> None:
@@ -62,3 +63,27 @@ def test_managed_attachment_path_stays_in_library_and_checks_hash(tmp_path: Path
         managed_attachment_path("notes/attachments/one.pdf", "0" * 64, tmp_path)
     with pytest.raises(LaunchError, match="不属于"):
         managed_attachment_path("../outside.pdf", digest, tmp_path)
+
+
+def test_save_managed_attachment_copy_preserves_source_and_verifies_bytes(tmp_path: Path) -> None:
+    attachment = tmp_path / "library" / "notes" / "attachments" / "one.pdf"
+    attachment.parent.mkdir(parents=True)
+    data = b"%PDF-1.4\nsource data\n%%EOF"
+    attachment.write_bytes(data)
+    digest = hashlib.sha256(data).hexdigest()
+    destination = tmp_path / "export" / "copy.pdf"
+    destination.parent.mkdir()
+
+    assert save_managed_attachment_copy(
+        "notes/attachments/one.pdf", digest, destination, tmp_path / "library"
+    ) == destination
+    assert destination.read_bytes() == data and attachment.read_bytes() == data
+    with pytest.raises(LaunchError, match="校验失败"):
+        save_managed_attachment_copy(
+            "notes/attachments/one.pdf", "0" * 64, destination, tmp_path / "library"
+        )
+    assert destination.read_bytes() == data
+    with pytest.raises(LaunchError, match="不能覆盖"):
+        save_managed_attachment_copy(
+            "notes/attachments/one.pdf", digest, attachment, tmp_path / "library"
+        )

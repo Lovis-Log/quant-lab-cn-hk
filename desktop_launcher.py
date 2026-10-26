@@ -20,6 +20,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from typing import Iterator
@@ -139,6 +140,31 @@ def managed_attachment_path(relative_path: str, expected_sha256: str,
     if digest != str(expected_sha256):
         raise LaunchError("附件校验失败，文件可能已被外部修改。")
     return target
+
+
+def save_managed_attachment_copy(relative_path: str, expected_sha256: str,
+                                 destination: Path, root: Path | None = None) -> Path:
+    """Copy a verified attachment to a selected path without leaving partial files."""
+    source = managed_attachment_path(relative_path, expected_sha256, root)
+    destination = Path(destination).resolve()
+    if destination == source:
+        raise LaunchError("不能覆盖资料库中的原附件。")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent,
+    )
+    temporary = Path(temporary_name)
+    try:
+        hasher = hashlib.sha256()
+        with os.fdopen(descriptor, "wb") as copy, source.open("rb") as original:
+            for block in iter(lambda: original.read(1024 * 1024), b""):
+                copy.write(block)
+                hasher.update(block)
+        if hasher.hexdigest() != expected_sha256:
+            raise LaunchError("附件校验失败，文件可能已被外部修改。")
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return destination
 
 
 def child_command(port: int) -> list[str]:
@@ -302,6 +328,26 @@ def run_desktop(smoke_test: bool = False) -> int:
                     if os.environ.get("QUANT_LAB_GUI_PROBE") != "1":
                         os.startfile(target)
                     return True
+                def save_managed_attachment(self, relative_path, expected_sha256, original_name):
+                    if not self._window:
+                        raise LaunchError("桌面窗口尚未就绪。")
+                    name = Path(str(original_name)).name
+                    if not name or name in {".", ".."}:
+                        raise LaunchError("附件名称无效。")
+                    if os.environ.get("QUANT_LAB_GUI_PROBE") == "1":
+                        destination = user_data_dir() / "validation-export" / name
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                    else:
+                        selected = self._window.create_file_dialog(
+                            webview.FileDialog.SAVE, save_filename=name,
+                        )
+                        if not selected:
+                            return {"status": "cancelled"}
+                        destination = Path(selected[0])
+                    saved = save_managed_attachment_copy(
+                        relative_path, expected_sha256, destination,
+                    )
+                    return {"status": "saved", "name": saved.name}
             probe_api = DesktopAPI()
 
             url = f"http://{HOST}:{port}"

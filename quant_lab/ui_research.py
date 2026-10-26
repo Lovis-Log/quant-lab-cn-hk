@@ -247,6 +247,49 @@ def _attachment_open_button(item: dict) -> None:
     """, unsafe_allow_javascript=True)
 
 
+def _attachment_save_button(item: dict) -> None:
+    button_id = f"ql-save-attachment-{item['id']}"
+    fallback_key = f"save_attachment_copy_{item['id']}"
+    safe_name = (
+        json.dumps(item["original_name"], ensure_ascii=False)
+        .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    )
+    st.html(f"""
+    <div class="ql-attachment-save" style="display:none">
+      <button type="button" id="{button_id}">另存副本</button>
+      <span aria-live="polite"></span>
+    </div>
+    <script>(()=>{{
+      const button=document.getElementById({json.dumps(button_id)});
+      if(!button || button.dataset.bound==='1') return;
+      button.dataset.bound='1';
+      const wrapper=button.parentElement;
+      const status=button.nextElementSibling;
+      const fallback=document.querySelector('.st-key-{fallback_key}');
+      const update=()=>{{
+        const desktop=!!window.pywebview?.api?.save_managed_attachment;
+        wrapper.style.display=desktop?'block':'none';
+        if(fallback) fallback.style.display=desktop?'none':'';
+      }};
+      update();
+      window.addEventListener('pywebviewready',update,{{once:true}});
+      button.addEventListener('click',async()=>{{
+        const api=window.pywebview?.api;
+        if(!api?.save_managed_attachment){{status.textContent='保存功能未就绪，请稍后再试。';return;}}
+        button.disabled=true;
+        status.textContent='正在打开保存窗口…';
+        try{{
+          const result=await api.save_managed_attachment(
+            {json.dumps(item['stored_relpath'])},{json.dumps(item['sha256'])},{safe_name});
+          status.textContent=result?.status==='saved'?'已保存：'+result.name:
+            result?.status==='cancelled'?'已取消保存。':'保存未完成，请重试。';
+        }}catch(_){{status.textContent='保存失败，请检查目标文件夹和附件。';}}
+        finally{{button.disabled=false;}}
+      }});
+    }})();</script>
+    """, unsafe_allow_javascript=True)
+
+
 def _render_attachment_list(attachments: list[dict]) -> None:
     for item in _visible_attachments(attachments):
         with st.container(key=f"attachment_item_{item['id']}"):
@@ -260,6 +303,7 @@ def _render_attachment_list(attachments: list[dict]) -> None:
                     mime=item["mime_type"], key=f"save_attachment_copy_{item['id']}",
                     width="stretch",
                 )
+                _attachment_save_button(item)
 
 
 def _render_reader(categories: list[dict]) -> None:
