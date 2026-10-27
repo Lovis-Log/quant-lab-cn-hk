@@ -2,6 +2,8 @@
 
 范围：工作包10–13。基线2b62038，恢复点codex/recovery-stage3-resume-20261027-2b62038；原stash及文件备份保留。用户单独要求先完成阶段三，本次开发验证已交付，等待用户验收，不启动阶段四。SQLite现为v6，旧BLOB与审计指纹不改写。
 
+供验收源码提交：[60f82f3](https://github.com/Lovis-Log/quant-lab-cn-hk/commit/60f82f35cd0f61d3ab6696e3ef2a80164bfe2ee2)；后续回执文档补充不改变此代码。
+
 ## 用户操作清单
 
 在仓库根目录运行 `.\.venv\Scripts\python.exe desktop_launcher.py`，验收源码桌面版；原安装EXE没有更新。
