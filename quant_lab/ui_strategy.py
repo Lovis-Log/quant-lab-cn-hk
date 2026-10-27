@@ -11,12 +11,14 @@ from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment, sensitivity_table, experiment_with_sensitivity
 from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
 from quant_lab.jobs import JobState
+from quant_lab.data_quality import require_completed_close
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec, build_signals
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
 from quant_lab.storage import save_experiment
 from quant_lab import names
 from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
 from dataclasses import asdict
+from quant_lab.research_inputs import prepare_inputs
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -46,6 +48,11 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
     st.subheader("交易策略实验室")
     st.caption("这里只生成收盘后才能知道的研究信号；图中标记不是实际成交。")
     if not require_history(bundle):
+        return
+    try:
+        require_completed_close(bundle)
+    except DataValidationError as exc:
+        st.warning(str(exc))
         return
     spec = _strategy_controls("strategy")
     if spec is None:
@@ -125,21 +132,19 @@ def _backtest_config(market: str) -> BacktestConfig:
     )
 
 
-def _raw_fills(bundle: HistoryBundle) -> pd.DataFrame:
-    if bundle.adjustment == "":
-        return bundle.frame
-    start = bundle.frame["date"].iloc[0].date()
-    end = bundle.frame["date"].iloc[-1].date()
-    raw = fetch_history(bundle.market, bundle.symbol, start, end, "", force=True)
-    if raw.update_error:
-        raise DataUnavailableError("不复权成交数据更新失败；请稍后重试，不能混用不同获取批次。")
-    return raw.frame
+def _raw_fills(bundle: HistoryBundle):
+    return prepare_inputs(bundle, fetch=fetch_history)
 
 
 def render_backtest(bundle: HistoryBundle | None) -> None:
     st.subheader("历史回测系统")
     st.caption("研究模型：收盘后产生信号，下一交易日开盘尝试成交；只做多，不借钱，不执行真实交易。")
     if not require_history(bundle):
+        return
+    try:
+        require_completed_close(bundle)
+    except DataValidationError as exc:
+        st.warning(str(exc))
         return
     with st.form("backtest_parameters", border=False):
         spec = _strategy_controls("backtest")
@@ -148,19 +153,20 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
         requested = st.form_submit_button("运行历史回测", type="primary")
     if spec is None:
         return
-    key = (bundle_key(bundle), spec, config, train_fraction)
+    key = (bundle_key(bundle), bundle.source, bundle.currency, spec, config, train_fraction)
     if requested:
         if bundle.adjustment:
             submit_task("backtest_raw", key, _raw_fills, bundle)
         else:
-            st.session_state["backtest_pending_raw"] = bundle.frame
-            submit_task("backtest", key, experiment_with_sensitivity, bundle.frame, bundle.frame,
+            inputs = prepare_inputs(bundle)
+            st.session_state["backtest_pending_manifest"] = (key, inputs.manifest)
+            submit_task("backtest", key, experiment_with_sensitivity, inputs.raw, inputs.signal,
                         spec, config, train_fraction, cpu=True)
     prepared = take_result("backtest_raw", key)
     if prepared:
         if prepared.state == JobState.SUCCEEDED:
-            st.session_state["backtest_pending_raw"] = prepared.result
-            submit_task("backtest", key, experiment_with_sensitivity, prepared.result, bundle.frame,
+            st.session_state["backtest_pending_manifest"] = (key, prepared.result.manifest)
+            submit_task("backtest", key, experiment_with_sensitivity, prepared.result.raw, prepared.result.signal,
                         spec, config, train_fraction, cpu=True)
         elif prepared.state == JobState.FAILED:
             st.session_state["backtest_error"] = prepared.error
@@ -172,6 +178,8 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
             st.session_state["backtest_result"] = result
             st.session_state["backtest_grid"] = grid
             st.session_state["backtest_raw"] = raw
+            pending = st.session_state.get("backtest_pending_manifest")
+            st.session_state["backtest_manifest"] = pending[1] if pending and pending[0] == key else {}
             st.session_state["backtest_error"] = None
         elif completed.state == JobState.FAILED:
             st.session_state["backtest_error"] = completed.error
@@ -251,10 +259,13 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     st.dataframe(grid, width="stretch", hide_index=True)
     st.caption("A 股模拟 T+1、用户设定的买入单位、零成交量和简化涨跌停；港股交易单位也由用户输入。停牌、涨跌停队列、公司行动、幸存者偏差和真实费用无法由日线完整重建。")
     with st.expander("保存本次实验与研究笔记"):
+        may_save = bundle.retention.allowed and bool(bundle.retention.evidence)
+        if not may_save:
+            st.caption("来源本地留存许可未核实，新增行情实验保存暂不可用；已有实验、笔记仍可使用。")
         title = st.text_input("研究标题", value=f"{names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name)} {STRATEGY_NAMES[spec.kind]}实验", key=f"research_title_{bundle.market}_{bundle.symbol}")
         hypothesis = st.text_area("研究假设", value="该均线规则在样本外仍具有可观察的风险收益特征。", key=f"research_hypothesis_{bundle.market}_{bundle.symbol}")
         notes = st.text_area("学习笔记", value="", key=f"research_notes_{bundle.market}_{bundle.symbol}")
-        if st.button("保存实验", key="save_experiment"):
+        if st.button("保存实验", key="save_experiment", disabled=not may_save):
             try:
                 record_id = save_experiment(
                     title=title, hypothesis=hypothesis, notes=notes,
@@ -265,6 +276,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
                     source=bundle.source, adjustment=bundle.adjustment,
                     received_at=bundle.received_at,
                     company_name=bundle.company_name,
+                    input_manifest=st.session_state.get("backtest_manifest", {}),
                 )
                 st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
             except (OSError, ValueError, sqlite3.Error) as exc:

@@ -37,6 +37,8 @@ from quant_lab.securities import security_directory
 from quant_lab.ui_jobs import submit_task, take_result, cancel_task, render_background_tasks, loading_placeholder
 from quant_lab.jobs import JobState
 from quant_lab.ui_helpers import reset_main_scroll
+from quant_lab.history_ranges import HISTORY_PRESETS, history_window
+from quant_lab.ui_data_quality import render_history_quality, render_quality_summary
 from quant_lab.ui_manual import render_manual_panel
 from quant_lab.ui_settings import (
     library_configured,
@@ -348,6 +350,7 @@ def _protect_session_widgets() -> None:
         "deepseek_prompt", "deepseek_answer_mode", "deepseek_attach",
         "ds_model_select", "ds_model_manual", "ai_workspace",
         "learning_mode", "refresh_enabled", "refresh_interval_seconds", "academy_search", "academy_group",
+        "history_preset", "history_start", "history_end",
     }
     prefixes = (
         "strategy_", "backtest_", "portfolio_", "model_", "research_", "academy_parameter_",
@@ -404,16 +407,17 @@ def _research_controls():
         help="常见大盘股票优先展示；候选是证券目录，不是买入推荐。未收录的代码可输入后选择新增项确认。",
     ) or "").strip()
     today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
-    selected_dates = st.date_input(
-        "历史区间",
-        value=(today - timedelta(days=365), today),
-        max_value=today,
-    )
-    dates = (
-        (selected_dates[0], selected_dates[1])
-        if isinstance(selected_dates, tuple) and len(selected_dates) == 2
-        else None
-    )
+    initial_start, initial_end = history_window(today, 1)
+    st.session_state.setdefault("history_start", initial_start)
+    st.session_state.setdefault("history_end", initial_end)
+    st.selectbox("快捷历史区间", tuple(HISTORY_PRESETS), key="history_preset", on_change=_apply_history_preset)
+    start = st.date_input("开始日期", value=None, min_value=date(1900, 1, 1), max_value=today,
+                          key="history_start", format="YYYY-MM-DD", on_change=_custom_history_dates)
+    end = st.date_input("结束日期", value=None, min_value=date(1900, 1, 1), max_value=today,
+                        key="history_end", format="YYYY-MM-DD", on_change=_custom_history_dates)
+    dates = (start, end) if isinstance(start, date) and isinstance(end, date) else None
+    if dates and start > end:
+        st.warning("开始日期不能晚于结束日期。")
     adjustment = ADJUSTMENTS[st.selectbox("价格口径", tuple(ADJUSTMENTS))]
     try:
         symbol = normalize_symbol(market, symbol)
@@ -484,6 +488,18 @@ def _research_controls():
         '<small>仅供学习与模拟研究</small></div>'
     )
     return market, symbol, dates, adjustment, clicked
+
+
+def _apply_history_preset():
+    years = HISTORY_PRESETS.get(st.session_state.get("history_preset", "1 年"))
+    if years is not None:
+        today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
+        start, end = history_window(today, years)
+        st.session_state["history_start"], st.session_state["history_end"] = start, end
+
+
+def _custom_history_dates():
+    st.session_state["history_preset"] = "自定义"
 
 
 def _header(page: str, market: str, symbol: str, latest_date: str | None) -> None:
@@ -694,6 +710,7 @@ def _main_page(
         f"已加载模拟/教学数据 · {adjustment_label}" if demonstration else
         "未加载真实行情"
     )
+    render_quality_summary(bundle)
     st.html(
         '<div class="ql-section-head"><div>'
         f'<h2>研究概览</h2></div><span class="ql-tag">{overview_tag}</span></div>'
@@ -839,6 +856,7 @@ def _main_page(
             )
             st.caption("加载并验证真实历史行情后可查看和导出 CSV。")
     show_history_status(bundle, st.session_state.get("history_next_attempt"), session_cache=session_cache)
+    render_history_quality(bundle)
     render_watchlist(market, symbol)
     if st.session_state.get("learning_mode", True):
         render_knowledge("simple_return", summary.simple_return if has_data else None,

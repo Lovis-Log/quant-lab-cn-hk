@@ -63,6 +63,7 @@ def main():
     parser.add_argument("--visual", action="store_true")
     parser.add_argument("--legacy-theme", action="store_true")
     parser.add_argument("--diagnose-events", action="store_true")
+    parser.add_argument("--history-quality", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.repetitions <= 100:
         parser.error("repetitions must be 1..100")
@@ -150,6 +151,20 @@ def main():
                     report["startup_ms"] = round((time.perf_counter()-started)*1000, 1)
                     assert page.url.startswith("http://127.0.0.1:")
                     assert page.title() == "Quant Lab CN/HK"
+                    if args.history_quality:
+                        preset = page.get_by_role("combobox", name="快捷历史区间", exact=True)
+                        preset.click()
+                        preset.fill("10 年")
+                        page.get_by_role("option", name="10 年", exact=True).click()
+                        settle(page)
+                        visible_date = "element => element.value || element.querySelector('input')?.value || element.innerText"
+                        start_text = page.get_by_label("开始日期", exact=True).evaluate(visible_date)
+                        end_text = page.get_by_label("结束日期", exact=True).evaluate(visible_date)
+                        start_parts, end_parts = re.findall(r"\d+", start_text), re.findall(r"\d+", end_text)
+                        assert len(start_parts) == len(end_parts) == 3
+                        start_value, end_value = "-".join(start_parts), "-".join(end_parts)
+                        assert int(start_value[:4]) == int(end_value[:4])-10
+                        report["ten_year_preset"] = {"start": start_value, "end": end_value}
                     radio_markup = page.get_by_test_id("stSidebar").get_by_role("radio", name="市场数据", exact=True).evaluate("element => element.parentElement.parentElement.outerHTML")
                     (directory / "radio-control.html").write_text(radio_markup, encoding="utf-8")
                     page.get_by_role("button", name="使用手册", exact=True).click()
@@ -244,6 +259,15 @@ def main():
                     page.wait_for_timeout(100)
                     report["layout"] = page.evaluate("""() => Object.fromEntries(['stSidebar','stSidebarHeader','stSidebarContent','stSidebarUserContent','stMainBlockContainer'].map(key => {const el=document.querySelector(`[data-testid=${key}]`); const style=el && getComputedStyle(el); const rect=el?.getBoundingClientRect(); return [key, el ? {x:rect.x,y:rect.y,width:rect.width,height:rect.height,padding:style.padding,font:style.fontFamily,background:style.backgroundColor}:null];}))""")
                     page.screenshot(path=str(directory / "market.png"))
+                    if args.history_quality:
+                        page.get_by_text("数据质量与覆盖", exact=True).click()
+                        page.get_by_role("button", name="导出质量报告", exact=True).wait_for()
+                        assert page.get_by_text("请求区间", exact=True).count() >= 1
+                        assert page.get_by_text("平台生成的固定教学样本，可本地留存；不是市场行情。", exact=True).is_visible()
+                        report["quality_panel"] = True
+                        report["quality_retention_status"] = True
+                        page.screenshot(path=str(directory / "history-quality.png"))
+                        page.get_by_text("数据质量与覆盖", exact=True).click()
                     if args.visual:
                         radio_markup = page.get_by_test_id("stSidebar").get_by_role("radio", name="市场数据", exact=True).evaluate("element => element.parentElement.parentElement.outerHTML")
                         (directory / "radio-control.html").write_text(radio_markup, encoding="utf-8")
@@ -305,6 +329,12 @@ def main():
                         page.get_by_text("策略累计收益", exact=True).wait_for(timeout=60000)
                         settle(page)
                         report["actual_cpu_backtest_completed"] = True
+                        if args.history_quality:
+                            page.get_by_text("保存本次实验与研究笔记", exact=True).click()
+                            assert page.get_by_role("button", name="保存实验", exact=True).is_enabled()
+                            page.get_by_role("button", name="保存实验", exact=True).click()
+                            page.get_by_text("实验 #1 已保存。可到“研究笔记”导出报告。", exact=True).wait_for()
+                            report["teaching_archive_saved"] = True
                         page.screenshot(path=str(directory / "backtest.png"))
                         page.get_by_role("button", name="使用手册", exact=True).click()
                         panel = page.locator(".st-key-manual_side_panel")

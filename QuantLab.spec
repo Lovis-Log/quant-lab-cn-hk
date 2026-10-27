@@ -23,7 +23,7 @@ hiddenimports = collect_submodules("quant_lab") + [
     "webview.platforms.edgechromium",
 ]
 
-for package in ("streamlit", "webview", "plotly", "altair", "akshare"):
+for package in ("streamlit", "webview", "plotly", "altair", "akshare", "exchange_calendars"):
     package_data, package_binaries, package_hidden = collect_all(package)
     datas += package_data
     binaries += package_binaries

@@ -15,20 +15,16 @@ from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec
 from quant_lab.ui_helpers import bundle_key, require_history
+from quant_lab.data_quality import require_completed_close
 from quant_lab import names
 from quant_lab.security import redact
 from quant_lab.deepseek import DeepSeekClient, AIRequestError
 from quant_lab.ai_context import bundle_context
+from quant_lab.research_inputs import prepare_inputs
 
 
 def _raw_history(bundle: HistoryBundle) -> pd.DataFrame:
-    if bundle.adjustment == "":
-        return bundle.frame
-    return fetch_history(
-        bundle.market, bundle.symbol,
-        bundle.frame["date"].iloc[0].date(),
-        bundle.frame["date"].iloc[-1].date(), "",
-    ).frame
+    return prepare_inputs(bundle, fetch=fetch_history).raw
 
 
 def current_experiment_context(bundle: HistoryBundle | None) -> dict:
@@ -49,6 +45,11 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     st.subheader("DeepSeek 量化研究助手")
     st.caption("模型只草拟可检验假设与文字报告；所有计算在本地内置函数中执行，模型生成的代码永不自动运行。")
     if not require_history(bundle):
+        return
+    try:
+        require_completed_close(bundle)
+    except DataValidationError as exc:
+        st.warning(str(exc))
         return
     data_key = bundle_key(bundle)
     st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))

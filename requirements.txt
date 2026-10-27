@@ -9,3 +9,4 @@ scipy>=1.16,<2
 scikit-learn>=1.7,<2
 openai>=2,<3
 requests>=2.32,<3
+exchange-calendars==4.13.2

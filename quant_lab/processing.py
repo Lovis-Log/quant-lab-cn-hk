@@ -23,6 +23,8 @@ def clean_stock_history(raw: pd.DataFrame, start: date, end: date) -> pd.DataFra
     """
     if not isinstance(raw, pd.DataFrame):
         raise DataValidationError("数据源没有返回表格。")
+    if raw.columns.duplicated().any():
+        raise DataValidationError("数据源存在重复列名，不能判断字段口径。")
     if raw.empty:
         return pd.DataFrame(columns=COLUMNS)
 
@@ -32,7 +34,15 @@ def clean_stock_history(raw: pd.DataFrame, start: date, end: date) -> pd.DataFra
 
     result = raw.loc[:, list(COLUMNS)].copy()
     result["date"] = pd.to_datetime(result["date"], errors="coerce")
+    if not pd.api.types.is_datetime64_any_dtype(result["date"].dtype):
+        raise DataValidationError("日线日期格式或时区混合，无法确定交易日期。")
+    if result["date"].dt.tz is not None:
+        raise DataValidationError("日线date须为无时区的交易日期，报价时间应另行记录。")
+    if (result["date"].dropna() != result["date"].dropna().dt.normalize()).any():
+        raise DataValidationError("日线date包含盘中时间，不能直接当作交易日期。")
     for column in COLUMNS[1:]:
+        if pd.api.types.is_bool_dtype(result[column].dtype):
+            raise DataValidationError(f"行情数值字段{column}不能是布尔类型。")
         result[column] = pd.to_numeric(result[column], errors="coerce")
     if result.isna().any().any():
         raise DataValidationError("历史行情包含无法解析的日期或数值。")

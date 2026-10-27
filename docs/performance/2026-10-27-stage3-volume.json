@@ -1,0 +1,23 @@
+{
+  "scope": "offline backend workload only; no ten-stock terminal UI; no real provider or browser drawing time",
+  "synthetic": true,
+  "raw_prices_saved": false,
+  "samples": 10,
+  "rows_per_sample": 2609,
+  "full_rows_total": 26090,
+  "start": "2016-10-27",
+  "end": "2026-10-27",
+  "timings_total_ms": {
+    "generate_ms": 4.34,
+    "validate_and_quality_ms": 115.89,
+    "metrics_ms": 5.76,
+    "chart_build_ms": 537.34,
+    "chart_json_ms": 34.88,
+    "export_csv_ms": 93.29
+  },
+  "chart_json_bytes": 2583895,
+  "export_csv_bytes": 2929709,
+  "network_time": "not measured; synthetic generation is not a network measurement",
+  "browser_render_time": "not measured here; desktop receipt records separate full load",
+  "measured_at": "2026-10-27T12:54:10.392280+00:00"
+}

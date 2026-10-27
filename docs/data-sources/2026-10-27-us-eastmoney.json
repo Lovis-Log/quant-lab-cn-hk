@@ -1,0 +1,24 @@
+{
+  "source": "akshare-eastmoney",
+  "ticker": "AAPL",
+  "synthetic": false,
+  "checked_at": "2026-10-27T12:31:22.139114+00:00",
+  "requested": [
+    "2016-10-27",
+    "2026-10-27"
+  ],
+  "raw_prices_saved": false,
+  "application_backtest_enabled": false,
+  "results": {
+    "unadjusted_parameter": {
+      "status": "failed",
+      "error_type": "ProxyError",
+      "note": "真实请求或结构校验失败，没有回退到模拟数据。"
+    },
+    "qfq": {
+      "status": "failed",
+      "error_type": "ProxyError",
+      "note": "真实请求或结构校验失败，没有回退到模拟数据。"
+    }
+  }
+}

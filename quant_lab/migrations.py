@@ -7,7 +7,7 @@ from threading import RLock
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 _LOCK = RLock()
 BASE_SCHEMA = (
     """CREATE TABLE IF NOT EXISTS watchlist (
@@ -29,6 +29,14 @@ BASE_SCHEMA = (
 def _upgrade(db: sqlite3.Connection) -> None:
     for statement in BASE_SCHEMA:
         db.execute(statement)
+    columns = {row[1] for row in db.execute("PRAGMA table_info(experiments)")}
+    if "input_manifest_json" not in columns:
+        db.execute("ALTER TABLE experiments ADD COLUMN input_manifest_json TEXT NOT NULL DEFAULT '{}'")
+    db.execute("""CREATE TABLE IF NOT EXISTS history_snapshots (
+        id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL, raw_sha256 TEXT NOT NULL,
+        frame_csv BLOB NOT NULL, saved_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS history_snapshot_heads (
+        query_key TEXT PRIMARY KEY, snapshot_id TEXT NOT NULL REFERENCES history_snapshots(id))""")
     for table in ("watchlist", "experiments"):
         columns = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
         if "company_name" not in columns:

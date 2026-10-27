@@ -10,6 +10,8 @@ import pandas as pd
 
 from quant_lab import credentials, names, ui
 from quant_lab.data import HistoryBundle
+from quant_lab.data_quality import assess_history
+from quant_lab.source_rights import TEACHING_RETENTION
 
 credentials.load_key = lambda **kwargs: None
 names.security_name = lambda *args, **kwargs: "离线性能样本"
@@ -44,9 +46,13 @@ def history(market, symbol, start, end, adjustment="", **kwargs):
         "high": np.maximum(opening, close) * (1 + rng.uniform(.001, .008, count)),
         "low": np.minimum(opening, close) * (1 - rng.uniform(.001, .008, count)),
         "close": close, "volume": volume, "amount": close * volume})
-    return HistoryBundle(frame, market, symbol, "离线模拟性能样本（非真实行情）",
-        "CNY" if market == "A 股" else "HKD", adjustment,
-        received_at=datetime.now(timezone.utc))
+    source = "离线模拟性能样本（非真实行情）"
+    currency = "CNY" if market == "A 股" else "HKD"
+    received = datetime.now(timezone.utc)
+    quality = assess_history(frame, market, start, end, source=source, currency=currency,
+                             adjustment=adjustment, received_at=received)
+    return HistoryBundle(frame, market, symbol, source, currency, adjustment,
+                         received_at=received, quality=quality, retention=TEACHING_RETENTION)
 
 
 ui.fetch_history = history

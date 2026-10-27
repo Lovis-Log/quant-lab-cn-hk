@@ -10,6 +10,8 @@ from streamlit.testing.v1 import AppTest
 from quant_lab.data import HistoryBundle
 from quant_lab.storage import list_experiments
 from conftest import finish_background_jobs
+from dataclasses import replace
+from quant_lab.source_rights import TEACHING_RETENTION
 
 
 def sample_bundle() -> HistoryBundle:
@@ -70,7 +72,7 @@ def test_research_actions_run_from_loaded_history() -> None:
 
 def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
-    bundle = sample_bundle()
+    bundle = replace(sample_bundle(), source="平台生成的教学样本", retention=TEACHING_RETENTION)
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     with patch("quant_lab.ui.fetch_history", return_value=bundle):
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
@@ -88,6 +90,21 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         app.button(key="notes_manage_experiments").click().run()
         assert any(item.label == "选择实验" for item in app.selectbox)
         assert any("从存档数据重新计算" == item.label for item in app.button)
+
+
+def test_unverified_source_cannot_create_new_archive():
+    bundle = sample_bundle()
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    with patch("quant_lab.ui.fetch_history", return_value=bundle):
+        app = AppTest.from_file(entrypoint, default_timeout=30).run()
+        app.sidebar.button[0].click().run()
+        finish_background_jobs(app)
+        app.sidebar.radio[0].set_value("历史回测").run()
+        app.button(key="FormSubmitter:backtest_parameters-运行历史回测").click().run()
+        finish_background_jobs(app)
+        assert app.button(key="save_experiment").disabled
+        assert any("本地留存许可未核实" in caption.value for caption in app.caption)
+        assert not list_experiments()
 
 
 def test_backtest_knowledge_group_expands_collapses_and_resets(monkeypatch) -> None:

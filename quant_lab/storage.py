@@ -84,6 +84,7 @@ def save_experiment(
     result: ExperimentResult, source: str, adjustment: str,
     received_at: datetime | None, path: Path | None = None,
     company_name: str = "",
+    input_manifest: dict | None = None,
 ) -> int:
     if not title.strip() or not hypothesis.strip():
         raise ValueError("研究标题和假设不能为空。")
@@ -93,6 +94,18 @@ def save_experiment(
     if raw_history.empty or signal_history.empty:
         raise ValueError("实验不能保存空行情。")
     raw_bytes, signal_bytes = _csv_bytes(raw_history), _csv_bytes(signal_history)
+    if input_manifest is not None:
+        if (input_manifest.get("format"), input_manifest.get("market"), input_manifest.get("symbol")) != (1, market, symbol):
+            raise ValueError("研究输入清单版本或证券身份与存档不匹配。")
+        for field, payload in (("raw", raw_bytes), ("signal", signal_bytes)):
+            info = input_manifest.get(field, {})
+            if info.get("sha256") != hashlib.sha256(payload).hexdigest():
+                raise ValueError("研究输入清单与保存行情不一致。")
+            rights = info.get("retention", {})
+            if not rights.get("allowed") or not rights.get("evidence"):
+                raise ValueError("来源本地留存许可未核实，不能新增行情快照。")
+            if info.get("adjustment") != ("" if field == "raw" else adjustment):
+                raise ValueError("研究输入清单的价格口径与存档不匹配。")
     stats = {
         "strategy": asdict(result.full_stats),
         "benchmark": asdict(result.benchmark_stats),
@@ -107,8 +120,8 @@ def save_experiment(
                 title, hypothesis, notes, market, symbol, start_date, end_date,
                 strategy_json, config_json, train_fraction, metrics_json,
                 source, adjustment, received_at, created_at, audit_id,
-                raw_sha256, signal_sha256, raw_csv, signal_csv, company_name
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                raw_sha256, signal_sha256, raw_csv, signal_csv, company_name, input_manifest_json
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             redact(title.strip()), redact(hypothesis.strip()), redact(notes.strip()), market, symbol,
             str(raw_history["date"].iloc[0].date()), str(raw_history["date"].iloc[-1].date()),
@@ -120,6 +133,7 @@ def save_experiment(
             hashlib.sha256(raw_bytes).hexdigest(), hashlib.sha256(signal_bytes).hexdigest(),
             zlib.compress(raw_bytes), zlib.compress(signal_bytes),
             redact(company_name),
+            json.dumps(input_manifest or {}, ensure_ascii=False),
         ))
         return int(cursor.lastrowid)
 
@@ -141,6 +155,7 @@ def get_experiment(experiment_id: int, path: Path | None = None) -> dict:
     if row is None:
         raise KeyError(f"找不到实验 {experiment_id}")
     record = dict(row)
+    record["input_manifest"] = json.loads(record.pop("input_manifest_json", "{}"))
     for field in ("raw", "signal"):
         csv_bytes = zlib.decompress(record.pop(f"{field}_csv"))
         if hashlib.sha256(csv_bytes).hexdigest() != record[f"{field}_sha256"]:
@@ -184,6 +199,7 @@ def export_experiment_zip(record: dict) -> bytes:
             "audit_id": record["audit_id"],
             "raw_sha256": record["raw_sha256"],
             "signal_sha256": record["signal_sha256"],
+            "input_manifest": record.get("input_manifest", {}),
         }, ensure_ascii=False, indent=2))
     return output.getvalue()
 
