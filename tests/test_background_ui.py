@@ -35,7 +35,7 @@ def test_slow_request_allows_page_switch_and_late_old_query_is_discarded(monkeyp
         assert "history" in app.session_state["_task_tickets"]
         assert any("ql-loading-placeholder" in item.value for item in app.get("html"))
         app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
-        assert any("金融数学实验室" in item.value for item in app.subheader)
+        assert any("Quant Academy" in item.value for item in app.subheader)
         app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
         gate.set()
         finish_background_jobs(app)
@@ -87,4 +87,17 @@ def test_completed_research_on_another_page_stops_polling_and_can_be_opened(monk
     app.sidebar.radio(key="nav_page").set_value("历史回测").run()
     assert any(item.label == "保存实验" for item in app.button)
     assert "backtest" not in app.session_state["_finished_task_tickets"]
+    assert not app.exception
+
+
+def test_maximized_workspace_switches_to_requested_dock():
+    app = AppTest.from_file(Path(__file__).resolve().parents[1]/"app.py", default_timeout=8).run()
+    app.button(key="manual_panel_maximize").click().run()
+    assert app.session_state["maximized_panel"] == "manual"
+    app.button(key="deepseek_panel_toggle").click().run()
+    assert app.session_state["maximized_panel"] == "deepseek"
+    assert app.button(key="deepseek_panel_close")
+    app.button(key="manual_panel_toggle").click().run()
+    assert app.session_state["maximized_panel"] == "manual"
+    assert app.button(key="manual_panel_close")
     assert not app.exception

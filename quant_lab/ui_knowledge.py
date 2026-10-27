@@ -45,11 +45,16 @@ def render_knowledge(
     period="所选样本区间",
     expanded=False,
     current_reading: str | None = None,
+    lazy=False,
 ):
     if not st.session_state.get("learning_mode", True):
         return
     item = KNOWLEDGE[topic]
-    with st.expander(f"知识解释：{item.title}", expanded=expanded):
+    with st.expander(f"知识解释：{item.title}", expanded=expanded,
+                     key=f"knowledge_lazy_{key}_{topic}" if lazy else None,
+                     on_change="rerun" if lazy else "ignore") as disclosure:
+        if lazy and not disclosure.open:
+            return
         for label, content in (("是什么", item.definition), ("刻画什么", item.feature),
                                ("为什么重要", item.importance)):
             st.markdown(f"**{label}**：{content}")

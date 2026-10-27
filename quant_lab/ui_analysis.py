@@ -114,7 +114,7 @@ def render_risk(bundle: HistoryBundle | None) -> None:
             key="portfolio",
         )
     figure = go.Figure()
-    for name, color in (("等权", "#4F8CFF"), ("逆波动率", "#24D6A0")):
+    for name, color in (("等权", "#78A7DB"), ("逆波动率", "#73B798")):
         figure.add_trace(go.Scatter(
             x=result.test_equity.index, y=result.test_equity[name],
             name=name, line={"color": color, "width": 2},
@@ -219,11 +219,11 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     figure = go.Figure()
     figure.add_trace(go.Scatter(
         x=result.predictions["target_date"], y=result.predictions["actual"],
-        name="实际次日收盘收益率", line={"color": "#4F8CFF"},
+        name="实际次日收盘收益率", line={"color": "#78A7DB"},
     ))
     figure.add_trace(go.Scatter(
         x=result.predictions["target_date"], y=result.predictions["predicted"],
-        name="模型预测", line={"color": "#F5B942"},
+        name="模型预测", line={"color": "#C6A56D"},
     ))
     st.plotly_chart(style_figure(figure), width="stretch", theme=None)
     st.dataframe(result.coefficients.to_frame(), width="stretch")

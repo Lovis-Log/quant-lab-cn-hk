@@ -12,8 +12,8 @@ from quant_lab.ui_updates import INTERVALS, persist_setting
 
 def _folder_picker_component() -> None:
     st.html("""
-    <button id="pick" style="width:100%;height:36px;border:1px solid #34435A;border-radius:6px;
-      background:#172133;color:#DCE6F3;font:600 13px sans-serif;cursor:pointer">浏览 Windows 文件夹…</button>
+    <button id="pick" style="width:100%;height:36px;border:1px solid #303438;border-radius:6px;
+      background:#22262A;color:#E8EBEE;font:600 13px sans-serif;cursor:pointer">浏览 Windows 文件夹…</button>
     <script>
     document.getElementById('pick').onclick = async () => {
       const api = window.pywebview?.api;

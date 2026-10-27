@@ -148,7 +148,13 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     app.run()
     app.sidebar.radio[0].set_value("Quant Academy").run()
     assert len(calls) == 1
+    app.session_state["knowledge_lazy_academy_simple_return"] = True
+    app.run()
+    # The current AppTest serializer omits expander widget states. Keep the
+    # disclosure open for this action as a real browser does automatically.
+    app.session_state["knowledge_lazy_academy_simple_return"] = True
     widget(app,"button","向 AI 追问").click().run()
+    assert "简单收益率" in widget(app,"text_area","问题（确认后发送）").value
     assert app.session_state["deepseek_api_key"] == "sk-only-ui-mock-secret"
     widget(app,"button","⚙").click().run()
     widget(app,"selectbox","DeepSeek 模型").set_value("beta").run()

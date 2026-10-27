@@ -129,6 +129,9 @@ def open_ai_followup(prompt, topic):
     st.session_state["deepseek_prompt"] = prompt
     st.session_state["ai_workspace"] = "对话与辅导"
     st.session_state["deepseek_panel_open"] = True
+    st.session_state["active_dock_panel"] = "deepseek"
+    if st.session_state.get("maximized_panel"):
+        st.session_state["maximized_panel"] = "deepseek"
 
 
 def _open_research_workspace() -> None:
@@ -832,10 +835,10 @@ def render_deepseek_panel(context: dict, bundle=None):
                 )
             with maximize:
                 st.button("⛶", key="deepseek_panel_maximize", width="stretch",
-                          on_click=_toggle_deepseek_maximize, help="最大化或恢复 DeepSeek 助手")
+                          on_click=_toggle_deepseek_maximize)
             with close:
                 st.button("×", key="deepseek_panel_close", width="stretch",
-                          on_click=_close_deepseek_panel, help="关闭 DeepSeek 侧栏")
+                          on_click=_close_deepseek_panel)
         with st.container(key="deepseek_panel_body"):
             render_deepseek(
                 context, bundle, chat_only=False, connection_expanded=False, compact=True

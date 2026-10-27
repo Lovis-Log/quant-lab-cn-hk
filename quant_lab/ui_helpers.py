@@ -6,6 +6,17 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from quant_lab.data import HistoryBundle
+from quant_lab import theme
+
+
+def reset_main_scroll(view, *, key):
+    """New pages/lessons begin at their heading; parameter edits keep position."""
+    state_key = "_scroll_view_" + key
+    if st.session_state.get(state_key) != view:
+        st.session_state[state_key] = view
+        st.html('<script>requestAnimationFrame(() => requestAnimationFrame(() => '
+                'document.querySelector(\'[data-testid="stMain"]\')?.scrollTo({top:0,behavior:"instant"})));</script>',
+                unsafe_allow_javascript=True)
 
 
 def bundle_key(bundle: HistoryBundle) -> str:
@@ -25,13 +36,13 @@ def require_history(bundle: HistoryBundle | None) -> bool:
 def style_figure(fig: go.Figure, height: int = 410) -> go.Figure:
     fig.update_layout(
         uirevision=repr(st.session_state.get("_current_query")),
-        height=height, paper_bgcolor="#151E2D", plot_bgcolor="#151E2D",
-        font={"color": "#94A3B8", "size": 11},
+        height=height, paper_bgcolor=theme.SURFACE, plot_bgcolor=theme.SURFACE,
+        font={"color": theme.MUTED, "size": 12, "family": theme.FONT},
         margin={"l": 25, "r": 20, "t": 25, "b": 30},
         hovermode="x unified", legend={"orientation": "h", "y": 1.12},
     )
-    fig.update_xaxes(showgrid=True, gridcolor="#273244", zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#273244", zeroline=False)
+    fig.update_xaxes(showgrid=True, gridcolor=theme.BORDER, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor=theme.BORDER, zeroline=False)
     return fig
 
 

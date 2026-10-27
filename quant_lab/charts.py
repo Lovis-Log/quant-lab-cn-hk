@@ -5,6 +5,7 @@ from plotly.subplots import make_subplots
 import pandas as pd
 
 from quant_lab.demo_data import make_layout_preview
+from quant_lab.theme import SURFACE, BORDER, TEXT, MUTED, ACCENT, UP, DOWN, AMBER, FONT
 
 
 def demo_chart() -> go.Figure:
@@ -22,7 +23,7 @@ def demo_chart() -> go.Figure:
             x=sample["演示序号"],
             y=sample["模拟指数"],
             mode="lines",
-            line={"color": "#24D6A0", "width": 2},
+            line={"color": ACCENT, "width": 2},
             name="模拟指数 · 无单位",
             hovertemplate="序号 %{x}<br>模拟指数 %{y:.2f}<extra></extra>",
         ),
@@ -33,7 +34,7 @@ def demo_chart() -> go.Figure:
         go.Bar(
             x=sample["演示序号"],
             y=sample["模拟活动量"],
-            marker_color="#4F8CFF",
+            marker_color=ACCENT,
             opacity=0.55,
             name="模拟活动量 · 无单位",
             hovertemplate="序号 %{x}<br>模拟活动量 %{y}<extra></extra>",
@@ -42,15 +43,15 @@ def demo_chart() -> go.Figure:
         col=1,
     )
     fig.update_layout(
-        height=520,
+        height=360,
         margin={"l": 18, "r": 18, "t": 30, "b": 20},
-        paper_bgcolor="#151E2D",
-        plot_bgcolor="#151E2D",
-        font={"color": "#94A3B8", "family": "Arial, sans-serif", "size": 11},
+        paper_bgcolor=SURFACE,
+        plot_bgcolor=SURFACE,
+        font={"color": MUTED, "family": FONT, "size": 11},
         hovermode="x unified",
         showlegend=False,
         bargap=0.42,
-        hoverlabel={"bgcolor": "#111827", "font_color": "#F1F5F9"},
+        hoverlabel={"bgcolor": "#181B1E", "font_color": TEXT},
         annotations=[
             {
                 "text": "SIMULATED · UI PREVIEW",
@@ -60,31 +61,31 @@ def demo_chart() -> go.Figure:
                 "y": 0.99,
                 "xanchor": "right",
                 "showarrow": False,
-                "font": {"color": "#718096", "size": 11},
+                "font": {"color": MUTED, "size": 11},
             }
         ],
     )
     fig.update_xaxes(
         title_text="演示序号（非交易日期）",
         showgrid=True,
-        gridcolor="#273244",
+        gridcolor=BORDER,
         zeroline=False,
-        tickfont={"color": "#728097"},
+        tickfont={"color": MUTED},
         row=2,
         col=1,
     )
     fig.update_yaxes(
         showgrid=True,
-        gridcolor="#273244",
+        gridcolor=BORDER,
         zeroline=False,
-        tickfont={"color": "#728097"},
+        tickfont={"color": MUTED},
         row=1,
         col=1,
     )
     fig.update_yaxes(
         showgrid=False,
         zeroline=False,
-        tickfont={"color": "#728097"},
+        tickfont={"color": MUTED},
         row=2,
         col=1,
     )
@@ -93,17 +94,17 @@ def demo_chart() -> go.Figure:
 
 def _historical_layout(fig: go.Figure, currency: str) -> go.Figure:
     fig.update_layout(
-        height=520,
+        height=360,
         margin={"l": 86, "r": 22, "t": 24, "b": 35},
-        paper_bgcolor="#151E2D",
-        plot_bgcolor="#151E2D",
-        font={"color": "#94A3B8", "family": "Arial, sans-serif", "size": 11},
+        paper_bgcolor=SURFACE,
+        plot_bgcolor=SURFACE,
+        font={"color": MUTED, "family": FONT, "size": 11},
         showlegend=False,
         hovermode="x unified",
-        hoverlabel={"bgcolor": "#111827", "font_color": "#F1F5F9"},
+        hoverlabel={"bgcolor": "#181B1E", "font_color": TEXT},
     )
-    fig.update_xaxes(showgrid=True, gridcolor="#273244", zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#273244", zeroline=False)
+    fig.update_xaxes(showgrid=True, gridcolor=BORDER, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor=BORDER, zeroline=False)
     unit = "元/股" if currency == "CNY" else "港元/股"
     fig.update_yaxes(title_text=f"价格（{unit}）", title_standoff=10,
                      tickformat=",.0f", row=1, col=1)
@@ -117,7 +118,7 @@ def _volume_colors(history: pd.DataFrame) -> list[str]:
     # A-share convention: red rises, green falls. First day has no comparison.
     changes = history["close"].diff()
     return [
-        "#4F8CFF" if pd.isna(change) else "#F06A78" if change >= 0 else "#24D6A0"
+        ACCENT if pd.isna(change) else UP if change >= 0 else DOWN
         for change in changes
     ]
 
@@ -132,7 +133,7 @@ def history_price_chart(history: pd.DataFrame, currency: str = "CNY") -> go.Figu
     fig.add_trace(
         go.Scatter(
             x=history["date"], y=history["close"], mode="lines",
-            line={"color": "#4F8CFF", "width": 2},
+            line={"color": ACCENT, "width": 2},
             name="收盘价",
             hovertemplate=f"%{{x|%Y-%m-%d}}<br>收盘 %{{y:.2f}} {unit}<extra></extra>",
         ), row=1, col=1,
@@ -158,8 +159,8 @@ def history_candlestick_chart(history: pd.DataFrame, currency: str = "CNY") -> g
         go.Candlestick(
             x=history["date"], open=history["open"], high=history["high"],
             low=history["low"], close=history["close"],
-            increasing_line_color="#F06A78", increasing_fillcolor="#F06A78",
-            decreasing_line_color="#24D6A0", decreasing_fillcolor="#24D6A0",
+            increasing_line_color=UP, increasing_fillcolor=UP,
+            decreasing_line_color=DOWN, decreasing_fillcolor=DOWN,
             name="日 K",
         ), row=1, col=1,
     )
@@ -172,3 +173,40 @@ def history_candlestick_chart(history: pd.DataFrame, currency: str = "CNY") -> g
     )
     fig.update_layout(xaxis_rangeslider_visible=False)
     return _historical_layout(fig, currency)
+
+
+def teaching_chart(choice: int, frame: pd.DataFrame) -> go.Figure:
+    """Render the exact fixed experiment values; never fetch market data."""
+    columns = (("期数", ("本金",)), ("交易日", ("价格", "均线")),
+        ("序号", ("样本值",)), ("交易日", ("演示价格",)),
+        ("时点", ("演示净值",)), ("交易日", ("演示收益率",)),
+        ("X", ("Y",)), ("参数组", ("训练期演示收益", "测试期演示收益")))
+    x, series = columns[choice]
+    figure = go.Figure()
+    for index, name in enumerate(series):
+        color = ACCENT if index == 0 else AMBER
+        if choice in (2, 5):
+            figure.add_bar(x=frame[x], y=frame[name], name=name, marker_color=color)
+        else:
+            figure.add_scatter(x=frame[x], y=frame[name], name=name, mode="lines+markers",
+                               line={"color": color, "width": 2}, marker={"size": 6})
+    if choice == 4 and float(frame["回撤"].min()) < 0:
+        position = int(frame["回撤"].to_numpy().argmin())
+        peak = int(frame["演示净值"].iloc[:position+1].to_numpy().argmax())
+        peak_value = float(frame["演示净值"].iloc[peak])
+        figure.add_shape(type="line", x0=frame[x].iloc[peak], x1=frame[x].iloc[position],
+                         y0=peak_value, y1=peak_value, line={"color": AMBER, "dash": "dash"})
+        figure.add_annotation(x=frame[x].iloc[position], y=frame["演示净值"].iloc[position],
+            text=f"最大回撤 {frame['回撤'].iloc[position]:.1%}", showarrow=True, arrowhead=2,
+            ax=frame[x].iloc[position], ay=peak_value, axref="x", ayref="y",
+            font={"color": AMBER}, arrowcolor=AMBER)
+    figure.update_layout(height=300, paper_bgcolor=SURFACE, plot_bgcolor=SURFACE,
+        margin={"l": 45, "r": 20, "t": 25, "b": 40}, font={"family": FONT, "color": MUTED, "size": 12},
+        uirevision=f"teaching-{choice}", hovermode="x unified", showlegend=len(series)>1,
+        legend={"orientation": "h", "y": 1.15}, xaxis_title=x)
+    figure.update_xaxes(showgrid=True, gridcolor=BORDER, zeroline=False)
+    if len(frame) <= 12:
+        figure.update_xaxes(dtick=1)
+    figure.update_yaxes(showgrid=True, gridcolor=BORDER, zeroline=False,
+                       tickformat=".0%" if choice in (5, 7) else None)
+    return figure

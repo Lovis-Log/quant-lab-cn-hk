@@ -55,20 +55,20 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
     chart = go.Figure()
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["close"], name="收盘价",
-        line={"color": "#4F8CFF", "width": 2},
+        line={"color": "#78A7DB", "width": 2},
     ))
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["ma_short"], name=f"MA {spec.short_window}",
-        line={"color": "#F5B942", "width": 1.5},
+        line={"color": "#C6A56D", "width": 1.5},
     ))
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["ma_long"], name=f"MA {spec.long_window}",
-        line={"color": "#24D6A0", "width": 1.5},
+        line={"color": "#73B798", "width": 1.5},
     ))
     changes = signals["signal"].diff().fillna(0)
     for state, name, color, marker in (
-        (1, "收盘后买入信号", "#F06A78", "triangle-up"),
-        (-1, "收盘后卖出信号", "#24D6A0", "triangle-down"),
+        (1, "收盘后买入信号", "#D7797E", "triangle-up"),
+        (-1, "收盘后卖出信号", "#73B798", "triangle-down"),
     ):
         points = signals.loc[changes == state]
         chart.add_trace(go.Scatter(
@@ -218,14 +218,14 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     figure.add_trace(go.Scatter(
         x=result.strategy.equity["date"],
         y=result.strategy.equity["equity"] / config.initial_cash,
-        name="策略净值", line={"color": "#24D6A0", "width": 2},
+        name="策略净值", line={"color": "#73B798", "width": 2},
     ))
     figure.add_trace(go.Scatter(
         x=result.benchmark.equity["date"],
         y=result.benchmark.equity["equity"] / config.initial_cash,
-        name="同成本买入并持有", line={"color": "#4F8CFF", "width": 1.5},
+        name="同成本买入并持有", line={"color": "#78A7DB", "width": 1.5},
     ))
-    figure.add_vline(x=result.split_date, line_color="#F5B942", line_dash="dot")
+    figure.add_vline(x=result.split_date, line_color="#C6A56D", line_dash="dot")
     figure.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     st.plotly_chart(style_figure(figure, 430), width="stretch", theme=None)
     st.caption(f"黄色虚线起为样本外区间（{result.split_date:%Y-%m-%d}）。前复权/后复权只用于生成信号；开盘成交与净值始终使用不复权价格。")

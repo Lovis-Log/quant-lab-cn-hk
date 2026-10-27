@@ -83,8 +83,11 @@ def show_history_status(bundle, next_attempt=None, *, session_cache=False):
     if bundle is not None:
         demonstration = any(word in bundle.source.lower()
                             for word in ("模拟", "演示", "教学", "demo", "simulation", "teaching"))
-        st.markdown("#### 数据更新状态 · " + ("模拟/教学日线" if demonstration else "历史日线"))
-        st.write(status_rows(bundle, next_attempt, session_cache=session_cache))
+        details = status_rows(bundle, next_attempt, session_cache=session_cache)
+        observation = "教学样本" if demonstration else "历史日线"
+        st.caption(f"{observation} · {bundle.source} · {bundle.currency} · 成功获取于 {beijing(bundle.received_at)}")
+        with st.expander("更新与缓存详情"):
+            st.table([{"项目": label, "内容": str(value)} for label, value in details.items()])
         if bundle.update_error:
             st.warning(bundle.update_error)
     if bundle is not None and demonstration:

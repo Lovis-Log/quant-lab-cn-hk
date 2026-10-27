@@ -101,6 +101,9 @@ def _show_more_results() -> None:
 
 def open_manual_page(page_id: str) -> None:
     st.session_state["manual_panel_open"] = True
+    st.session_state["active_dock_panel"] = "manual"
+    if st.session_state.get("maximized_panel"):
+        st.session_state["maximized_panel"] = "manual"
     st.session_state["manual_section"] = (
         "快速开始" if page_id == "quick_start" else "功能说明"
     )
@@ -111,6 +114,9 @@ def open_manual_page(page_id: str) -> None:
 
 def open_manual_article(article_id: str) -> None:
     st.session_state["manual_panel_open"] = True
+    st.session_state["active_dock_panel"] = "manual"
+    if st.session_state.get("maximized_panel"):
+        st.session_state["maximized_panel"] = "manual"
     st.session_state["manual_section"] = "专业知识库"
     st.session_state["manual_article_id"] = article_id
     st.session_state.pop("manual_page_id", None)
@@ -489,7 +495,7 @@ def render_manual_panel() -> None:
                     key="manual_panel_maximize",
                     width="stretch",
                     on_click=_toggle_manual_maximize,
-                    help="最大化或恢复使用手册",
+
                 )
             with close:
                 st.button(
@@ -497,7 +503,7 @@ def render_manual_panel() -> None:
                     key="manual_panel_close",
                     width="stretch",
                     on_click=_close_manual_panel,
-                    help="关闭使用手册",
+
                 )
         with st.container(key="manual_panel_body"):
             render_manual()

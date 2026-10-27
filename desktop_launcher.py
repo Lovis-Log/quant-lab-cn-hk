@@ -185,6 +185,7 @@ def serve_streamlit(port: int) -> int:
     if stop_signal:
         start_shutdown_listener(Path(stop_signal), root)
     from streamlit.web import cli
+    from quant_lab import theme
 
     arguments = [
         "run", str(app_script()),
@@ -198,6 +199,15 @@ def serve_streamlit(port: int) -> int:
         "--browser.serverAddress=127.0.0.1",
         "--browser.gatherUsageStats=false",
     ]
+    # Apply the approved application theme even when an older profile still
+    # contains its original copied config. The user's file stays untouched.
+    palette = {"base": "dark", "primaryColor": theme.ACCENT,
+        "backgroundColor": theme.BACKGROUND, "secondaryBackgroundColor": theme.SURFACE,
+        "textColor": theme.TEXT, "borderColor": theme.BORDER,
+        "sidebar.backgroundColor": theme.NAVIGATION,
+        "sidebar.secondaryBackgroundColor": theme.SURFACE,
+        "sidebar.textColor": theme.TEXT, "sidebar.borderColor": theme.BORDER}
+    arguments.extend(f"--theme.{key}={value}" for key, value in palette.items())
     cli.main(args=arguments, prog_name="streamlit", standalone_mode=False)
     return 0
 
