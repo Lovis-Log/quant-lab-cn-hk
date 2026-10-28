@@ -20,7 +20,7 @@ from quant_lab import names
 
 def render_risk(bundle: HistoryBundle | None) -> None:
     st.subheader("风险与投资组合")
-    st.caption("同一市场、同一币种的历史描述与样本外配置比较；不包含交易费用或汇率转换。")
+    st.caption("旧简化模型：同一市场同币种、固定权重每日再平衡，不核算持仓现金、交易费用或汇率。新的现金持仓模型在“多股票比较”中。")
     if not require_history(bundle):
         return
     history = bundle.frame

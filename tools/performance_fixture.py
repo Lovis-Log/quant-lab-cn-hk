@@ -38,7 +38,7 @@ def history(market, symbol, start, end, adjustment="", **kwargs):
     time.sleep(float(os.environ.get("QUANT_LAB_TEST_IO_DELAY", "0")))
     count = int(os.environ.get("QUANT_LAB_TEST_ROWS", "2520"))
     dates = pd.bdate_range(end=pd.Timestamp(end), periods=count)
-    rng = np.random.default_rng(20261027)
+    rng = np.random.default_rng(20261027+sum((index+1)*ord(letter) for index,letter in enumerate(symbol)))
     close = 100 * np.exp(np.cumsum(rng.normal(.0002, .012, count)))
     opening = np.r_[100., close[:-1]] * (1 + rng.normal(0, .0015, count))
     volume = rng.integers(80000, 250000, count)
@@ -56,6 +56,21 @@ def history(market, symbol, start, end, adjustment="", **kwargs):
 
 
 ui.fetch_history = history
+
+from quant_lab import comparison,portfolio_cash
+comparison.fetch_history_cached=history
+portfolio_cash.fetch_history_cached=history
+
+if os.environ.get("QUANT_LAB_TEST_COMPARISON")=="1":
+    from datetime import date
+    from quant_lab import ui_terminal,storage
+    from quant_lab.market_data import MarketSnapshot
+    if not storage.list_watchlist():storage.add_watchlist("A 股","600519")
+    def _comparison_watch(items):
+        now=datetime.now(timezone.utc)
+        return {item:MarketSnapshot(item[0],item[1],100.,now.date(),now,"固定教学快照，非真实行情","CNY" if item[0]=="A 股" else "HKD",
+            quality_status="固定教学快照，非真实行情") for item in items},{}
+    ui_terminal.snapshot_batch=_comparison_watch
 
 
 if os.environ.get("QUANT_LAB_TEST_US_SOURCE")=="1":

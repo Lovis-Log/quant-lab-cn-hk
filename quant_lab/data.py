@@ -22,6 +22,7 @@ from quant_lab.refresh import RefreshCache
 from quant_lab.data_quality import HistoryQuality, assess_history
 from quant_lab.security import redact
 from quant_lab.source_rights import RetentionPolicy, UNVERIFIED_RETENTION
+from quant_lab.provider_runtime import SINA_RUNTIME_LOCK
 
 
 LOGGER = logging.getLogger(__name__)
@@ -156,7 +157,8 @@ class AKShareProvider:
                     source, currency = "东方财富 · AKShare", "HKD"
                 except Exception as primary_exc:
                     _record_failure(symbol, primary_exc)
-                    raw = ak.stock_hk_daily(symbol=symbol, adjust=adjustment)
+                    with SINA_RUNTIME_LOCK:
+                        raw = ak.stock_hk_daily(symbol=symbol, adjust=adjustment)
                     source = "新浪财经 · AKShare（东方财富请求失败后回退）"
                     currency = "HKD"
         except Exception as exc:
@@ -194,6 +196,7 @@ class AKShareProvider:
             source=bundle.source, currency=bundle.currency,
             status="历史日线收盘参考；未结束日线不纳入，确切延迟未知" if quality.unfinished_sessions else
                    "历史日线收盘参考；非实时，延迟未知",
+            quality_status="来源区间："+quality.coverage_label,
         )
 
 

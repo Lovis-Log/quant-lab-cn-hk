@@ -9,6 +9,7 @@ import pandas as pd
 
 from quant_lab.us_market import normalize_us_symbol
 from quant_lab.us_data import validate_us_prices
+from quant_lab.provider_runtime import SINA_RUNTIME_LOCK
 
 
 @dataclass(frozen=True)
@@ -35,7 +36,8 @@ def inspect_sina_prices(symbol,start,end):
     if start>end:
         raise ValueError("开始日期不能晚于结束日期。")
     try:
-        frame=ak.stock_us_daily(symbol=symbol,adjust="")
+        with SINA_RUNTIME_LOCK:
+            frame=ak.stock_us_daily(symbol=symbol,adjust="")
         if "date" not in frame.columns:
             frame=frame.reset_index()
         frame["date"]=pd.to_datetime(frame.date)

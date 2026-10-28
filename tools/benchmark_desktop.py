@@ -65,6 +65,7 @@ def main():
     parser.add_argument("--diagnose-events", action="store_true")
     parser.add_argument("--history-quality", action="store_true")
     parser.add_argument("--us-research", action="store_true")
+    parser.add_argument("--comparison", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.repetitions <= 100:
         parser.error("repetitions must be 1..100")
@@ -98,6 +99,7 @@ def main():
         "QUANT_LAB_TEST_ROWS": "252" if args.visual else "2520",
         "QUANT_LAB_TEST_EVENTS": "1" if args.diagnose_events else "0",
         "QUANT_LAB_TEST_US_SOURCE": "1" if args.us_research else "0",
+        "QUANT_LAB_TEST_COMPARISON": "1" if args.comparison else "0",
         "QUANT_LAB_SMOKE_RESULT": str(probe), "PYTHONPATH": str(source)}
     if args.legacy_theme:
         profile = directory / "user" / ".streamlit" / "config.toml"
@@ -108,7 +110,7 @@ def main():
         "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True)),
         "platform": platform.platform(), "processor": platform.processor(),
         "logical_cpus": os.cpu_count(), "viewport": {"width": 1366, "height": 768},
-        "data_rows": 252 if args.visual else 2520, "fixture_revision": "ohlc-v2", "measurements": {}, "errors": [],
+        "data_rows": 252 if args.visual else 2520, "fixture_revision": "ohlc-v3-symbol-seeds", "measurements": {}, "errors": [],
         "synthetic_io_delay_seconds": args.io_delay,
         "legacy_theme_profile": args.legacy_theme,
         "warm_up_cycles": 2,
@@ -153,6 +155,55 @@ def main():
                     report["startup_ms"] = round((time.perf_counter()-started)*1000, 1)
                     assert page.url.startswith("http://127.0.0.1:")
                     assert page.title() == "Quant Lab CN/HK"
+                    if args.comparison:
+                        page.wait_for_timeout(500)
+                        settle(page)
+                        page.get_by_text("工作区预设",exact=True).click()
+                        chooser=page.get_by_role("combobox",name="选择工作区预设",exact=True)
+                        chooser.click();chooser.fill("多股票比较")
+                        chooser.press("Enter")
+                        page.get_by_role("button",name="应用预设",exact=True).click()
+                        page.get_by_role("heading",name="多股票比较",exact=True).wait_for()
+                        settle(page)
+                        assert not page.locator('.st-key-manual_side_panel').count()
+                        codes=",".join(f"6005{index:02}" for index in range(10))
+                        page.get_by_label("比较股票代码（2–10只，逗号分隔）",exact=True).fill(codes)
+                        date_node=page.get_by_label("比较开始日期",exact=True)
+                        digits=re.findall(r"\d+",date_node.inner_text())
+                        end_digits=re.findall(r"\d+",page.get_by_label("比较结束日期",exact=True).inner_text())
+                        year=date_node.get_by_role("spinbutton").first
+                        for _ in range(int(digits[0])-(int(end_digits[0])-10)):
+                            year.press("ArrowDown")
+                        year.press("Tab")
+                        page.keyboard.press("Escape")
+                        page.get_by_role("button",name="加载比较",exact=True).click()
+                        page.get_by_role("heading",name="风险收益对比 · 共同覆盖区间",exact=True).wait_for(timeout=90000)
+                        settle(page)
+                        report["ten_stock_comparison"]=True
+                        report["comparison_requested_start"]=date_node.inner_text()
+                        page.get_by_test_id("stMain").evaluate("element=>{element.scrollTop=0}")
+                        page.screenshot(path=str(directory/"comparison.png"))
+                        page.get_by_text("进入现金持仓组合研究",exact=True).click()
+                        page.get_by_role("button",name="运行现金持仓组合",exact=True).click()
+                        page.get_by_text("等权是同成本基准",exact=False).wait_for(timeout=90000)
+                        settle(page)
+                        report["cash_portfolio_completed"]=True
+                        page.screenshot(path=str(directory/"cash-portfolio.png"))
+                        before_watch_tables=page.get_by_test_id("stDataFrame").count()
+                        page.get_by_text("显示观察列表",exact=True).click()
+                        assert page.get_by_role("switch",name="显示观察列表",exact=True).is_checked()
+                        page.get_by_role("heading",name="自选股 · 最近历史日线收盘参考",exact=True).wait_for()
+                        page.wait_for_function("count=>document.querySelectorAll('[data-testid=stDataFrame]').length>count",arg=before_watch_tables,timeout=30000)
+                        settle(page)
+                        page.screenshot(path=str(directory/"watchlist.png"))
+                        report["watch_quality_visible"]=True
+                        if not page.get_by_role("button",name="保存当前",exact=True).is_visible():
+                            page.get_by_text("工作区预设",exact=True).click()
+                        page.get_by_role("button",name="保存当前",exact=True).click()
+                        settle(page)
+                        report["workspace_saved"]=True
+                        page.get_by_test_id("stSidebar").get_by_text("市场数据",exact=True).click()
+                        settle(page)
                     if args.us_research:
                         page.get_by_test_id("stSidebar").get_by_text("美股研究",exact=True).click()
                         page.get_by_role("heading",name="美股研究",exact=True).wait_for()

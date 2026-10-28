@@ -1,0 +1,49 @@
+{
+  "synthetic": false,
+  "raw_prices_saved": false,
+  "market": "A 股",
+  "codes": [
+    "600519",
+    "000001"
+  ],
+  "checked_at": "2026-10-28T13:36:30.304279+00:00",
+  "requested_start": "2025-10-28",
+  "requested_end": "2026-10-28",
+  "costs_and_lots": "illustrative research assumptions, not current broker or exchange certification",
+  "status": "comparison_passed",
+  "currency": "CNY",
+  "common_rows": 243,
+  "common_start": "2025-10-28",
+  "common_end": "2026-10-28",
+  "input_fingerprint": "0445d649e3ca32483b0d5323c34a7f1b286bf4315983ee95ac4e38ffc018ec88",
+  "sources": [
+    {
+      "code": "600519",
+      "source": "腾讯证券 · AKShare",
+      "received_at": "2026-10-28T13:36:32.410099+00:00",
+      "quality": "按参考日历未见已结束交易日缺口",
+      "observations": 243
+    },
+    {
+      "code": "000001",
+      "source": "腾讯证券 · AKShare",
+      "received_at": "2026-10-28T13:36:32.413668+00:00",
+      "quality": "按参考日历未见已结束交易日缺口",
+      "observations": 243
+    }
+  ],
+  "cash_model": {
+    "status": "passed",
+    "train_end": "2026-07-09",
+    "test_start": "2026-07-10",
+    "methods": [
+      "等权",
+      "逆波动率"
+    ],
+    "audits": {
+      "等权": "4c1d339e7710076a9766bb8fa233c9b7a9a385726687f817cdd1d56335db8364",
+      "逆波动率": "9f6fbe85e974541dac117906dc68291d3ac72af10a6980223623df0fc0c3722c"
+    },
+    "minimum_cash": 18748.9860392
+  }
+}

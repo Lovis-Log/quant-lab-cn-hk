@@ -21,14 +21,14 @@ def cancel_task(slot):
         job_manager().cancel(ticket["id"], task_scope())
 
 
-def submit_task(slot, fingerprint, function, *args, cpu=False, **kwargs):
+def submit_task(slot, fingerprint, function, *args, cpu=False, job_timeout=120, **kwargs):
     tickets = st.session_state.setdefault("_task_tickets", {})
     st.session_state.setdefault("_finished_task_tickets", {}).pop(slot, None)
     ticket = tickets.get(slot)
     fingerprint = repr(fingerprint)
     if ticket and ticket["fingerprint"] != fingerprint:
         cancel_task(slot)
-    identifier = job_manager().submit(task_scope(), slot, fingerprint, function, *args, cpu=cpu, **kwargs)
+    identifier = job_manager().submit(task_scope(), slot, fingerprint, function, *args, cpu=cpu, timeout=job_timeout, **kwargs)
     tickets[slot] = {"id": identifier, "fingerprint": fingerprint}
     return identifier
 
@@ -55,6 +55,7 @@ TASK_LABELS = {"history": "历史日线", "history_refresh": "历史日线更新
     "portfolio": "组合研究", "statistics": "统计模型", "sensitivity": "参数扫描"}
 TASK_LABELS.update({"backtest_raw": "回测成交价格", "portfolio_data": "组合行情"})
 TASK_LABELS.update({"us_research":"美元教学研究","us_source_check":"免费美股来源核验"})
+TASK_LABELS.update({"comparison_data":"多股票行情","comparison_calc":"多股票比较","cash_inputs":"组合成交价格","cash_portfolio":"现金持仓组合"})
 
 
 def render_background_tasks():

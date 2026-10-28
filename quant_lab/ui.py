@@ -49,7 +49,7 @@ from quant_lab.ui_settings import (
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy", "美股研究")
+PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy", "美股研究", "多股票比较")
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 SIDEBAR_LAYOUT_JS = """
@@ -353,6 +353,9 @@ def _protect_session_widgets() -> None:
         "history_preset", "history_start", "history_end",
         "us_source_mode", "us_candidate_symbol", "us_teaching_symbol", "us_calendar_day",
         "us_kind", "us_short", "us_long", "us_cash", "us_commission", "us_minimum", "us_slippage", "us_rebalance",
+        "workspace_name","compare_market","compare_codes","compare_benchmark","compare_start","compare_end","compare_adjustment","compare_window",
+        "compare_fraction","compare_frequency","compare_cash","compare_commission","compare_minimum","compare_buyfee","compare_sellfee","compare_slippage","compare_limit",
+        "comparison_watch_open",
     }
     prefixes = (
         "strategy_", "backtest_", "portfolio_", "model_", "research_", "academy_parameter_",
@@ -381,11 +384,20 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         if st.session_state.get("nav_page") not in PAGES:
             st.session_state["nav_page"] = PAGES[0]
         page = st.radio("功能导航", PAGES, label_visibility="collapsed", key="nav_page")
+        from quant_lab.ui_workspaces import render_workspace_presets
+        if page=="多股票比较":
+            st.caption("同市场、同币种。比较与组合参数在主工作区设置。")
+            from quant_lab.ui_comparison import _market_change
+            st.selectbox("比较市场",("A 股","港股"),key="compare_market",on_change=_market_change)
+            render_workspace_presets()
+            return page,"A 股","600519",None,"",False
         if page=="美股研究":
             st.caption("美元参数在美股工作区设置。真实来源与教学输入分别核验。")
+            render_workspace_presets()
             return page,"A 股","600519",None,"",False
         with (st.expander("研究参数", expanded=False) if page == "Quant Academy" else st.container()):
             market, symbol, dates, adjustment, clicked = _research_controls()
+        render_workspace_presets()
     return page, market, symbol, dates, adjustment, clicked
 
 
@@ -945,6 +957,8 @@ def render_app() -> None:
         render_library_setup()
         return
     initialize_settings()
+    from quant_lab.ui_workspaces import initialize_workspaces
+    initialize_workspaces()
     rerun_pending_settings()
     initialize_credentials()
     _protect_session_widgets()
@@ -989,6 +1003,9 @@ def render_app() -> None:
     elif page == "美股研究":
         from quant_lab.ui_us import render_us_research
         render_us_research()
+    elif page == "多股票比较":
+        from quant_lab.ui_comparison import render_comparison
+        render_comparison()
     else:
         _header(page, market, symbol, latest_date)
         if error:
@@ -1012,6 +1029,9 @@ def render_app() -> None:
                    "data_status": "离线教学实验，不是股票行情。"}
     if page == "美股研究":
         context=st.session_state.get("active_us_context",{"page":page,"data_status":"尚未加载合格真实美股数据"})
+        st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
+    if page == "多股票比较":
+        context=st.session_state.get("active_comparison_context",{"page":page,"data_status":"尚未加载比较输入"})
         st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]

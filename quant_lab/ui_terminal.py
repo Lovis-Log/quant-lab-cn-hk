@@ -84,7 +84,8 @@ def render_watchlist(market: str, symbol: str) -> None:
             rows.append({"股票": names.cached_security_label(*item), "最近日线收盘": quote.last_close,
                          "币种": quote.currency, "行情日期": quote.observation_date.isoformat(),
                          **status_rows(quote, attempts.get(item), session_cache=not updated),
-                         "延迟状态": quote.status})
+                         "延迟状态": quote.status,"数据质量":quote.quality_status,
+                         "更新状态":"进行中" if "watch" in st.session_state.get("_task_tickets",{}) else "上次更新失败" if item in errors or quote.update_error else "最近检查完成"})
             if item in errors:
                 rows[-1]["最近更新结果"] = "请求失败；保留上次有效数据，可能过期"
             if quote.update_error:

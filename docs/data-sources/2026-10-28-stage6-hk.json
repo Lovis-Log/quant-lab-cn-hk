@@ -1,0 +1,49 @@
+{
+  "synthetic": false,
+  "raw_prices_saved": false,
+  "market": "港股",
+  "codes": [
+    "00700",
+    "00941"
+  ],
+  "checked_at": "2026-10-28T13:39:58.785269+00:00",
+  "requested_start": "2025-10-28",
+  "requested_end": "2026-10-28",
+  "costs_and_lots": "illustrative research assumptions, not current broker or exchange certification",
+  "status": "comparison_passed",
+  "currency": "HKD",
+  "common_rows": 246,
+  "common_start": "2025-10-28",
+  "common_end": "2026-10-28",
+  "input_fingerprint": "40a88ea884cb027c7affe8d6e83085d8b6d1cec6f8ced90d90c4a5f143797c47",
+  "sources": [
+    {
+      "code": "00700",
+      "source": "新浪财经 · AKShare（东方财富请求失败后回退）",
+      "received_at": "2026-10-28T13:40:00.064635+00:00",
+      "quality": "按参考日历未见已结束交易日缺口",
+      "observations": 246
+    },
+    {
+      "code": "00941",
+      "source": "新浪财经 · AKShare（东方财富请求失败后回退）",
+      "received_at": "2026-10-28T13:40:00.555682+00:00",
+      "quality": "按参考日历未见已结束交易日缺口",
+      "observations": 246
+    }
+  ],
+  "cash_model": {
+    "status": "passed",
+    "train_end": "2026-07-14",
+    "test_start": "2026-07-15",
+    "methods": [
+      "等权",
+      "逆波动率"
+    ],
+    "audits": {
+      "等权": "5e2a78fe1d9972dc424a3a5e16e23df106efdaf59338788c482fc6c0a065cdaf",
+      "逆波动率": "ad2334abdafac4f16b26ee50e10b88eae081485c2d6015c2fce7e2627bc52d42"
+    },
+    "minimum_cash": 4221.024427
+  }
+}

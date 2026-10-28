@@ -47,6 +47,12 @@ flowchart LR
 
 ## 数据合同
 
+阶段六：`comparison.py`以最多两个工作者取A/H同市场2–10只股票，规范化/币种/口径/结构校验后返回完整ComparisonInputs及指纹；共同日期比较由CPU服务完成。来源失效不交付半批结果，立即更新force绕过查询缓存。`provider_runtime.py`共享锁保护新浪HK/US的嵌入JS初始化，避免本环境观察到的并发原生崩溃。
+
+`portfolio_cash.py`保留旧portfolio.py，新增独立ah-cash-price-v1。严格完整的原始成交日期、配对输入及参考日历版本入清单；原始收益训练固定权重，下一开盘样本外现金/持仓/成本核算，Decimal控制现金。UI参数批量提交，取数、配对、比较及组合均走现有后台票据；输入与参数不匹配时丢弃晚结果。绘图全量、隐藏风险页签延迟绘制，已有结果重绘不重跑模型。
+
+`workspaces.py`为当前user_data_dir下的独立JSON v1白名单配置，原子保存/恢复导航、参数和面板开关，不写价格、笔记、AI或密钥，不修改SQLite。新页面的AI上下文只使用比较指纹、市场/代码/基准/条数，不混入单股或私人笔记。比较页观察列表须显式显示，之后沿既有开关与间隔轮询。详见docs/PORTFOLIO_STAGE6.md。
+
 美股阶段五使用独立的`us_market/us_data`合同、`us_backtest/us_research`纯计算、`us_sources`未合格来源诊断和`us_archive`版本化归档。USInstrument的点号类别代码与来源映射分离，USDataset明确原始执行价证据和独立事件簿完整性；`USMarketDataProvider`是后续合格来源的服务接缝，当前没有生产合格实现。A/H的normalize_symbol、BacktestConfig和旧审计算法保持原语义，不把美股悄悄送进港股分支。`ui_us`仅把受控任务提交到既有后台服务；免费来源不通过时只提供摘要，教学输入来自显式选择，绝不是失败回退。
 
 US现金账户分别核算已结算现金、待结算卖出款、应收股息和整数持仓，公司行动与独立结算日历均有覆盖/版本。价格均线只调整已观察历史的拆股前缀。JSON快照包含全量OHLCV、目标权重矩阵、事件与支付假设、结算日期和各版本，不写入旧SQLite实验表；复算校验输入与全部输出，不联网、不执行任意代码。当前SQLite仍为v6，详见docs/US_RULES.md。真实源未通过完整关卡，当前只交付框架/教学端到端路径。

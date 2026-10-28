@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "scope": "offline full backend workload; no real network or browser drawing timing",
+  "symbols": 10,
+  "rows_per_symbol": 2609,
+  "total_raw_rows": 26090,
+  "normalization_rows": 2609,
+  "sample_out_rows": 784,
+  "full_chart_bytes": 1135644,
+  "timings_ms": {
+    "generate_and_validate_ms": 246.13,
+    "comparison_ms": 10.17,
+    "prepare_ms": 201.44,
+    "cash_models_ms": 280.76,
+    "full_chart_build_and_json_ms": 227.23
+  },
+  "minimum_cash": 45126.01879936724,
+  "raw_prices_saved": false,
+  "versions": [
+    "ah-cash-price-v1"
+  ]
+}
