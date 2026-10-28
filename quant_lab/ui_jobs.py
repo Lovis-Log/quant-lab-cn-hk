@@ -54,6 +54,7 @@ TASK_LABELS = {"history": "历史日线", "history_refresh": "历史日线更新
     "directory": "证券目录", "watch": "观察列表", "backtest": "历史回测",
     "portfolio": "组合研究", "statistics": "统计模型", "sensitivity": "参数扫描"}
 TASK_LABELS.update({"backtest_raw": "回测成交价格", "portfolio_data": "组合行情"})
+TASK_LABELS.update({"us_research":"美元教学研究","us_source_check":"免费美股来源核验"})
 
 
 def render_background_tasks():

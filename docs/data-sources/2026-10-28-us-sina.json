@@ -1,0 +1,56 @@
+{
+  "source": "akshare-sina",
+  "ticker": "AAPL",
+  "synthetic": false,
+  "checked_at": "2026-10-28T12:11:56.932044+00:00",
+  "requested": [
+    "2016-10-27",
+    "2026-10-27"
+  ],
+  "raw_prices_saved": false,
+  "application_backtest_enabled": false,
+  "results": {
+    "unadjusted_parameter": {
+      "status": "returned",
+      "rows": 2513,
+      "columns": [
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "actual_start": "2016-10-27",
+      "actual_end": "2026-10-27",
+      "duplicate_dates": 0,
+      "invalid_price_rows": 0,
+      "sha256": "2f862031abe00100559e25affa721350499a73c6a20c33219f5824c02c66f761",
+      "split_boundary_close_ratio_diagnostic": 3.8688,
+      "company_actions_payment_dates_verified": false,
+      "raw_execution_price_definition_verified": false,
+      "retention_permission_verified": false
+    },
+    "qfq": {
+      "status": "returned",
+      "rows": 2513,
+      "columns": [
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "actual_start": "2016-10-27",
+      "actual_end": "2026-10-27",
+      "duplicate_dates": 0,
+      "invalid_price_rows": 0,
+      "sha256": "d2dd8e1a7c8d187684590aa3925bf81f2a8e94b0609e06c2a53ea70a904486f0",
+      "split_boundary_close_ratio_diagnostic": 0.965745,
+      "company_actions_payment_dates_verified": false,
+      "raw_execution_price_definition_verified": false,
+      "retention_permission_verified": false
+    }
+  }
+}

@@ -9,6 +9,8 @@ from pathlib import Path
 import subprocess
 import sys
 from uuid import uuid4
+from zoneinfo import ZoneInfo
+from datetime import timedelta
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,8 +18,19 @@ ROOT = Path(__file__).resolve().parents[1]
 def worker(args):
     import akshare as ak
     import pandas as pd
+    sys.path.insert(0,str(ROOT))
+    from quant_lab.us_market import us_schedule
+    from quant_lab.history_ranges import history_window
+    now=datetime.now(timezone.utc)
+    today=now.astimezone(ZoneInfo("America/New_York")).date()
+    schedule=us_schedule(today-timedelta(days=20),today)
+    ended=schedule.loc[schedule["close"]<=pd.Timestamp(now)]
+    if ended.empty:
+        raise ValueError("参考交易日历未给出最近已结束日线。")
+    end=ended.index[-1].date()
+    start,_=history_window(end,10)
     report = {"source": args.source, "ticker": "AAPL", "synthetic": False,
-        "checked_at": datetime.now(timezone.utc).isoformat(), "requested": ["2016-10-27", "2026-10-27"],
+        "checked_at": now.isoformat(), "requested": [str(start),str(end)],
         "raw_prices_saved": False, "application_backtest_enabled": False, "results": {}}
     for adjustment in ("", "qfq"):
         name = adjustment or "unadjusted_parameter"
@@ -25,14 +38,14 @@ def worker(args):
             if args.source == "akshare-sina":
                 frame = ak.stock_us_daily(symbol="AAPL", adjust=adjustment)
             else:
-                frame = ak.stock_us_hist(symbol="105.AAPL", period="daily", start_date="20161027",
-                                         end_date="20261027", adjust=adjustment)
+                frame = ak.stock_us_hist(symbol="105.AAPL", period="daily", start_date=start.strftime("%Y%m%d"),
+                                         end_date=end.strftime("%Y%m%d"), adjust=adjustment)
                 frame = frame.rename(columns={"日期":"date", "开盘":"open", "收盘":"close",
                     "最高":"high", "最低":"low", "成交量":"volume"})
             if "date" not in frame:
                 frame = frame.reset_index()
             frame["date"] = pd.to_datetime(frame.date)
-            frame = frame.loc[frame.date.between("2016-10-27", "2026-10-27")].sort_values("date")
+            frame = frame.loc[frame.date.between(pd.Timestamp(start),pd.Timestamp(end))].sort_values("date")
             valid_prices = frame.loc[:,["open","high","low","close"]].apply(pd.to_numeric,errors="coerce")
             item = {"status":"returned", "rows":len(frame), "columns":list(frame.columns),
                 "actual_start":str(frame.date.iloc[0].date()) if len(frame) else None,

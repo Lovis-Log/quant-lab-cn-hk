@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--legacy-theme", action="store_true")
     parser.add_argument("--diagnose-events", action="store_true")
     parser.add_argument("--history-quality", action="store_true")
+    parser.add_argument("--us-research", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.repetitions <= 100:
         parser.error("repetitions must be 1..100")
@@ -96,6 +97,7 @@ def main():
         "QUANT_LAB_TEST_IO_DELAY": str(args.io_delay),
         "QUANT_LAB_TEST_ROWS": "252" if args.visual else "2520",
         "QUANT_LAB_TEST_EVENTS": "1" if args.diagnose_events else "0",
+        "QUANT_LAB_TEST_US_SOURCE": "1" if args.us_research else "0",
         "QUANT_LAB_SMOKE_RESULT": str(probe), "PYTHONPATH": str(source)}
     if args.legacy_theme:
         profile = directory / "user" / ".streamlit" / "config.toml"
@@ -151,6 +153,33 @@ def main():
                     report["startup_ms"] = round((time.perf_counter()-started)*1000, 1)
                     assert page.url.startswith("http://127.0.0.1:")
                     assert page.title() == "Quant Lab CN/HK"
+                    if args.us_research:
+                        page.get_by_test_id("stSidebar").get_by_text("美股研究",exact=True).click()
+                        page.get_by_role("heading",name="美股研究",exact=True).wait_for()
+                        settle(page)
+                        assert page.get_by_text("以下为平台生成的固定教学样本，非真实美股行情。它用来核对拆股、分红应收/支付和结算现金。",exact=True).is_visible()
+                        page.get_by_role("button",name="运行美元教学研究",exact=True).click()
+                        page.get_by_text("教学策略累计收益",exact=True).wait_for(timeout=60000)
+                        page.get_by_role("button",name="导出可复算美元教学实验",exact=True).wait_for()
+                        settle(page)
+                        page.screenshot(path=str(directory/"us-research.png"))
+                        report["us_teaching_calculation"]=True
+                        page.get_by_text("免费来源状态",exact=True).click()
+                        settle(page)
+                        assert page.get_by_role("button",name="运行真实美股回测",exact=True).is_disabled()
+                        assert not page.get_by_text("教学策略累计收益",exact=True).count()
+                        page.get_by_role("button",name="核验免费日线覆盖",exact=True).click()
+                        page.get_by_text("隔离验收模拟上游超时；没有有效真实数据，未替换为教学行情。",exact=True).wait_for(timeout=30000)
+                        settle(page)
+                        page.screenshot(path=str(directory/"us-source-gate.png"))
+                        report["us_live_gate_closed"]=True
+                        report["us_source_failure_no_fallback"]=True
+                        page.get_by_text("离线教学样本",exact=True).click()
+                        page.get_by_text("教学策略累计收益",exact=True).wait_for()
+                        settle(page)
+                        report["us_teaching_state_restored"]=True
+                        page.get_by_test_id("stSidebar").get_by_text("市场数据",exact=True).click()
+                        settle(page)
                     if args.history_quality:
                         preset = page.get_by_role("combobox", name="快捷历史区间", exact=True)
                         preset.click()

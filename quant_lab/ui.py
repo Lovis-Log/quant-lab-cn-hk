@@ -49,7 +49,7 @@ from quant_lab.ui_settings import (
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy")
+PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy", "美股研究")
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 SIDEBAR_LAYOUT_JS = """
@@ -351,6 +351,8 @@ def _protect_session_widgets() -> None:
         "ds_model_select", "ds_model_manual", "ai_workspace",
         "learning_mode", "refresh_enabled", "refresh_interval_seconds", "academy_search", "academy_group",
         "history_preset", "history_start", "history_end",
+        "us_source_mode", "us_candidate_symbol", "us_teaching_symbol", "us_calendar_day",
+        "us_kind", "us_short", "us_long", "us_cash", "us_commission", "us_minimum", "us_slippage", "us_rebalance",
     }
     prefixes = (
         "strategy_", "backtest_", "portfolio_", "model_", "research_", "academy_parameter_",
@@ -379,6 +381,9 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
         if st.session_state.get("nav_page") not in PAGES:
             st.session_state["nav_page"] = PAGES[0]
         page = st.radio("功能导航", PAGES, label_visibility="collapsed", key="nav_page")
+        if page=="美股研究":
+            st.caption("美元参数在美股工作区设置。真实来源与教学输入分别核验。")
+            return page,"A 股","600519",None,"",False
         with (st.expander("研究参数", expanded=False) if page == "Quant Academy" else st.container()):
             market, symbol, dates, adjustment, clicked = _research_controls()
     return page, market, symbol, dates, adjustment, clicked
@@ -981,6 +986,9 @@ def render_app() -> None:
         bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
     elif page == "Quant Academy":
         render_academy()
+    elif page == "美股研究":
+        from quant_lab.ui_us import render_us_research
+        render_us_research()
     else:
         _header(page, market, symbol, latest_date)
         if error:
@@ -1002,6 +1010,9 @@ def render_app() -> None:
     if page == "Quant Academy":
         context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
                    "data_status": "离线教学实验，不是股票行情。"}
+    if page == "美股研究":
+        context=st.session_state.get("active_us_context",{"page":page,"data_status":"尚未加载合格真实美股数据"})
+        st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]
     st.session_state["_current_ai_context"] = context

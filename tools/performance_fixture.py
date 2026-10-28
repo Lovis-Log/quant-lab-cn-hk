@@ -56,3 +56,10 @@ def history(market, symbol, start, end, adjustment="", **kwargs):
 
 
 ui.fetch_history = history
+
+
+if os.environ.get("QUANT_LAB_TEST_US_SOURCE")=="1":
+    from quant_lab import us_sources
+    def _us_validation_failure(*args,**kwargs):
+        raise ValueError("隔离验收模拟上游超时；没有有效真实数据，未替换为教学行情。")
+    us_sources.inspect_sina_prices=_us_validation_failure

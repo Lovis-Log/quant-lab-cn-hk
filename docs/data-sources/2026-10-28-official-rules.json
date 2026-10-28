@@ -1,0 +1,65 @@
+{
+  "sec-t1": {
+    "url": "https://www.sec.gov/newsroom/press-releases/2023-29",
+    "checked_at": "2026-10-28T11:57:21.390525+00:00",
+    "http_status": 403
+  },
+  "sec-t2": {
+    "url": "https://www.sec.gov/newsroom/press-releases/2017-68",
+    "checked_at": "2026-10-28T11:57:21.390525+00:00",
+    "http_status": 403
+  },
+  "finra-settlement": {
+    "url": "https://www.finra.org/investors/insights/understanding-settlement-cycles",
+    "checked_at": "2026-10-28T11:57:21.391847+00:00",
+    "http_status": 200,
+    "sha256": "5894cd22b9c5b81f629893992bd1ec0c702970bad6e4d769f36513fa821e2156",
+    "characters": 7925
+  },
+  "nyse-calendar": {
+    "url": "https://www.nyse.com/markets/hours-calendars",
+    "checked_at": "2026-10-28T11:57:22.106024+00:00",
+    "http_status": 403
+  },
+  "dtcc-settlement": {
+    "url": "https://www.dtcc.com/settlement-and-asset-services/settlement/settlement-service",
+    "checked_at": "2026-10-28T11:57:22.106024+00:00",
+    "http_status": 404
+  },
+  "twelve-pricing": {
+    "url": "https://twelvedata.com/pricing",
+    "checked_at": "2026-10-28T11:57:23.003461+00:00",
+    "http_status": 200,
+    "sha256": "2fc1694f8aa4fc762beec507232c6d83a6b3dd6ffd09c302faa5af2dd0c93cb9",
+    "characters": 11057
+  },
+  "twelve-terms": {
+    "url": "https://twelvedata.com/terms",
+    "checked_at": "2026-10-28T11:57:23.167204+00:00",
+    "http_status": 200,
+    "sha256": "04b58a554bf0915a266403e5c760312bf60324c8a1bc42ac3c89b611d358285a",
+    "characters": 32253
+  },
+  "finra-17-19": {
+    "url": "https://www.finra.org/rules-guidance/notices/17-19",
+    "checked_at": "2026-10-28T12:12:05.107201+00:00",
+    "http_status": 200,
+    "sha256": "6020e412449bda1d31d38e5f7549b92b4216072bccf0e909c3ce3ee6d47231d2"
+  },
+  "finra-17-12": {
+    "url": "https://www.finra.org/rules-guidance/notices/17-12",
+    "checked_at": "2026-10-28T12:12:05.108201+00:00",
+    "http_status": 200,
+    "sha256": "4624d884c1fb93e59488a51dca35c3bf08ea3d37399ab9c4165048cf6d7e576d"
+  },
+  "finra-23-15": {
+    "url": "https://www.finra.org/rules-guidance/notices/23-15",
+    "http_status": 200,
+    "sha256": "60f7bb7d25a0092957dfb47d33a08c3f8bf614ceeed4ca235e79b39bb6be5e2f"
+  },
+  "dtcc-t1": {
+    "url": "https://www.dtcc.com/ust1",
+    "http_status": 200,
+    "sha256": "0fbcc7e0f19c49ec8fce4d661916b99a4228e6b53989ff61a374553fdd057009"
+  }
+}
