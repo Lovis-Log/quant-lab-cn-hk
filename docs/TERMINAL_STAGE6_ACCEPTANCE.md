@@ -2,6 +2,8 @@
 
 日期2026-10-28。基线89c85ed，开始时干净，恢复点codex/recovery-stage6-20261028-89c85ed。用户明确要求“进行第6阶段”，本次只实施26–28；阶段四仍待做，阶段七不启动。开发验证不代替用户验收。
 
+供验收源码：[b9f31ac](https://github.com/Lovis-Log/quant-lab-cn-hk/commit/b9f31acb1fe9227e900eb32cfc348d3b88ce783c)；之后回执文档补充不改变此代码。
+
 ## 交付清单
 
 | 工作包 | 本轮交付 |
