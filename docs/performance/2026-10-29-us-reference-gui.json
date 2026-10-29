@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-29",
+  "source_base": "874e5a4",
+  "surface": "actual isolated source desktop WebView2 DOM",
+  "real_us_prices": true,
+  "ah_prices": "isolated fixture; not exercised",
+  "title": "Quant Lab",
+  "viewports": [
+    [
+      1366,
+      768
+    ],
+    [
+      1920,
+      1080
+    ]
+  ],
+  "checks": {
+    "real_load_chart_table": true,
+    "viewport_1366": true,
+    "viewport_1920": true,
+    "manual_refresh_keeps_execution_gate": true,
+    "teaching_remains_separate": true,
+    "desktop_exit": true
+  },
+  "page_errors": [],
+  "browser_plugin": "invocation failed: missing browser-service.mjs (26.1023.51421)",
+  "fallback": "repository-required actual WebView2 via existing Playwright CDP pattern",
+  "initial_sandbox_launch": "local page failed to load; retry with desktop execution permissions succeeded",
+  "remaining_gui_probe_failure": "first successful desktop probe could not locate icon-prefixed teaching button by exact accessible name; only teaching/exit were rerun via keyed locator",
+  "performance_claim": false,
+  "raw_prices_archived": false,
+  "personal_data_or_credentials_read": false,
+  "desktop_evidence": [
+    ".tools\\us-reference-gui-64e31201b88e463c8e4de3765cf73b30",
+    ".tools\\us-reference-gui-73eeac25ea944c65aac80341c35d528f"
+  ]
+}

@@ -1,8 +1,7 @@
-"""US stage-five workspace, explicit teaching mode and closed live-source gates."""
+"""US daily references and separate teaching research with execution gates."""
 
 from dataclasses import asdict
-from datetime import datetime,date
-import json
+from datetime import datetime
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -12,13 +11,11 @@ from quant_lab.jobs import JobState
 from quant_lab.strategy import StrategySpec,STRATEGY_NAMES
 from quant_lab.ui_helpers import style_figure
 from quant_lab.ui_jobs import submit_task,take_result,loading_placeholder
-from quant_lab.us_market import NY,session_information,normalize_us_symbol
-from quant_lab import us_sources
+from quant_lab.us_market import NY,session_information
 from quant_lab.us_teaching import teaching_us_inputs
 from quant_lab.us_backtest import USExecutionConfig,run_us_portfolio
 from quant_lab.us_research import calculate_us_example
 from quant_lab.us_archive import export_us_run
-from quant_lab.history_ranges import history_window
 
 
 def render_us_source_status():
@@ -26,55 +23,14 @@ def render_us_source_status():
 
 
 def render_us_research(source_only=False):
-    st.subheader("美股数据与来源" if source_only else "美元教学研究")
-    st.caption("USD现金账户 · 正常交易时段下一开盘 · 只做多、无杠杆、整数股")
+    st.subheader("美股历史日线" if source_only else "美元教学研究")
+    if not source_only:
+        st.caption("USD现金账户 · 正常交易时段下一开盘 · 只做多、无杠杆、整数股")
     st.session_state["active_us_context"]={"page":"美股研究","currency":"USD","data_status":"离线教学；真实来源尚未通过回测关卡"}
     source="免费来源状态" if source_only else st.radio("研究输入",("离线教学样本","免费来源状态"),horizontal=True,key="us_source_mode")
     if source=="免费来源状态":
-        st.session_state["active_us_context"]["data_status"]="真实美股来源尚未通过完整关卡；没有当前真实行情"
-        st.info("当前没有免费来源通过完整验证，真实美股回测和美元组合暂不开放。")
-        st.html('<style>.st-key-us_source_status table{table-layout:fixed;width:100%}.st-key-us_source_status td,.st-key-us_source_status th{white-space:normal!important;overflow-wrap:anywhere}</style>')
-        with st.container(key="us_source_status"):
-            st.table([
-            {"来源":"AKShare / 新浪","状态":"长历史候选；身份、原始执行价、完整事件和留存尚未通过"},
-            {"来源":"AKShare / 东方财富","状态":"此前请求失败；本次状态见来源验收记录"},
-            {"来源":"Alpha Vantage免费Daily","状态":"十年full权限不满足；不切换付费方案"},
-            {"来源":"Twelve Data Basic","状态":"尚无账号验证；免费权限、显示/留存与完整事件仍需核验"},
-            ])
-        with st.form("us_source_check"):
-            ticker=st.text_input("待核验美股代码",value="AAPL",key="us_candidate_symbol")
-            requested=st.form_submit_button("核验免费日线覆盖")
-        start,end=history_window(datetime.now(NY).date(),10)
-        try:
-            ticker=normalize_us_symbol(ticker)
-        except ValueError as error:
-            st.warning(str(error))
-            return
-        key=(ticker,start,end)
-        if requested:
-            submit_task("us_source_check",key,us_sources.inspect_sina_prices,ticker,start,end)
-        completed=take_result("us_source_check",key)
-        if "us_source_check" in st.session_state.get("_task_tickets",{}):
-            st.caption("正在核验公开日线覆盖；可切页或取消，不会自动开放真实回测。")
-        if completed and completed.state==JobState.SUCCEEDED and isinstance(completed.result,us_sources.USSourceObservation):
-            st.session_state["us_source_observation"]=(key,completed.result)
-            st.session_state.pop("us_source_error",None)
-        elif completed and completed.state==JobState.FAILED:
-            st.session_state["us_source_error"]=(key,completed.error)
-        elif completed and completed.state==JobState.SUCCEEDED:
-            st.session_state["us_source_error"]=(key,"来源未返回有效的核验摘要；保留旧摘要，不开放真实回测。")
-        observation=st.session_state.get("us_source_observation")
-        error=st.session_state.get("us_source_error")
-        if error and error[0]==key:
-            st.error(error[1])
-        if observation and observation[0]==key:
-            info=observation[1]
-            st.write(f"请求 {info.requested_start} 至 {info.requested_end}；实际 {info.actual_start} 至 {info.actual_end}，{info.observations}条。")
-            st.caption(f"成功接收：{info.received_at}；只记录响应摘要，不保存原始报价。")
-            st.download_button("导出来源核验摘要",json.dumps(asdict(info),ensure_ascii=False,indent=2).encode(),
-                               file_name=f"{ticker}_us_source_observation.json",mime="application/json")
-        st.button("运行真实美股回测",disabled=True,key="us_live_backtest")
-        st.caption("取得价格不等于取得公司行动或留存授权；未知事件不当作零事件。")
+        from quant_lab.ui_us_prices import render_us_prices
+        render_us_prices()
         if source_only:
             from quant_lab.ui_comparison import _open_us_teaching
             st.button("进入美元教学研究", key="us_source_teaching", icon=":material/school:", on_click=_open_us_teaching)
