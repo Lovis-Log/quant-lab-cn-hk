@@ -156,7 +156,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
             for item in items:
                 st.write(f"• {item}")
     report_text = (
-        f"# Quant Lab CN/HK 研究审计\n\n"
+        f"# Quant Lab 研究审计\n\n"
         f"标的：{names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
         f"来源：{bundle.source}；价格口径：{bundle.adjustment_label}；币种：{bundle.currency}\n\n"
         f"实际交易日：{bundle.frame['date'].iloc[0]:%Y-%m-%d} 至 "

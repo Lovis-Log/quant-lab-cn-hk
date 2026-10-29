@@ -259,3 +259,27 @@ button:active { box-shadow:inset 0 0 0 999px rgba(120,167,219,.08); }
   button,[data-testid="stSidebar"] [data-testid="stRadioOption"] { transition:none; }
   .st-key-settings_panel,[data-testid="stApp"][data-test-script-state="running"] .ql-topbar-workspace::after { animation:none; }
 }
+
+/* One horizontal workbench: retain the main view and every open dock. */
+:root { --ql-main-width:calc(100vw - var(--ql-sidebar-width)); --ql-track-width:calc(100vw - var(--ql-sidebar-width)); }
+[data-testid="stMainBlockContainer"] { padding:0; }
+.st-key-workbench_scroller { position:fixed; top:var(--ql-topbar); left:var(--ql-sidebar-width); right:0; bottom:0; width:calc(100vw - var(--ql-sidebar-width)) !important; height:auto !important; overflow-x:auto !important; overflow-y:hidden !important; }
+.st-key-workbench_scroller:has(.st-key-history_table_fullscreen) { z-index:2000002; }
+body:has(.ql-left-sidebar-hidden) .st-key-workbench_scroller { left:0; width:100vw !important; }
+.st-key-workbench_scroller > [data-testid="stLayoutWrapper"] { width:var(--ql-track-width); max-width:none !important; height:100%; min-width:100%; }
+.st-key-workbench_track { display:flex; flex-direction:row !important; flex-wrap:nowrap; gap:0; width:var(--ql-track-width) !important; min-width:var(--ql-track-width); max-width:none !important; height:100%; }
+.st-key-workbench_track > [data-testid="stLayoutWrapper"]:has(> .st-key-main_workspace) { flex:0 0 var(--ql-main-width); width:var(--ql-main-width); height:100%; min-width:0; }
+.st-key-main_workspace { box-sizing:border-box; width:100%; height:100%; padding:20px 24px 32px; overflow-y:auto; overflow-x:hidden; }
+.st-key-workbench_track > [data-testid="stLayoutWrapper"]:has(> .st-key-right_dock) { flex:0 0 var(--ql-dock-total-width); width:var(--ql-dock-total-width); height:100%; }
+.st-key-right_dock { display:flex; flex-direction:row !important; flex-wrap:nowrap; height:100%; gap:0; }
+.st-key-right_dock > [data-testid="stElementContainer"] { display:none; }
+.st-key-right_dock > [data-testid="stLayoutWrapper"]:has(> :is(.st-key-manual_side_panel,.st-key-deepseek_side_panel,.st-key-notes_side_panel)) { flex:0 0 auto; height:100%; width:auto; }
+.st-key-manual_side_panel,.st-key-deepseek_side_panel,.st-key-notes_side_panel { position:relative !important; inset:auto !important; bottom:auto; flex:0 0 auto; height:100%; max-width:none; transition:none; }
+[data-testid="stAppViewContainer"]:has(.st-key-right_dock) [data-testid="stMain"] { padding-right:0; }
+html[data-ql-maximized=true] .st-key-main_workspace { display:none; }
+.st-key-right_dock:has(.ql-maximized-panel) :is(.st-key-manual_side_panel,.st-key-deepseek_side_panel,.st-key-notes_side_panel) { left:auto !important; right:auto !important; width:var(--ql-dock-total-width) !important; }
+.st-key-topbar_tools button { width:max-content; padding-left:12px; padding-right:12px; }
+.st-key-global_topbar > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child { flex:0 0 auto; width:auto; margin-left:auto; }
+.st-key-topbar_tools [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { flex:0 0 auto; width:auto; }
+.st-key-topbar_left [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child { flex-basis:184px; min-width:184px; }
+.ql-topbar-brand img { width:28px; height:28px; object-fit:contain; }

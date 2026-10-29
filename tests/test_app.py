@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import select_security
 from conftest import navigate
 from conftest import finish_background_jobs
 
@@ -50,7 +51,7 @@ def test_loaded_history_replaces_demo_metrics(monkeypatch) -> None:
     assert any("来源：腾讯证券" in item.value for item in app.get("caption"))
     assert len(app.get("plotly_chart")) == 1
 
-    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
+    select_security(app, "symbol_A 股", "000001")
     assert not app.exception
     assert not any("+10.00%" in item.value for item in app.get("html"))
 

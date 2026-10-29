@@ -30,7 +30,7 @@ from urllib.error import URLError
 from urllib.request import ProxyHandler, build_opener
 
 
-APP_TITLE = "Quant Lab CN/HK"
+APP_TITLE = "Quant Lab"
 HOST = "127.0.0.1"
 STARTUP_TIMEOUT_SECONDS = 35
 WEBVIEW_TIMEOUT_SECONDS = 30
@@ -102,7 +102,7 @@ def single_instance(root: Path) -> Iterator[None]:
         try:
             msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError as exc:
-            raise LaunchError("Quant Lab CN/HK 已在运行，请切换到已有窗口。") from exc
+            raise LaunchError("Quant Lab 已在运行，请切换到已有窗口。") from exc
         try:
             yield
         finally:

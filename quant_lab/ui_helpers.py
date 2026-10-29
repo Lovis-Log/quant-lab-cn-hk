@@ -14,8 +14,10 @@ def reset_main_scroll(view, *, key):
     state_key = "_scroll_view_" + key
     if st.session_state.get(state_key) != view:
         st.session_state[state_key] = view
-        st.html('<script>requestAnimationFrame(() => requestAnimationFrame(() => '
-                'document.querySelector(\'[data-testid="stMain"]\')?.scrollTo({top:0,behavior:"instant"})));</script>',
+        st.html('<script>requestAnimationFrame(() => requestAnimationFrame(() => {'
+                'document.querySelector(".st-key-main_workspace")?.scrollTo({top:0,behavior:"instant"});'
+                'document.querySelector(".st-key-workbench_scroller")?.scrollTo({left:0,behavior:"instant"});'
+                '}));</script>',
                 unsafe_allow_javascript=True)
 
 

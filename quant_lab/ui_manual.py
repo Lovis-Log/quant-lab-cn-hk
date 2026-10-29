@@ -31,193 +31,65 @@ def _manual_library() -> ManualContentLibrary:
     return load_manual_content()
 
 
-def _clear_search_return() -> None:
-    st.session_state.pop("manual_search_return_query", None)
-    st.session_state.pop("manual_search_return_limit", None)
-
-
-def _clear_search_origin() -> None:
-    st.session_state.pop("manual_search_origin_section", None)
-    st.session_state.pop("manual_search_origin_page_id", None)
-    st.session_state.pop("manual_search_origin_article_id", None)
-
-
-def _clear_search() -> None:
-    st.session_state["manual_search_query"] = ""
-    st.session_state["manual_search_limit"] = SEARCH_PAGE_SIZE
-    st.session_state["manual_search_last_query"] = ""
-    _clear_search_return()
-    _clear_search_origin()
-
-
-def _restore_search_origin() -> None:
-    section = st.session_state.pop("manual_search_origin_section", None)
-    page_id = st.session_state.pop("manual_search_origin_page_id", None)
-    article_id = st.session_state.pop("manual_search_origin_article_id", None)
-    st.session_state["manual_search_query"] = ""
-    st.session_state["manual_search_last_query"] = ""
-    st.session_state["manual_search_limit"] = SEARCH_PAGE_SIZE
-    _clear_search_return()
-    if section in SECTIONS:
-        st.session_state["manual_section"] = section
-    if page_id:
-        st.session_state["manual_page_id"] = page_id
-    else:
-        st.session_state.pop("manual_page_id", None)
-    if article_id:
-        st.session_state["manual_article_id"] = article_id
-    else:
-        st.session_state.pop("manual_article_id", None)
-
-
-def _section_changed() -> None:
-    st.session_state.pop("manual_page_id", None)
-    st.session_state.pop("manual_article_id", None)
-    _clear_search()
-
-
-def _search_changed() -> None:
-    query = st.session_state.get("manual_search_query", "").strip()
-    previous = st.session_state.get("manual_search_last_query", "")
-    if query and not previous:
-        st.session_state["manual_search_origin_section"] = st.session_state.get(
-            "manual_section", "快速开始"
-        )
-        if st.session_state.get("manual_page_id"):
-            st.session_state["manual_search_origin_page_id"] = st.session_state["manual_page_id"]
-        if st.session_state.get("manual_article_id"):
-            st.session_state["manual_search_origin_article_id"] = st.session_state["manual_article_id"]
-    if query != st.session_state.get("manual_search_last_query", ""):
-        st.session_state["manual_search_limit"] = SEARCH_PAGE_SIZE
-        st.session_state["manual_search_last_query"] = query
-        _clear_search_return()
-
-
-def _show_more_results() -> None:
-    st.session_state["manual_search_limit"] = (
-        st.session_state.get("manual_search_limit", SEARCH_PAGE_SIZE) + SEARCH_PAGE_SIZE
-    )
-
-
-def open_manual_page(page_id: str) -> None:
-    st.session_state["manual_panel_open"] = True
-    st.session_state["active_dock_panel"] = "manual"
-    if st.session_state.get("maximized_panel"):
-        st.session_state["maximized_panel"] = "manual"
-    st.session_state["manual_section"] = (
-        "快速开始" if page_id == "quick_start" else "功能说明"
-    )
-    st.session_state["manual_page_id"] = page_id
-    st.session_state.pop("manual_article_id", None)
-    _clear_search()
-
-
-def open_manual_article(article_id: str) -> None:
-    st.session_state["manual_panel_open"] = True
-    st.session_state["active_dock_panel"] = "manual"
-    if st.session_state.get("maximized_panel"):
-        st.session_state["maximized_panel"] = "manual"
-    st.session_state["manual_section"] = "专业知识库"
-    st.session_state["manual_article_id"] = article_id
-    st.session_state.pop("manual_page_id", None)
-    _clear_search()
-
-
-def _remember_search_return() -> None:
-    st.session_state["manual_search_return_query"] = st.session_state.get(
-        "manual_search_query", ""
-    ).strip()
-    st.session_state["manual_search_return_limit"] = st.session_state.get(
-        "manual_search_limit", SEARCH_PAGE_SIZE
-    )
-
-
-def _open_search_manual(page_id: str) -> None:
-    _remember_search_return()
-    st.session_state["manual_search_query"] = ""
-    st.session_state["manual_section"] = (
-        "快速开始" if page_id == "quick_start" else "功能说明"
-    )
-    st.session_state["manual_page_id"] = page_id
-    st.session_state.pop("manual_article_id", None)
-
-
-def _open_search_article(article_id: str) -> None:
-    _remember_search_return()
-    st.session_state["manual_search_query"] = ""
-    st.session_state["manual_section"] = "专业知识库"
-    st.session_state["manual_article_id"] = article_id
-    st.session_state.pop("manual_page_id", None)
-
-
-def _open_related_article(article_id: str) -> None:
-    st.session_state["manual_section"] = "专业知识库"
-    st.session_state["manual_search_query"] = ""
-    st.session_state["manual_article_id"] = article_id
-    st.session_state.pop("manual_page_id", None)
-
-
-def _return_to_search() -> None:
-    st.session_state["manual_search_query"] = st.session_state.pop(
-        "manual_search_return_query", ""
-    )
-    st.session_state["manual_search_limit"] = st.session_state.pop(
-        "manual_search_return_limit", SEARCH_PAGE_SIZE
-    )
-    st.session_state["manual_search_last_query"] = st.session_state["manual_search_query"]
-
-
-def _close_manual_page() -> None:
-    st.session_state.pop("manual_page_id", None)
-    _clear_search_return()
-
-
-def _close_article() -> None:
-    st.session_state.pop("manual_article_id", None)
-    _clear_search_return()
-
-
-def _toolbar_back_action() -> None:
-    if st.session_state.get("manual_search_return_query"):
-        _return_to_search()
-    elif st.session_state.get("manual_search_query", "").strip():
-        _restore_search_origin()
-    elif st.session_state.get("manual_section") == "功能说明" and st.session_state.get("manual_page_id"):
-        _close_manual_page()
-    elif st.session_state.get("manual_section") == "专业知识库" and st.session_state.get("manual_article_id"):
-        _close_article()
-
-
-def _toolbar_back_label() -> str | None:
-    if st.session_state.get("manual_search_return_query"):
-        return "← 返回搜索结果"
-    if st.session_state.get("manual_search_query", "").strip():
-        return "← 返回当前分区"
-    if st.session_state.get("manual_section") == "功能说明" and st.session_state.get("manual_page_id"):
-        return "← 返回功能目录"
-    if st.session_state.get("manual_section") == "专业知识库" and st.session_state.get("manual_article_id"):
-        return "← 返回知识库目录"
-    return None
-
-
-def _toolbar_back_help() -> str | None:
-    label = _toolbar_back_label()
-    if label is None:
-        return None
-    return label.removeprefix("← ")
+from quant_lab.ui_manual_navigation import (
+    _section_changed, _category_changed, _search_changed, _show_more_results,
+    open_manual_page, open_manual_article, _open_related_article,
+    _open_search_manual, _open_search_article, _toolbar_back_action, _toolbar_back_help,
+    remember_view,
+)
 
 
 def _reset_scroll_for_view(view_key: str) -> None:
     token = sha256(view_key.encode("utf-8")).hexdigest()[:16]
-    st.html(
-        f'<span class="ql-manual-view-token" data-token="{token}"></span>'
-        '<script>(()=>{const body=document.querySelector(".st-key-manual_panel_body");'
-        'const markers=document.querySelectorAll(".ql-manual-view-token");'
-        'const marker=markers[markers.length-1];if(!body||!marker)return;'
-        'const token=marker.dataset.token;if(body.dataset.manualViewToken===token)return;'
-        'body.dataset.manualViewToken=token;body.scrollTop=0;})();</script>',
-        unsafe_allow_javascript=True,
-    )
+    restore = st.session_state.pop("_manual_restore_scroll", False)
+    st.html(f'<span class="ql-manual-view-token" data-token="{token}" data-restore="{str(restore).lower()}"></span>'
+            + MANUAL_SCROLL_JS, unsafe_allow_javascript=True)
+
+
+MANUAL_SCROLL_JS = """
+<script>(()=>{
+  const body=[...document.querySelectorAll('.st-key-manual_panel_body')].at(-1);
+  const marker=[...document.querySelectorAll('.ql-manual-view-token')].at(-1);
+  if(!body||!marker)return;
+  const positions=window.__qlManualScrollPositions ||= {};
+  if(!body.dataset.qlHistoryBound){
+    body.dataset.qlHistoryBound='1';
+    body.addEventListener('scroll',()=>{if(!body.dataset.qlNavigating&&body.dataset.manualViewToken)positions[body.dataset.manualViewToken]=body.scrollTop;},{passive:true});
+    body.addEventListener('click',event=>{if(event.target.closest('button')){positions[body.dataset.manualViewToken]=body.scrollTop;body.dataset.qlNavigating='1';}},true);
+  }
+  const token=marker.dataset.token;
+  if(body.dataset.manualViewToken===token){if(!body.__qlRestoreCancel)body.dataset.qlNavigating='';return;}
+  body.__qlRestoreCancel?.();
+  body.dataset.manualViewToken=token;
+  body.dataset.qlNavigating='1';
+  const desired=marker.dataset.restore==='true'?(positions[token]||0):0;
+  let frame=0,timer=0,done=false;
+  const stop=()=>{
+    if(done)return;done=true;cancelAnimationFrame(frame);clearTimeout(timer);
+    mutation.disconnect();resize.disconnect();body.__qlRestoreCancel=null;body.dataset.qlNavigating='';
+  };
+  const finish=()=>{body.scrollTop=desired;positions[token]=body.scrollTop;stop();};
+  const schedule=()=>{
+    if(done)return;cancelAnimationFrame(frame);
+    frame=requestAnimationFrame(()=>{
+      if(body.dataset.manualViewToken!==token){stop();return;}
+      const height=body.scrollHeight;body.scrollTop=desired;
+      frame=requestAnimationFrame(()=>{
+        if(body.scrollHeight===height&&body.scrollHeight-body.clientHeight>=desired-1&&
+           document.querySelector('[data-testid=stApp]')?.getAttribute('data-test-script-state')==='notRunning')finish();
+      });
+    });
+  };
+  const mutation=new MutationObserver(schedule),resize=new ResizeObserver(schedule);
+  mutation.observe(body,{childList:true,subtree:true,characterData:true});
+  const app=document.querySelector('[data-testid=stApp]');
+  if(app)mutation.observe(app,{attributes:true,attributeFilter:['data-test-script-state']});
+  resize.observe(body.firstElementChild||body);
+  body.__qlRestoreCancel=stop;
+  timer=setTimeout(finish,1500);
+  schedule();
+})();</script>
+"""
 
 
 def _render_sticky_toolbar() -> tuple[str, str]:
@@ -352,6 +224,7 @@ def _render_article_index(library: ManualContentLibrary) -> None:
         "专业分类",
         library.category_order,
         key="manual_category",
+        on_change=_category_changed,
         format_func=lambda value: CATEGORY_TITLES[value],
     )
     articles = library.articles_in_category(category)
@@ -460,6 +333,8 @@ def render_manual() -> None:
     except (ContentValidationError, KeyError, ValueError) as exc:
         st.error(f"使用手册内容不可用：{exc}")
         st.info("请检查只读内容资源是否完整；程序不会用演示文本替代缺失内容。")
+    finally:
+        remember_view()
 
 
 def _close_manual_panel() -> None:

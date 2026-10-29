@@ -7,6 +7,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from conftest import navigate, finish_background_jobs
+from conftest import select_security
 from quant_lab.desktop_loading import StartupOverlay
 from quant_lab.navigation import navigation_values, comparison_selection, SECTIONS
 from quant_lab.workspaces import WorkspaceStore, restore_values
@@ -60,17 +61,13 @@ def test_candidate_edit_market_drafts_and_us_gate_do_not_load_prices(monkeypatch
     assert app.sidebar.radio(key="nav_section").options == list(SECTIONS)
     assert not any(item.label == "工作区方案" for item in app.expander)
     navigate(app, "多股票比较")
-    app.text_input(key="compare_codes").set_value("600519,600036").run()
-    app.button(key="comparison_add_stock").click().run()
-    chooser = app.multiselect(key="stock_picker_selection_A 股")
-    assert any("贵州茅台" in option for option in chooser.options)
-    chooser.set_value(["600519", "600036", "000001"]).run()
-    app.button(key="stock_picker_apply").click().run()
-    assert app.text_input(key="compare_codes").value == "600519,600036,000001"
+    select_security(app, "compare_codes", "600519,600036,000001")
+    assert app.session_state["compare_codes"] == "600519,600036,000001"
+    assert not app.get("dialog")
     app.sidebar.selectbox(key="compare_market").set_value("港股").run()
-    app.text_input(key="compare_codes").set_value("00700,00005").run()
+    select_security(app, "compare_codes", "00700,00005")
     app.sidebar.selectbox(key="compare_market").set_value("A 股").run()
-    assert app.text_input(key="compare_codes").value == "600519,600036,000001"
+    assert app.session_state["compare_codes"] == "600519,600036,000001"
     app.sidebar.selectbox(key="compare_market").set_value("美股").run()
     assert not app.exception and not calls
     assert any("尚未开放" in message.value for message in app.info)
@@ -106,3 +103,22 @@ def test_refresh_preference_reregisters_market_fragment_without_fetch(monkeypatc
     app.selectbox(key="refresh_interval_seconds").set_value(600).run()
     assert app.session_state["refresh_interval_seconds"] == 600
     assert not app.exception and not calls
+
+
+def test_inline_picker_rejects_bad_client_values_and_keeps_canonical_codes():
+    from quant_lab.ui_security_picker import commit_selection
+    assert commit_selection("港股", "compare_codes", True, ["700", "00700", "941"]) == "00700,00941"
+    assert commit_selection("A 股", "symbol_A 股", False, ["SH600519"]) == "600519"
+    for payload in ("600519", [None], ["600519", "000001"]):
+        with pytest.raises(ValueError):
+            commit_selection("A 股", "symbol_A 股", False, payload)
+
+
+def test_research_parameters_are_collapsed_without_losing_selection():
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    select_security(app, "symbol_A 股", "000001")
+    for page in ("策略实验室", "Quant Academy", "市场数据"):
+        navigate(app, page)
+        assert next(item for item in app.expander if item.label == "研究参数").proto.expanded is False
+        assert app.session_state["symbol_A 股"] == "000001"
+        assert not app.exception

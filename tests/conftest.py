@@ -41,3 +41,12 @@ def navigate(app, page):
     elif page in RESEARCH:
         app.radio(key="research_page").set_value(page).run()
     return app
+
+
+def select_security(app, key, text):
+    """AppTest cannot drive component JavaScript; DOM coverage uses real WebView2."""
+    from quant_lab.ui_security_picker import commit_selection
+    multiple = key == "compare_codes"
+    market = app.session_state["compare_market"] if multiple else key.removeprefix("symbol_")
+    app.session_state[key] = commit_selection(market, key, multiple, text.replace("，", ",").split(","))
+    return app.run()

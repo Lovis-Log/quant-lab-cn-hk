@@ -118,8 +118,7 @@ DOCK_RESIZE_JS = """
         .reduce((total, other) => total + (other ? other.getBoundingClientRect().width : 0), 0);
       const sidebar = document.querySelector('[data-testid="stSidebar"]');
       const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 0;
-      const mainMinimum = Number.parseFloat(getComputedStyle(root).getPropertyValue('--ql-main-min')) || 560;
-      const maximum = Math.max(minimum, window.innerWidth - sidebarWidth - otherWidth - mainMinimum);
+      const maximum = Math.max(minimum, window.innerWidth - sidebarWidth);
       const width = Math.round(Math.min(maximum, Math.max(minimum, requested)));
       root.style.setProperty(property, `${width}px`);
       if (persist) localStorage.setItem(storageKey, String(width));
@@ -205,36 +204,45 @@ TOPBAR_REORDER_JS = """
       const column = buttons[kind]?.closest('[data-testid="stColumn"]');
       if (column) column.style.order = String(index);
     });
-    let right = 0;
     const present = order.filter(kind => newest(`.st-key-${kind}_side_panel`));
+    kinds.forEach(kind => buttons[kind]?.setAttribute('aria-pressed',String(present.includes(kind))));
     const sidebar = document.querySelector('[data-testid="stSidebar"]');
     const sidebarWidth = sidebar && getComputedStyle(sidebar).display !== 'none' ? sidebar.getBoundingClientRect().width : 0;
     const mainMinimum = Number.parseFloat(getComputedStyle(root).getPropertyValue('--ql-main-min')) || 560;
-    const available = Math.max(240, window.innerWidth - sidebarWidth - mainMinimum);
+    const available = Math.max(240, window.innerWidth - sidebarWidth);
+    const maximized = !!newest('.ql-maximized-panel');
     const desired = Object.fromEntries(present.map(kind => [kind,
       Number.parseFloat(getComputedStyle(root).getPropertyValue(`--ql-${kind}-width`)) || 320]));
-    const compact = present.reduce((total, kind) => total + desired[kind], 0) > available;
     const requested = newest('.ql-dock-active')?.dataset.panel;
     const active = present.includes(requested) ? requested : present[0];
-    root.dataset.qlDockCompact = compact ? 'true' : 'false';
-    [...order].reverse().forEach(kind => {
+    root.dataset.qlDockCompact = 'false';
+    root.dataset.qlMaximized = String(maximized);
+    let total = 0;
+    order.forEach((kind,index) => {
       const copies = [...document.querySelectorAll(`.st-key-${kind}_side_panel`)];
       copies.slice(0, -1).forEach(stale => { stale.style.display='none'; stale.inert=true; });
       const panel = copies.at(-1);
       if (!panel) return;
-      const hidden = compact && kind !== active;
-      panel.style.display = hidden ? 'none' : '';
-      panel.setAttribute('aria-hidden', String(hidden));
-      panel.inert = hidden;
+      panel.style.display = '';
+      panel.setAttribute('aria-hidden', 'false');
+      panel.inert = false;
       const button = buttons[kind];
-      if (button) button.setAttribute('aria-pressed', String(kind === active));
-      if (hidden) return;
-      panel.style.width = `${Math.min(available, desired[kind])}px`;
-      panel.style.right = `${right}px`;
-      right += panel.getBoundingClientRect().width;
+      if (button) button.setAttribute('aria-pressed', 'true');
+      const width = maximized ? available : Math.min(available,desired[kind]);
+      panel.style.width = `${width}px`;
+      panel.parentElement.style.order = String(index);
+      total += width;
     });
+    const mainWidth = maximized ? 0 : Math.max(mainMinimum,available-total);
     root.dataset.qlDockOrder = order.join('-');
-    root.style.setProperty('--ql-dock-total-width', `${right}px`);
+    root.style.setProperty('--ql-dock-total-width', `${total}px`);
+    root.style.setProperty('--ql-main-width', `${mainWidth}px`);
+    root.style.setProperty('--ql-track-width', `${Math.max(available,mainWidth+total)}px`);
+    const reveal = newest('.ql-dock-reveal');
+    if(reveal?.dataset.panel && root.dataset.qlRevealToken!==reveal.dataset.token) {
+      const target=newest(`.st-key-${reveal.dataset.panel}_side_panel`);
+      if(target){root.dataset.qlRevealToken=reveal.dataset.token;requestAnimationFrame(()=>target.scrollIntoView({inline:'nearest',block:'nearest',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}
+    }
     const serializedOrder = JSON.stringify(order);
     if (savedOrder !== serializedOrder) {
       localStorage.setItem(storageKey, serializedOrder);
@@ -361,7 +369,7 @@ def _protect_session_widgets() -> None:
         "us_source_mode", "us_candidate_symbol", "us_teaching_symbol", "us_calendar_day",
         "us_kind", "us_short", "us_long", "us_cash", "us_commission", "us_minimum", "us_slippage", "us_rebalance",
         "workspace_name","market_selection","compare_market","compare_codes","compare_benchmark","compare_start","compare_end","compare_adjustment","compare_window",
-        "nav_section","research_page",
+        "nav_section","research_page","manual_section","manual_category","manual_search_query",
         "compare_fraction","compare_frequency","compare_cash","compare_commission","compare_minimum","compare_buyfee","compare_sellfee","compare_slippage","compare_limit",
         "comparison_watch_open",
         "lab_mode","lab_kind","lab_short","lab_long","lab_shorts","lab_longs","lab_score","lab_fraction","lab_train","lab_test","lab_folds","lab_stress",
@@ -399,48 +407,22 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             market = st.selectbox("比较市场", MARKETS, key="compare_market", on_change=_market_change)
             st.session_state["nav_page"] = section
             return section, market, "", None, "", False
-        if section == "Quant Academy":
-            st.session_state["nav_page"] = section
-            with st.expander("研究参数", expanded=False):
-                market = st.selectbox("市场", MARKETS, key="market_selection", on_change=_select_market_changed)
-                if market != "美股":
-                    market, symbol, dates, adjustment, clicked = _research_controls()
-                    return section, market, symbol, dates, adjustment, clicked
-            return section, st.session_state["market_selection"], "", None, "", False
-        market = st.selectbox("市场", MARKETS, key="market_selection", on_change=_select_market_changed)
-        page = active_route(section, market, st.session_state["research_page"])
-        st.session_state["nav_page"] = page
-        if market == "美股":
-            st.caption("USD · 真实来源待核验")
-            return page, market, "", None, "", False
-        with st.container():
+        with st.expander("研究参数", expanded=False):
+            market = st.selectbox("市场", MARKETS, key="market_selection", on_change=_select_market_changed)
+            page = active_route(section, market, st.session_state["research_page"])
+            st.session_state["nav_page"] = page
+            if market == "美股":
+                st.caption("USD · 真实来源待核验")
+                return page, market, "", None, "", False
             market, symbol, dates, adjustment, clicked = _research_controls()
     return page, market, symbol, dates, adjustment, clicked
 
 
 def _research_controls():
-    st.html('<div class="ql-sidebar-label ql-sidebar-gap">研究参数</div>')
     market = st.session_state["market_selection"]
     st.session_state.setdefault(f"symbol_{market}", "600519" if market == "A 股" else "00700")
-    labels = {}
-    directory = None
-    try:
-        directory = security_directory(market)
-        labels = dict(directory.rows)
-        st.session_state.setdefault("_directory_metadata", {})[market] = directory
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        st.warning(str(exc))
-    current = st.session_state[f"symbol_{market}"]
-    options = list(labels)
-    if current and current not in options:
-        options.append(current)
-    symbol = (st.selectbox(
-        "股票（代码 / 名称）", options, key=f"symbol_{market}",
-        accept_new_options=True,
-        format_func=lambda code: f"{code} · {labels[code]}" if code in labels else code,
-        placeholder="输入代码或名称搜索，也可直接输入新代码",
-        help="常见大盘股票优先展示；候选是证券目录，不是买入推荐。未收录的代码可输入后选择新增项确认。",
-    ) or "").strip()
+    from quant_lab.ui_security_picker import render_security_picker
+    symbol = render_security_picker(market, f"symbol_{market}").strip()
     today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
     initial_start, initial_end = history_window(today, 1)
     st.session_state.setdefault("history_start", initial_start)
@@ -463,8 +445,6 @@ def _research_controls():
         valid_symbol and dates is not None and dates[0] <= dates[1]
     )
     clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
-    if directory is not None and directory.error:
-        st.warning(directory.error)
     directory_result = take_result("directory", market)
     if directory_result and directory_result.state == JobState.FAILED:
         st.warning(directory_result.error)
@@ -518,7 +498,7 @@ def _custom_history_dates():
 
 
 def _header(page: str, market: str, symbol: str, latest_date: str | None) -> None:
-    page_title = "市场数据实验室" if page == "市场数据" else page
+    page_title = "市场数据实验室" if page == "市场数据" else RESEARCH.get(page, page)
     status = f"历史数据截至 {latest_date}" if latest_date else "尚未加载真实行情"
     status_class = ""
     st.html(
@@ -551,13 +531,14 @@ def _toggle_notes_panel() -> None:
 
 
 def _toggle_dock(kind):
-    current = st.session_state.get("active_dock_panel", "manual")
+    current = st.session_state.get("maximized_panel") or st.session_state.get("active_dock_panel", "manual")
     opening = not (st.session_state.get(f"{kind}_panel_open", False) and current == kind)
     st.session_state[f"{kind}_panel_open"] = opening
     if opening:
         st.session_state["active_dock_panel"] = kind
-        if st.session_state.get("maximized_panel"):
-            st.session_state["maximized_panel"] = kind
+        if st.session_state.get("maximized_panel") and st.session_state["maximized_panel"] != kind:
+            st.session_state["maximized_panel"] = None
+        st.session_state["_dock_reveal"] = kind
     elif st.session_state.get("maximized_panel") == kind:
         st.session_state["maximized_panel"] = None
     return opening
@@ -589,7 +570,9 @@ def _global_topbar() -> None:
         with left, st.container(key="topbar_left"):
             brand, sidebar_toggle, settings = st.columns([3, .65, .65], vertical_alignment="center", gap="small")
             with brand:
-                st.html('<div class="ql-topbar-brand"><strong>QUANT LAB</strong></div>')
+                import base64
+                logo = base64.b64encode((Path(__file__).resolve().parents[1] / "assets" / "quantlab.png").read_bytes()).decode()
+                st.html(f'<div class="ql-topbar-brand"><img src="data:image/png;base64,{logo}" alt="Quant Lab"><strong>QUANT LAB</strong></div>')
             with sidebar_toggle:
                 st.button("▥", key="left_sidebar_toggle", width="stretch", on_click=_toggle_left_sidebar)
             with settings:
@@ -607,6 +590,8 @@ def _global_topbar() -> None:
         sidebar_state = "visible" if st.session_state["left_sidebar_visible"] else "hidden"
         st.html(f'<span class="ql-left-sidebar-state ql-left-sidebar-{sidebar_state}"></span>')
         st.html(f'<span class="ql-dock-active" data-panel="{st.session_state["active_dock_panel"]}"></span>')
+        reveal = st.session_state.pop("_dock_reveal", "")
+        st.html(f'<span class="ql-dock-reveal" data-panel="{reveal}" data-token="{time.monotonic_ns() if reveal else 0}"></span>')
         st.html(SIDEBAR_LAYOUT_JS, unsafe_allow_javascript=True)
         st.html(TOPBAR_REORDER_JS, unsafe_allow_javascript=True)
 
@@ -934,8 +919,8 @@ def _consume_history(query):
 
 def render_app() -> None:
     st.set_page_config(
-        page_title="Quant Lab CN/HK",
-        page_icon="📈",
+        page_title="Quant Lab",
+        page_icon=str(Path(__file__).resolve().parents[1] / "assets" / "quantlab.png"),
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -957,100 +942,103 @@ def render_app() -> None:
     _global_topbar()
     st.session_state.pop("_open_ai_page", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
-    if st.session_state["nav_section"] == "研究工作台" and market != "美股":
-        page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
-                        format_func=RESEARCH.get, label_visibility="collapsed")
-        st.session_state["nav_page"] = page
-    bundle: HistoryBundle | None = None
-    error: str | None = None
-    query = None
-    st.session_state["active_backtest_context"] = None
-    st.session_state["active_analysis_context"] = None
-    st.session_state["active_learning_context"] = None
-    record = None
-    if dates is not None:
-        query = (market, symbol, dates[0], dates[1], adjustment)
-        if clicked:
-            _submit_history(query)
-        _consume_history(query)
-        if st.session_state.get("loaded_query") == query:
-            bundle = st.session_state.get("loaded_bundle")
-            error = st.session_state.get("load_error")
-            if bundle is not None:
-                current_name = names.cached_security_name(market, symbol)
-                if current_name and current_name != bundle.company_name:
-                    bundle = replace(bundle, company_name=current_name)
-                    st.session_state["loaded_bundle"] = bundle
+    with st.container(key="workbench_scroller"):
+        with st.container(key="workbench_track"):
+            with st.container(key="main_workspace"):
+                if st.session_state["nav_section"] == "研究工作台" and market != "美股":
+                    page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
+                                    format_func=RESEARCH.get, label_visibility="collapsed")
+                    st.session_state["nav_page"] = page
+                bundle: HistoryBundle | None = None
+                error: str | None = None
+                query = None
+                st.session_state["active_backtest_context"] = None
+                st.session_state["active_analysis_context"] = None
+                st.session_state["active_learning_context"] = None
+                record = None
+                if dates is not None:
+                    query = (market, symbol, dates[0], dates[1], adjustment)
+                    if clicked:
+                        _submit_history(query)
+                    _consume_history(query)
+                    if st.session_state.get("loaded_query") == query:
+                        bundle = st.session_state.get("loaded_bundle")
+                        error = st.session_state.get("load_error")
+                        if bundle is not None:
+                            current_name = names.cached_security_name(market, symbol)
+                            if current_name and current_name != bundle.company_name:
+                                bundle = replace(bundle, company_name=current_name)
+                                st.session_state["loaded_bundle"] = bundle
 
-    st.session_state["_current_query"] = query
-    if st.session_state.get("ai_followup_context") and st.session_state.get("ai_followup_query") != query:
-        st.session_state.pop("ai_followup_context", None)
+                st.session_state["_current_query"] = query
+                if st.session_state.get("ai_followup_context") and st.session_state.get("ai_followup_query") != query:
+                    st.session_state.pop("ai_followup_context", None)
 
-    latest_date = (
-        bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
-        if bundle is not None and not bundle.frame.empty else None
-    )
-    base_context = bundle_context(page, bundle)
-    context_bundle = bundle
-    st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else base_context.get("data_fingerprint")
-    if page == "市场数据":
-        _market_workspace(query, market, symbol, adjustment)
-        bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
-    elif page == "Quant Academy":
-        from quant_lab.ui_learning import render_academy
-        render_academy()
-    elif page == "美股数据":
-        from quant_lab.ui_us import render_us_source_status
-        render_us_source_status()
-    elif page == "美股研究":
-        from quant_lab.ui_us import render_us_research
-        render_us_research()
-    elif page == "多股票比较":
-        from quant_lab.ui_comparison import render_comparison
-        render_comparison()
-    else:
-        _header(page, market, symbol, latest_date)
-        if error:
-            st.warning(error)
-        if page == "策略实验室":
-            from quant_lab.ui_strategy import render_strategy
-            render_strategy(bundle)
-        elif page == "历史回测":
-            from quant_lab.ui_strategy import render_backtest
-            render_backtest(bundle)
-        elif page == "风险与组合":
-            from quant_lab.ui_analysis import render_risk
-            render_risk(bundle)
-        elif page == "统计与机器学习":
-            from quant_lab.ui_analysis import render_statistics
-            render_statistics(bundle)
-        elif page == "研究实验台":
-            from quant_lab.ui_experiments import render_experiment_lab
-            render_experiment_lab(bundle)
-    context = experiment_context(record) if record else base_context if bundle is context_bundle else bundle_context(page, bundle)
-    context["page"] = page
-    if st.session_state.get("active_backtest_context"):
-        context.update(st.session_state["active_backtest_context"])
-    if st.session_state.get("active_analysis_context"):
-        context["statistics"] = st.session_state["active_analysis_context"]
-    if page == "Quant Academy":
-        context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
-                   "data_status": "离线教学实验，不是股票行情。"}
-    if page in ("美股研究", "美股数据"):
-        context=st.session_state.get("active_us_context",{"page":page,"data_status":"尚未加载合格真实美股数据"})
-        st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
-    if page == "多股票比较":
-        context=st.session_state.get("active_comparison_context",{"page":page,"data_status":"尚未加载比较输入"})
-        st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
-    if page == "研究实验台":
-        context=st.session_state.get("active_lab_context",{"page":page,"data_status":"尚未完成研究验证"})
-        st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
-    if st.session_state.get("active_learning_context"):
-        context["learning_context"] = st.session_state["active_learning_context"]
-    st.session_state["_current_ai_context"] = context
-    _render_right_dock(context, bundle)
+                latest_date = (
+                    bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
+                    if bundle is not None and not bundle.frame.empty else None
+                )
+                base_context = bundle_context(page, bundle)
+                context_bundle = bundle
+                st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else base_context.get("data_fingerprint")
+                if page == "市场数据":
+                    _market_workspace(query, market, symbol, adjustment)
+                    bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
+                elif page == "Quant Academy":
+                    from quant_lab.ui_learning import render_academy
+                    render_academy()
+                elif page == "美股数据":
+                    from quant_lab.ui_us import render_us_source_status
+                    render_us_source_status()
+                elif page == "美股研究":
+                    from quant_lab.ui_us import render_us_research
+                    render_us_research()
+                elif page == "多股票比较":
+                    from quant_lab.ui_comparison import render_comparison
+                    render_comparison()
+                else:
+                    _header(page, market, symbol, latest_date)
+                    if error:
+                        st.warning(error)
+                    if page == "策略实验室":
+                        from quant_lab.ui_strategy import render_strategy
+                        render_strategy(bundle)
+                    elif page == "历史回测":
+                        from quant_lab.ui_strategy import render_backtest
+                        render_backtest(bundle)
+                    elif page == "风险与组合":
+                        from quant_lab.ui_analysis import render_risk
+                        render_risk(bundle)
+                    elif page == "统计与机器学习":
+                        from quant_lab.ui_analysis import render_statistics
+                        render_statistics(bundle)
+                    elif page == "研究实验台":
+                        from quant_lab.ui_experiments import render_experiment_lab
+                        render_experiment_lab(bundle)
+                context = experiment_context(record) if record else base_context if bundle is context_bundle else bundle_context(page, bundle)
+                context["page"] = page
+                if st.session_state.get("active_backtest_context"):
+                    context.update(st.session_state["active_backtest_context"])
+                if st.session_state.get("active_analysis_context"):
+                    context["statistics"] = st.session_state["active_analysis_context"]
+                if page == "Quant Academy":
+                    context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
+                               "data_status": "离线教学实验，不是股票行情。"}
+                if page in ("美股研究", "美股数据"):
+                    context=st.session_state.get("active_us_context",{"page":page,"data_status":"尚未加载合格真实美股数据"})
+                    st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
+                if page == "多股票比较":
+                    context=st.session_state.get("active_comparison_context",{"page":page,"data_status":"尚未加载比较输入"})
+                    st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
+                if page == "研究实验台":
+                    context=st.session_state.get("active_lab_context",{"page":page,"data_status":"尚未完成研究验证"})
+                    st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
+                if st.session_state.get("active_learning_context"):
+                    context["learning_context"] = st.session_state["active_learning_context"]
+                st.session_state["_current_ai_context"] = context
+                render_background_tasks()
+            _render_right_dock(context, bundle)
     if st.session_state.get("settings_open"):
         render_settings_panel()
-    render_background_tasks()
     reset_main_scroll(page, key="page")
     signal_frontend_ready()

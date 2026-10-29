@@ -15,6 +15,7 @@ datas = [
     (str(ROOT / "quant_lab" / "resources"), "quant_lab/resources"),
     (str(ROOT / "docs" / "knowledge-drafts"), "docs/knowledge-drafts"),
     (str(ROOT / "assets" / "quantlab.ico"), "assets"),
+    (str(ROOT / "assets" / "quantlab.png"), "assets"),
 ]
 binaries = []
 hiddenimports = collect_submodules("quant_lab") + [

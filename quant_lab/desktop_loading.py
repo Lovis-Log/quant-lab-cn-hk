@@ -39,6 +39,15 @@ class StartupOverlay:
         brand.Font = Font("Segoe UI", 23, FontStyle.Bold)
         brand.AutoSize = True
         brand.Margin = Padding(0, 0, 0, round(12 * scale))
+        from pathlib import Path
+        from System.Drawing import Image as NativeImage
+        from System.Windows.Forms import PictureBox, PictureBoxSizeMode
+        logo = PictureBox()
+        logo.Size = size(56, 56)
+        logo.SizeMode = PictureBoxSizeMode.Zoom
+        logo.Image = NativeImage.FromFile(str(Path(__file__).resolve().parents[1] / "assets" / "quantlab.png"))
+        logo.Margin = Padding(0, 0, 0, round(12 * scale))
+        self.logo_image = logo.Image
         status = Label()
         status.Text = "正在准备工作区"
         status.ForeColor = Color.FromArgb(146, 154, 163)
@@ -53,7 +62,7 @@ class StartupOverlay:
         animations = ctypes.c_int(1)
         ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(animations), 0)
         progress.Visible = bool(animations.value)
-        for control in (brand, status, progress):
+        for control in (logo, brand, status, progress):
             content.Controls.Add(control)
         panel.Controls.Add(content)
 
@@ -81,6 +90,7 @@ class StartupOverlay:
                 self.form.Controls.Remove(self.panel)
                 self.panel.Dispose()
                 self.panel = None
+                self.logo_image.Dispose()
         if self.form.InvokeRequired:
             self.form.BeginInvoke(Action(remove))
         else:

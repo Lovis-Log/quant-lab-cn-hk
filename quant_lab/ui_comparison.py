@@ -60,53 +60,6 @@ def _open_us_teaching():
     st.session_state["us_source_mode"] = "离线教学样本"
 
 
-def _close_stock_picker():
-    st.session_state.pop("_stock_picker_market", None)
-
-
-@st.dialog("选择比较股票", width="medium", on_dismiss=_close_stock_picker)
-def _stock_picker(market):
-    from quant_lab.securities import security_directory
-    from quant_lab.storage import list_watchlist
-    labels = {}
-    try:
-        directory = security_directory(market)
-        labels = dict(directory.rows)
-        if directory.error:
-            st.warning(directory.error)
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        st.warning(str(error))
-    current_text = st.session_state.get("compare_codes", "")
-    try:
-        current = comparison_selection(market, current_text)
-    except ValueError as error:
-        st.warning(f"当前手动输入需要修正：{error} 确认候选将替换这份草稿。")
-        current = ()
-    try:
-        watched = [code for item_market, code in list_watchlist() if item_market == market]
-    except (OSError, ValueError, sqlite3.Error):
-        watched = []
-    candidates = list(dict.fromkeys([*watched, *current, *labels]))
-    candidate_labels = {code: labels.get(code) or names.cached_security_name(market, code) or "名称暂不可用" for code in candidates}
-    selected = st.multiselect("搜索名称或代码，选择要比较的股票", candidates, default=list(current),
-        format_func=lambda code: f"{'★ ' if code in watched else ''}{code} · {candidate_labels[code]}",
-        max_selections=10, key="stock_picker_selection_" + market,
-        placeholder="输入名称或代码搜索")
-    st.caption(f"已选择 {len(selected)}/10 只 · ★ 自选股优先 · 至少2只才可加载比较")
-    if st.button("确认选择", key="stock_picker_apply", type="primary"):
-        st.session_state["_comparison_pending_codes"] = (market, ",".join(comparison_selection(market, "", selected)))
-        _close_stock_picker()
-        st.rerun(scope="app")
-    if not labels and st.button("更新证券目录", key="stock_picker_directory"):
-        submit_task("directory", market, security_directory, market, force=True)
-        st.rerun(scope="app")
-
-
-def _show_stock_picker(market):
-    st.session_state.pop("stock_picker_selection_" + market, None)
-    st.session_state["_stock_picker_market"] = market
-
-
 def _chart(frame,labels,view,height=330,percentage=False):
     figure=go.Figure()
     trace=go.Scattergl if len(frame)>1000 else go.Scatter
@@ -211,16 +164,9 @@ def render_comparison():
         st.button("进入美元教学研究", key="comparison_us_teaching", on_click=_open_us_teaching, icon=":material/school:")
         return
     st.session_state.setdefault("_comparison_draft_market", market)
-    pending_codes = st.session_state.pop("_comparison_pending_codes", None)
-    if pending_codes and pending_codes[0] == market:
-        st.session_state["compare_codes"] = pending_codes[1]
     st.session_state.setdefault("compare_codes", "600519,000001,600036" if market == "A 股" else "00700,00941,00005")
-    code_col, picker_col = st.columns((12, 1), vertical_alignment="bottom", gap="small")
-    code_text = code_col.text_input("比较股票代码（2–10只，逗号分隔）", key="compare_codes")
-    if picker_col.button("＋", key="comparison_add_stock", width="stretch", help="按名称或代码选择股票"):
-        _show_stock_picker(market)
-    if st.session_state.get("_stock_picker_market") == market:
-        _stock_picker(market)
+    from quant_lab.ui_security_picker import render_security_picker
+    code_text = render_security_picker(market, "compare_codes", multiple=True, label="比较股票（2–10只，代码 / 名称）")
     currency="CNY" if market=="A 股" else "HKD"
     start_default,end_default=history_window(datetime.now(ZoneInfo("Asia/Shanghai")).date(),1)
     with st.form("comparison_parameters",border=False):

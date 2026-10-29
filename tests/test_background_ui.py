@@ -7,6 +7,7 @@ from threading import Event
 
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import select_security
 from conftest import navigate
 
 from quant_lab.data import HistoryBundle
@@ -37,7 +38,7 @@ def test_slow_request_allows_page_switch_and_late_old_query_is_discarded(monkeyp
         assert any("ql-loading-placeholder" in item.value for item in app.get("html"))
         navigate(app, "Quant Academy")
         assert any("Quant Academy" in item.value for item in app.subheader)
-        app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
+        select_security(app, "symbol_A 股", "000001")
         gate.set()
         finish_background_jobs(app)
         assert "loaded_bundle" not in app.session_state or app.session_state["loaded_bundle"] is None
@@ -91,14 +92,19 @@ def test_completed_research_on_another_page_stops_polling_and_can_be_opened(monk
     assert not app.exception
 
 
-def test_maximized_workspace_switches_to_requested_dock():
+def test_opening_another_dock_exits_maximize_and_keeps_panels():
     app = AppTest.from_file(Path(__file__).resolve().parents[1]/"app.py", default_timeout=8).run()
     app.button(key="manual_panel_maximize").click().run()
     assert app.session_state["maximized_panel"] == "manual"
     app.button(key="deepseek_panel_toggle").click().run()
-    assert app.session_state["maximized_panel"] == "deepseek"
+    assert app.session_state["maximized_panel"] is None
     assert app.button(key="deepseek_panel_close")
     app.button(key="manual_panel_toggle").click().run()
-    assert app.session_state["maximized_panel"] == "manual"
+    assert app.session_state["maximized_panel"] is None
     assert app.button(key="manual_panel_close")
+    app.button(key="notes_panel_toggle").click().run()
+    app.button(key="manual_panel_maximize").click().run()
+    app.button(key="notes_panel_toggle").click().run()
+    assert app.session_state["maximized_panel"] is None
+    assert all(app.session_state[kind + "_panel_open"] for kind in ("manual", "deepseek", "notes"))
     assert not app.exception
