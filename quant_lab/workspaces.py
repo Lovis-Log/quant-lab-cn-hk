@@ -21,7 +21,7 @@ _LOCK=RLock()
 BOOLS={"manual_panel_open","deepseek_panel_open","notes_panel_open","left_sidebar_visible","comparison_watch_open"}
 NUMBERS={"compare_window":(2,252),"compare_fraction":(.5,.85),"compare_cash":(100,1e12),
     "compare_commission":(0,10000),"compare_minimum":(0,1e8),"compare_buyfee":(0,10000),"compare_sellfee":(0,10000),"compare_slippage":(0,9999)}
-OPTIONS={"nav_page":{"Quant Academy","市场数据","多股票比较","历史回测","策略实验室","风险与组合","统计与机器学习","美股研究"},
+OPTIONS={"nav_page":{"Quant Academy","市场数据","多股票比较","历史回测","策略实验室","风险与组合","统计与机器学习","美股研究","研究实验台"},
     "market_selection":{"A 股","港股"},"compare_market":{"A 股","港股"},"compare_adjustment":{"","qfq","hfq"},
     "compare_frequency":{"monthly","daily"},"history_preset":{"1 年","3 年","5 年","10 年","自定义"},
     "compare_limit":{"10%","5%","20%","30%","不模拟"},"active_dock_panel":{"manual","notes","deepseek"},"maximized_panel":{None,"manual","notes","deepseek"}}

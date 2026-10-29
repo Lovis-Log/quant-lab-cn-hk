@@ -36,6 +36,46 @@ def settle(page):
     page.wait_for_function("""() => document.querySelector('[data-testid=stApp]')?.getAttribute('data-test-script-state') === 'notRunning' && ['manual','deepseek','notes'].every(kind=>document.querySelectorAll(`.st-key-${kind}_side_panel`).length<=1)""", timeout=45000)
 
 
+def close_owned_native_window(pid,host_pid):
+    """Use the actual Windows close path, scoped to our exact test process."""
+    import ctypes
+    from ctypes import wintypes
+    if host_pid!=pid:
+        class BasicInfo(ctypes.Structure):
+            _fields_=[("reserved",ctypes.c_void_p),("peb",ctypes.c_void_p),("other",ctypes.c_void_p*2),
+                      ("unique",ctypes.c_void_p),("parent",ctypes.c_void_p)]
+        kernel=ctypes.windll.kernel32
+        kernel.OpenProcess.argtypes=[wintypes.DWORD,wintypes.BOOL,wintypes.DWORD]
+        kernel.OpenProcess.restype=wintypes.HANDLE
+        kernel.CloseHandle.argtypes=[wintypes.HANDLE]
+        handle=kernel.OpenProcess(0x1000,False,host_pid)
+        if not handle:raise RuntimeError("Cannot verify the test interpreter process.")
+        try:
+            query=ctypes.windll.ntdll.NtQueryInformationProcess
+            query.argtypes=[wintypes.HANDLE,wintypes.ULONG,ctypes.c_void_p,wintypes.ULONG,ctypes.c_void_p]
+            info=BasicInfo()
+            if query(handle,0,ctypes.byref(info),ctypes.sizeof(info),None)!=0 or info.parent!=pid:
+                raise RuntimeError("Desktop host is not the test process or its direct interpreter child.")
+        finally:kernel.CloseHandle(handle)
+    api=ctypes.windll.user32
+    callback_type=ctypes.WINFUNCTYPE(wintypes.BOOL,wintypes.HWND,wintypes.LPARAM)
+    api.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+    api.IsWindowVisible.argtypes=[wintypes.HWND]
+    api.EnumWindows.argtypes=[callback_type,wintypes.LPARAM]
+    api.PostMessageW.argtypes=[wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+    windows=[]
+    @callback_type
+    def owned(handle,parameter):
+        owner=wintypes.DWORD()
+        api.GetWindowThreadProcessId(handle,ctypes.byref(owner))
+        if owner.value==host_pid and api.IsWindowVisible(handle):windows.append(handle)
+        return True
+    api.EnumWindows(owned,0)
+    if not windows:raise RuntimeError("No visible desktop window belongs to the test process.")
+    for handle in windows:
+        if not api.PostMessageW(handle,0x0010,0,0):raise RuntimeError("Test-window close request failed.")
+
+
 @contextmanager
 def capture_failure(page, directory):
     try:
@@ -66,6 +106,7 @@ def main():
     parser.add_argument("--history-quality", action="store_true")
     parser.add_argument("--us-research", action="store_true")
     parser.add_argument("--comparison", action="store_true")
+    parser.add_argument("--research-lab", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.repetitions <= 100:
         parser.error("repetitions must be 1..100")
@@ -90,6 +131,9 @@ def main():
     code = launcher.read_text(encoding="utf-8")
     marker = "from __future__ import annotations"
     code = code.replace(marker, marker + f"\nimport ctypes\nctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('QuantLab.Validation.{directory.name}')", 1)
+    # Windows venv's redirector PID can differ from the real GUI interpreter.
+    # Record only our own host PID in the isolated copy, not production code.
+    code=code.replace('"debug_port": probe_debug_port,','"debug_port": probe_debug_port, "host_pid": os.getpid(),',1)
     launcher.write_text(code, encoding="utf-8")
     probe = directory / "probe.json"
     environment = {**os.environ, "QUANT_LAB_DATA_DIR": str(directory / "user"),
@@ -155,6 +199,62 @@ def main():
                     report["startup_ms"] = round((time.perf_counter()-started)*1000, 1)
                     assert page.url.startswith("http://127.0.0.1:")
                     assert page.title() == "Quant Lab CN/HK"
+                    if args.research_lab:
+                        preset=page.get_by_role("combobox",name="快捷历史区间",exact=True)
+                        preset.click();preset.fill("10 年");preset.press("Enter")
+                        settle(page)
+                        page.get_by_role("button",name="加载真实历史日线",exact=True).click()
+                        page.get_by_text("已加载模拟/教学数据",exact=False).first.wait_for(timeout=45000)
+                        page.get_by_test_id("stSidebar").get_by_text("研究实验台",exact=True).click()
+                        page.get_by_role("heading",name="研究实验台",exact=True).wait_for()
+                        settle(page)
+                        page.get_by_role("button",name="运行研究验证",exact=True).click()
+                        page.get_by_role("heading",name="研究验证已完成",exact=True).wait_for(timeout=90000)
+                        page.get_by_role("button",name="导出可离线复算研究报告",exact=True).wait_for()
+                        page.get_by_role("heading",name="研究验证已完成",exact=True).scroll_into_view_if_needed()
+                        settle(page)
+                        page.screenshot(path=str(directory/"research-scan.png"))
+                        page.get_by_role("tab",name="滚动样本外",exact=True).click()
+                        settle(page)
+                        page.screenshot(path=str(directory/"research-walk.png"))
+                        page.get_by_role("tab",name="成本压力",exact=True).click()
+                        settle(page)
+                        page.screenshot(path=str(directory/"research-stress.png"))
+                        page.get_by_role("button",name="保存验证实验",exact=True).click()
+                        page.get_by_text("验证实验 #1 已保存",exact=False).wait_for()
+                        long_window=page.get_by_label("长周期（交易日）",exact=True)
+                        long_window.fill("20");long_window.press("Tab")
+                        page.get_by_role("button",name="运行研究验证",exact=True).click()
+                        page.get_by_role("heading",name="研究验证已完成",exact=True).wait_for(timeout=90000)
+                        settle(page)
+                        page.get_by_role("button",name="保存验证实验",exact=True).click()
+                        page.get_by_text("验证实验 #2 已保存",exact=False).wait_for()
+                        page.get_by_text("存档实验比较",exact=True).click()
+                        settle(page)
+                        chooser=page.get_by_role("combobox",name="选择2–6个存档实验",exact=True)
+                        chooser.click()
+                        options=[label for label in page.get_by_role("option").all_text_contents() if label.strip().startswith("#")]
+                        assert len(options)==2
+                        page.keyboard.press("Escape")
+                        for label in options:
+                            chooser.click()
+                            page.get_by_role("option",name=label.strip(),exact=True).click()
+                            page.keyboard.press("Escape")
+                        page.get_by_role("button",name="复算并比较所选存档",exact=True).click()
+                        page.get_by_text("对比固定基础策略全样本结果",exact=False).wait_for(timeout=60000)
+                        settle(page)
+                        page.screenshot(path=str(directory/"research-compare.png"))
+                        page.get_by_text("完整验证配方离线复算",exact=True).click()
+                        page.get_by_role("button",name="复算存档验证配方",exact=True).click()
+                        page.get_by_text("验证配方离线复算一致",exact=False).wait_for(timeout=90000)
+                        settle(page)
+                        page.screenshot(path=str(directory/"research-replay.png"))
+                        report["research_scan_walk_stress"]=True
+                        report["research_two_archives_saved_and_replayed"]=True
+                        report["research_report_export_visible"]=True
+                        report["research_full_archive_validation_replayed"]=True
+                        page.get_by_test_id("stSidebar").get_by_text("市场数据",exact=True).click()
+                        settle(page)
                     if args.comparison:
                         page.wait_for_timeout(500)
                         settle(page)
@@ -458,11 +558,8 @@ def main():
                         settle(page)
                         report["cpu_cancel"] = True
                     assert page.get_by_test_id("stException").count() == 0
-                    try:
-                        page.evaluate("window.pywebview.api.close()")
-                    except Exception as error:
-                        if "closed" not in str(error).lower():
-                            raise
+                    close_owned_native_window(child.pid,payload["host_pid"])
+                    report["close_method"]="owned-native-WM_CLOSE"
                     child.wait(timeout=20)
         final = json.loads(probe.read_text(encoding="utf-8"))
         report["child_stopped"] = final.get("child_stopped", False)

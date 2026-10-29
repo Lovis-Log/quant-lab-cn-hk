@@ -19,6 +19,8 @@ from quant_lab import names
 from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
 from dataclasses import asdict
 from quant_lab.research_inputs import prepare_inputs
+from quant_lab.research_versions import LEGACY_VERSIONS
+from quant_lab.research_diagnostics import backtest_diagnostics
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -258,6 +260,14 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     grid = st.session_state["backtest_grid"]
     st.dataframe(grid, width="stretch", hide_index=True)
     st.caption("A 股模拟 T+1、用户设定的买入单位、零成交量和简化涨跌停；港股交易单位也由用户输入。停牌、涨跌停队列、公司行动、幸存者偏差和真实费用无法由日线完整重建。")
+    with st.expander("成本、未成交与仓位诊断"):
+        diagnostic=backtest_diagnostics(st.session_state["backtest_raw"],result.strategy,config)
+        labels={"order_attempts":"订单尝试","filled_orders":"成交订单","blocked_orders":"未成交订单","commission":"佣金",
+            "additional_fees":"附加费用","charged_fees":"实收费用","slippage_estimate":"滑点价差估计","traded_notional":"累计成交金额",
+            "notional_turnover":"成交金额/平均权益","average_exposure":"平均仓位暴露","maximum_exposure":"最大仓位暴露"}
+        st.table(pd.DataFrame([{"指标":labels.get(key,key),"数值":value} for key,value in diagnostic.summary.items()]))
+        st.dataframe(diagnostic.blocked,width="stretch",hide_index=True)
+        st.caption("换手为累计双边成交金额/平均日权益；滑点价差另列，不重复计入费用。规则为研究假设。更多滚动验证与压力测试在研究实验台。")
     with st.expander("保存本次实验与研究笔记"):
         may_save = bundle.retention.allowed and bool(bundle.retention.evidence)
         if not may_save:
@@ -277,6 +287,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
                     received_at=bundle.received_at,
                     company_name=bundle.company_name,
                     input_manifest=st.session_state.get("backtest_manifest", {}),
+                    version_metadata=LEGACY_VERSIONS,
                 )
                 st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
             except (OSError, ValueError, sqlite3.Error) as exc:

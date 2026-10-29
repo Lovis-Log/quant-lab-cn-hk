@@ -69,6 +69,12 @@ US现金账户分别核算已结算现金、待结算卖出款、应收股息和
 
 ## 实验复现
 
+阶段七以`research_validation.py`、`research_diagnostics.py`、`research_reports.py`和`experiment_comparison.py`实现纯本地服务；计算进程入口不在Streamlit模块。`ValidationRecipe`限制36候选/8折/10000行/200万预计行次；扫描只看固定训练前缀，滚动逐折重新训练而一次连续执行，不重置仓位。压力用固定基础策略，失败情景不填0。UI票据绑定当前输入、参数与捕获批次，旧结果不覆盖新输入。
+
+`research_versions.py`声明保留的ah-single-v1和新research-validation-v1；SQLite v6原input_manifest_json记录可缺省版本/验证配方，不改schema或旧BLOB。旧档缺声明走兼容路由，未知/空显式声明拒绝；原指纹与可用旧机器输出/订单同时核对。4成员旧ZIP保留，新增验证ZIP包含全输入/输出SHA、规则/配方和未知公司行动状态；固定成员/大小、无extractall/代码执行，离线逐表/文本复算。
+
+比较只从本地计算事实构建2–6实验，数据/区间/币种/版本/资金或测试切分不一致显式标记，受限条件下不画统一净值。AI只收statistics白名单数值摘要，不默认收标题/私人笔记/完整行情；教学与失败旧结果状态保持一致。完整协议见docs/RESEARCH_STAGE7.md。
+
 回测读取同一交易日的信号价和不复权成交价，按日期严格对齐。信号由收盘形成，下一交易日开盘尝试成交。保存实验时，SQLite 压缩存储两份 CSV 快照和 SHA-256、参数、费用、市场、来源、接收时间、结果与研究笔记。复算从归档输入重新运行并核对实验指纹。ZIP 包含 Markdown 报告、两份行情 CSV 与 `assumptions.json`。
 
 ## 桌面与未来演进

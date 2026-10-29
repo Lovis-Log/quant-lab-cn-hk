@@ -49,7 +49,7 @@ from quant_lab.ui_settings import (
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy", "美股研究", "多股票比较")
+PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy", "美股研究", "多股票比较", "研究实验台")
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 SIDEBAR_LAYOUT_JS = """
@@ -356,6 +356,7 @@ def _protect_session_widgets() -> None:
         "workspace_name","compare_market","compare_codes","compare_benchmark","compare_start","compare_end","compare_adjustment","compare_window",
         "compare_fraction","compare_frequency","compare_cash","compare_commission","compare_minimum","compare_buyfee","compare_sellfee","compare_slippage","compare_limit",
         "comparison_watch_open",
+        "lab_mode","lab_kind","lab_short","lab_long","lab_shorts","lab_longs","lab_score","lab_fraction","lab_train","lab_test","lab_folds","lab_stress",
     }
     prefixes = (
         "strategy_", "backtest_", "portfolio_", "model_", "research_", "academy_parameter_",
@@ -1018,6 +1019,9 @@ def render_app() -> None:
             render_risk(bundle)
         elif page == "统计与机器学习":
             render_statistics(bundle)
+        elif page == "研究实验台":
+            from quant_lab.ui_experiments import render_experiment_lab
+            render_experiment_lab(bundle)
     context = experiment_context(record) if record else bundle_context(page, bundle)
     context["page"] = page
     if st.session_state.get("active_backtest_context"):
@@ -1032,6 +1036,9 @@ def render_app() -> None:
         st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
     if page == "多股票比较":
         context=st.session_state.get("active_comparison_context",{"page":page,"data_status":"尚未加载比较输入"})
+        st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
+    if page == "研究实验台":
+        context=st.session_state.get("active_lab_context",{"page":page,"data_status":"尚未完成研究验证"})
         st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
     if st.session_state.get("active_learning_context"):
         context["learning_context"] = st.session_state["active_learning_context"]

@@ -56,6 +56,8 @@ TASK_LABELS = {"history": "历史日线", "history_refresh": "历史日线更新
 TASK_LABELS.update({"backtest_raw": "回测成交价格", "portfolio_data": "组合行情"})
 TASK_LABELS.update({"us_research":"美元教学研究","us_source_check":"免费美股来源核验"})
 TASK_LABELS.update({"comparison_data":"多股票行情","comparison_calc":"多股票比较","cash_inputs":"组合成交价格","cash_portfolio":"现金持仓组合"})
+TASK_LABELS.update({"lab_inputs":"研究验证输入","lab_validation":"研究验证","lab_saved_compare":"存档复算与比较"})
+TASK_LABELS["lab_archive_replay"]="验证配方离线复算"
 
 
 def render_background_tasks():
