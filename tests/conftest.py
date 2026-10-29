@@ -29,3 +29,15 @@ def finish_background_jobs(app, timeout=15):
         time.sleep(.02)
         app.run()
     return app
+
+
+def navigate(app, page):
+    """Exercise the visible compact navigation while retaining legacy test intent."""
+    from quant_lab.navigation import navigation_values, RESEARCH
+    values = navigation_values({"nav_page": page})
+    app.sidebar.radio(key="nav_section").set_value(values["nav_section"]).run()
+    if page == "美股研究":
+        app.sidebar.selectbox(key="market_selection").set_value("美股").run()
+    elif page in RESEARCH:
+        app.radio(key="research_page").set_value(page).run()
+    return app

@@ -70,6 +70,7 @@ def render_library_setup() -> None:
 
 def _close_settings() -> None:
     st.session_state["settings_open"] = False
+    st.session_state["settings_app_rerun_pending"] = True
 
 
 def _queue_learning_mode_refresh() -> None:
@@ -89,12 +90,21 @@ def _refresh_learning_mode_page() -> None:
     _queue_learning_mode_refresh()
 
 
+def _refresh_schedule_changed(key):
+    persist_setting(key)
+    # Fragment intervals/closures must be registered again after a schedule edit.
+    st.session_state["settings_app_rerun_pending"] = True
+
+
 def rerun_pending_settings() -> None:
     """Consume settings-triggered app reruns before any fragment is rendered."""
-    if st.session_state.pop("learning_mode_app_rerun_pending", False):
+    pending = st.session_state.pop("learning_mode_app_rerun_pending", False)
+    pending = st.session_state.pop("settings_app_rerun_pending", False) or pending
+    if pending:
         st.rerun(scope="app")
 
 
+@st.fragment
 def render_settings_panel() -> None:
     with st.container(key="settings_panel"):
         title, close = st.columns([5, 1], vertical_alignment="center")
@@ -102,7 +112,7 @@ def render_settings_panel() -> None:
             st.html('<div class="ql-ai-panel-title"><strong>设置</strong><span>SETTINGS</span></div>')
         with close:
             st.button("×", key="settings_close", on_click=_close_settings, width="stretch")
-        storage_tab, ai_tab, preference_tab = st.tabs(("资料文件夹", "DeepSeek", "偏好设置"))
+        preference_tab, storage_tab, ai_tab, declaration_tab = st.tabs(("偏好设置", "资料文件夹", "DeepSeek", "声明与数据来源"))
         with storage_tab:
             st.caption("当前资料库位置")
             st.code(str(user_data_dir()), language=None)
@@ -110,6 +120,8 @@ def render_settings_panel() -> None:
         with ai_tab:
             render_connection_settings()
         with preference_tab:
+            from quant_lab.ui_workspaces import render_workspace_presets
+            render_workspace_presets()
             learning_toggle, refresh = st.columns(
                 [3, 1], vertical_alignment="bottom", gap="small"
             )
@@ -126,13 +138,64 @@ def render_settings_panel() -> None:
                 )
             st.caption("只调整页面解释密度，不改变行情、策略、回测、统计或组合计算。")
             st.toggle("自动刷新行情（仅市场页）", key="refresh_enabled",
-                      on_change=persist_setting, args=("refresh_enabled",))
+                      on_change=_refresh_schedule_changed, args=("refresh_enabled",))
             st.selectbox("自动刷新间隔", INTERVALS, key="refresh_interval_seconds",
                          format_func=lambda seconds: f"{seconds//60} 分钟",
-                         on_change=persist_setting, args=("refresh_interval_seconds",))
+                         on_change=_refresh_schedule_changed, args=("refresh_interval_seconds",))
             st.caption("自动刷新只在软件和市场页会话运行时生效；关闭软件后不更新。")
             if st.session_state.get("settings_error"):
                 st.warning(st.session_state.pop("settings_error"))
+        with declaration_tab:
+            _render_declarations()
+    if st.session_state.pop("settings_app_rerun_pending", False):
+        st.rerun(scope="app")
+    rerun_pending_settings()
+
+
+def _render_declarations():
+    from quant_lab import names
+    from quant_lab.securities import security_directory
+    from quant_lab.ui_jobs import submit_task, take_result, cancel_task
+    from quant_lab.jobs import JobState
+    from quant_lab.ui_updates import beijing
+
+    st.markdown("仅供学习与模拟研究，不提供实盘下单。历史日线及缓存均不是实时行情；确切延迟未知。")
+    st.caption("证券目录只提供代码与名称候选，不是投资推荐，也不验证当前上市状态。")
+    market = st.session_state.get("market_selection", "A 股")
+    if market == "美股":
+        st.info("美股以USD独立研究；当前真实来源尚未通过完整关卡。教学样本不代表真实行情。")
+        return
+    completed = take_result("directory", market)
+    if completed and completed.state == JobState.FAILED:
+        st.warning(completed.error)
+    try:
+        directory = security_directory(market)
+        st.write(f"{market}证券目录 · {len(directory.rows)}只")
+        st.caption(f"{directory.source} · 获取于 {beijing(directory.received_at)}")
+        if directory.error:
+            st.warning(directory.error)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        st.warning(str(error))
+    if st.button("更新股票候选目录", key="refresh_security_directory"):
+        submit_task("directory", market, security_directory, market, force=True)
+        st.session_state["settings_app_rerun_pending"] = True
+    selected = st.session_state.get("_selected_security")
+    if selected and selected[0] == market:
+        st.write(names.cached_security_label(*selected))
+        try:
+            record = names.storage.cached_security_name(*selected)
+            if record:
+                st.caption(f"名称资料：{record['source']} · 成功获取于 {beijing(record['fetched_at'])}")
+        except (OSError, ValueError, sqlite3.Error):
+            st.caption("名称资料暂不可用。")
+        if st.button("重新获取证券名称", key="refresh_security_name"):
+            cancel_task("name")
+            submit_task("name", selected, names.security_name, *selected, force=True)
+            st.session_state["settings_app_rerun_pending"] = True
+    bundle = st.session_state.get("loaded_bundle")
+    if (bundle is not None and bundle.market == market
+            and st.session_state.get("loaded_query") == st.session_state.get("_current_query")):
+        st.caption(f"当前行情：{bundle.source} · {bundle.currency} · {bundle.adjustment_label} · 成功获取于 {beijing(bundle.received_at)}")
 
 
 __all__ = [

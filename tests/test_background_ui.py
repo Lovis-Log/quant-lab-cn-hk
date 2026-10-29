@@ -7,6 +7,7 @@ from threading import Event
 
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from quant_lab.data import HistoryBundle
 from conftest import finish_background_jobs
@@ -34,7 +35,7 @@ def test_slow_request_allows_page_switch_and_late_old_query_is_discarded(monkeyp
         assert not app.exception
         assert "history" in app.session_state["_task_tickets"]
         assert any("ql-loading-placeholder" in item.value for item in app.get("html"))
-        app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
+        navigate(app, "Quant Academy")
         assert any("Quant Academy" in item.value for item in app.subheader)
         app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
         gate.set()
@@ -78,13 +79,13 @@ def test_completed_research_on_another_page_stops_polling_and_can_be_opened(monk
     app = AppTest.from_file(Path(__file__).resolve().parents[1]/"app.py", default_timeout=8).run()
     app.sidebar.button[0].click().run()
     finish_background_jobs(app)
-    app.sidebar.radio(key="nav_page").set_value("历史回测").run()
+    navigate(app, "历史回测")
     next(item for item in app.button if item.label == "运行历史回测").click().run()
-    app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     finish_background_jobs(app)
     assert not app.session_state["_task_tickets"]
     assert "backtest" in app.session_state["_finished_task_tickets"]
-    app.sidebar.radio(key="nav_page").set_value("历史回测").run()
+    navigate(app, "历史回测")
     assert any(item.label == "保存实验" for item in app.button)
     assert "backtest" not in app.session_state["_finished_task_tickets"]
     assert not app.exception

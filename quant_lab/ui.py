@@ -21,10 +21,6 @@ from quant_lab.data import (
 )
 from quant_lab.metrics import summarize_prices, price_risk_metrics
 from quant_lab.processing import DataValidationError
-from quant_lab.ui_analysis import render_risk, render_statistics
-from quant_lab.ui_strategy import render_backtest, render_strategy
-from quant_lab.ui_learning import render_academy
-from quant_lab.ui_research import render_research_panel
 from quant_lab.ui_terminal import render_watchlist
 from quant_lab import names
 from quant_lab.market_data import normalize_symbol
@@ -40,6 +36,8 @@ from quant_lab.ui_helpers import reset_main_scroll
 from quant_lab.history_ranges import HISTORY_PRESETS, history_window
 from quant_lab.ui_data_quality import render_history_quality, render_quality_summary
 from quant_lab.ui_manual import render_manual_panel
+from quant_lab.navigation import SECTIONS, MARKETS, RESEARCH, navigation_values, active_route
+from quant_lab.desktop_loading import signal_frontend_ready
 from quant_lab.ui_settings import (
     library_configured,
     render_library_setup,
@@ -49,7 +47,7 @@ from quant_lab.ui_settings import (
 
 
 CSS_PATH = Path(__file__).parent / "terminal.css"
-PAGES = ("市场数据", "策略实验室", "历史回测", "风险与组合", "统计与机器学习", "Quant Academy", "美股研究", "多股票比较", "研究实验台")
+PAGES = SECTIONS
 ADJUSTMENTS = {"不复权": "", "前复权": "qfq", "后复权": "hfq"}
 
 SIDEBAR_LAYOUT_JS = """
@@ -176,6 +174,11 @@ TOPBAR_REORDER_JS = """
   const storageKey = "quantlab.dock.panelOrder";
   const kinds = ['manual', 'deepseek', 'notes'];
   const describeControls = () => {
+    const settings = newest('.st-key-settings_toggle button');
+    if (settings) {
+      const left = Math.max(12, Math.min(settings.getBoundingClientRect().left, window.innerWidth - 564));
+      if (root.style.getPropertyValue('--ql-settings-left') !== `${left}px`) root.style.setProperty('--ql-settings-left', `${left}px`);
+    }
     const descriptions = {settings_toggle:'打开设置',left_sidebar_toggle:'显示或隐藏左侧导航栏',
       manual_panel_maximize:'最大化或恢复使用手册',manual_panel_close:'关闭使用手册',
       deepseek_panel_maximize:'最大化或恢复DeepSeek助手',deepseek_panel_close:'关闭DeepSeek助手',
@@ -200,7 +203,7 @@ TOPBAR_REORDER_JS = """
     const before = animate ? Object.fromEntries(kinds.map(kind => [kind, buttons[kind]?.getBoundingClientRect()])) : {};
     order.forEach((kind, index) => {
       const column = buttons[kind]?.closest('[data-testid="stColumn"]');
-      if (column) column.style.order = String(index + 3);
+      if (column) column.style.order = String(index);
     });
     let right = 0;
     const present = order.filter(kind => newest(`.st-key-${kind}_side_panel`));
@@ -333,7 +336,11 @@ TOPBAR_REORDER_JS = """
   if (!window.__quantLabFullscreenEscapeBound) {
     window.__quantLabFullscreenEscapeBound = true;
     window.addEventListener('keydown', event => {
-      if (event.key !== 'Escape' || !document.querySelector('.ql-maximized-panel')) return;
+      if (event.key !== 'Escape' || document.querySelector('[role="dialog"]')) return;
+      const overlayClose = document.querySelector('.st-key-history_fullscreen_close button') ||
+        document.querySelector('.st-key-settings_close button');
+      if (overlayClose) { event.preventDefault(); overlayClose.click(); return; }
+      if (!document.querySelector('.ql-maximized-panel')) return;
       [...document.querySelectorAll('.st-key-right_dock button')]
         .find(button => button.textContent.includes('⛶'))?.click();
     });
@@ -353,7 +360,8 @@ def _protect_session_widgets() -> None:
         "history_preset", "history_start", "history_end",
         "us_source_mode", "us_candidate_symbol", "us_teaching_symbol", "us_calendar_day",
         "us_kind", "us_short", "us_long", "us_cash", "us_commission", "us_minimum", "us_slippage", "us_rebalance",
-        "workspace_name","compare_market","compare_codes","compare_benchmark","compare_start","compare_end","compare_adjustment","compare_window",
+        "workspace_name","market_selection","compare_market","compare_codes","compare_benchmark","compare_start","compare_end","compare_adjustment","compare_window",
+        "nav_section","research_page",
         "compare_fraction","compare_frequency","compare_cash","compare_commission","compare_minimum","compare_buyfee","compare_sellfee","compare_slippage","compare_limit",
         "comparison_watch_open",
         "lab_mode","lab_kind","lab_short","lab_long","lab_shorts","lab_longs","lab_score","lab_fraction","lab_train","lab_test","lab_folds","lab_stress",
@@ -377,40 +385,49 @@ def _metric(label: str, value: str, note: str, accent: str = "") -> None:
     )
 
 
+def _select_market_changed():
+    from quant_lab.ui_comparison import change_comparison_market
+    change_comparison_market(st.session_state["market_selection"])
+
+
 def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
     with st.sidebar:
-        st.html(
-            '<div class="ql-sidebar-heading">工作区</div>'
-        )
-        if st.session_state.get("nav_page") not in PAGES:
-            st.session_state["nav_page"] = PAGES[0]
-        page = st.radio("功能导航", PAGES, label_visibility="collapsed", key="nav_page")
-        from quant_lab.ui_workspaces import render_workspace_presets
-        if page=="多股票比较":
-            st.caption("同市场、同币种。比较与组合参数在主工作区设置。")
+        st.html('<div class="ql-sidebar-heading">工作区</div>')
+        section = st.radio("功能导航", PAGES, label_visibility="collapsed", key="nav_section")
+        if section == "多股票比较":
             from quant_lab.ui_comparison import _market_change
-            st.selectbox("比较市场",("A 股","港股"),key="compare_market",on_change=_market_change)
-            render_workspace_presets()
-            return page,"A 股","600519",None,"",False
-        if page=="美股研究":
-            st.caption("美元参数在美股工作区设置。真实来源与教学输入分别核验。")
-            render_workspace_presets()
-            return page,"A 股","600519",None,"",False
-        with (st.expander("研究参数", expanded=False) if page == "Quant Academy" else st.container()):
+            market = st.selectbox("比较市场", MARKETS, key="compare_market", on_change=_market_change)
+            st.session_state["nav_page"] = section
+            return section, market, "", None, "", False
+        if section == "Quant Academy":
+            st.session_state["nav_page"] = section
+            with st.expander("研究参数", expanded=False):
+                market = st.selectbox("市场", MARKETS, key="market_selection", on_change=_select_market_changed)
+                if market != "美股":
+                    market, symbol, dates, adjustment, clicked = _research_controls()
+                    return section, market, symbol, dates, adjustment, clicked
+            return section, st.session_state["market_selection"], "", None, "", False
+        market = st.selectbox("市场", MARKETS, key="market_selection", on_change=_select_market_changed)
+        page = active_route(section, market, st.session_state["research_page"])
+        st.session_state["nav_page"] = page
+        if market == "美股":
+            st.caption("USD · 真实来源待核验")
+            return page, market, "", None, "", False
+        with st.container():
             market, symbol, dates, adjustment, clicked = _research_controls()
-        render_workspace_presets()
     return page, market, symbol, dates, adjustment, clicked
 
 
 def _research_controls():
     st.html('<div class="ql-sidebar-label ql-sidebar-gap">研究参数</div>')
-    market = st.selectbox("市场", ("A 股", "港股"), key="market_selection")
+    market = st.session_state["market_selection"]
     st.session_state.setdefault(f"symbol_{market}", "600519" if market == "A 股" else "00700")
     labels = {}
     directory = None
     try:
         directory = security_directory(market)
         labels = dict(directory.rows)
+        st.session_state.setdefault("_directory_metadata", {})[market] = directory
     except (OSError, ValueError, KeyError, TypeError) as exc:
         st.warning(str(exc))
     current = st.session_state[f"symbol_{market}"]
@@ -446,18 +463,11 @@ def _research_controls():
         valid_symbol and dates is not None and dates[0] <= dates[1]
     )
     clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
-    if directory is not None:
-        st.caption(f"目录快照：{len(labels)} 只 · {directory.source} · 获取于 {beijing(directory.received_at)}；不含行情，不验证当前上市状态。")
-        if directory.error:
-            st.warning(directory.error)
+    if directory is not None and directory.error:
+        st.warning(directory.error)
     directory_result = take_result("directory", market)
     if directory_result and directory_result.state == JobState.FAILED:
         st.warning(directory_result.error)
-    if st.button("更新股票候选目录", key="refresh_security_directory"):
-        try:
-            submit_task("directory", market, security_directory, market, force=True)
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            st.warning(str(exc))
     if valid_symbol:
         name_key = (market, symbol)
         name_result = take_result("name", name_key)
@@ -467,16 +477,8 @@ def _research_controls():
         if name_key not in seen_names:
             submit_task("name", name_key, names.security_name, market, symbol)
             seen_names.add(name_key)
-        if st.button("重新获取证券名称", key="refresh_security_name"):
-            cancel_task("name")
-            submit_task("name", name_key, names.security_name, market, symbol, force=True)
         st.caption("当前选择：" + names.cached_security_label(market, symbol))
-        try:
-            name_record = names.storage.cached_security_name(market, symbol)
-            if name_record:
-                st.caption(f"名称资料缓存：{name_record['source']} · 成功获取于 {beijing(name_record['fetched_at'])}")
-        except (OSError, ValueError, sqlite3.Error):
-            pass
+        st.session_state["_selected_security"] = (market, symbol)
         name_error = names.NAME_CACHE.error(market, symbol)
         if name_error:
             st.warning(name_error)
@@ -490,6 +492,7 @@ def _research_controls():
             if chosen:
                 st.session_state["market_selection"] = chosen[0]
                 st.session_state[f"symbol_{chosen[0]}"] = chosen[1]
+                _select_market_changed()
         st.selectbox("从自选股选择", [None] + watch_items, key="sidebar_watch", on_change=choose_watch,
                      format_func=lambda item: "手动输入" if item is None else names.cached_security_label(*item))
     if st.session_state.get("settings_error"):
@@ -498,13 +501,7 @@ def _research_controls():
         st.caption("A 股请输入 6 位数字；港股可输入 1–5 位数字，程序会自动补足为 5 位。")
     elif dates is None:
         st.caption("请选择完整的开始和结束日期。")
-    else:
-        source = "腾讯证券" if market == "A 股" else "东方财富"
-        st.caption(f"来源：{source}，经 AKShare 获取；历史日线。")
-    st.html(
-        '<div class="ql-side-footer">历史日线 · 本地研究<br>'
-        '<small>仅供学习与模拟研究</small></div>'
-    )
+    st.caption("历史日线 · 本地研究")
     return market, symbol, dates, adjustment, clicked
 
 
@@ -588,34 +585,25 @@ def _global_topbar() -> None:
         st.session_state["active_dock_panel"] = next((kind for kind in ("manual", "deepseek", "notes")
             if st.session_state.get(f"{kind}_panel_open", False)), "manual")
     with st.container(key="global_topbar"):
-        brand, sidebar_toggle, workspace, settings, manual, assistant, research = st.columns(
-            [1.8, .32, 4, .32, .95, 1.05, .95],
-            vertical_alignment="center", gap="small"
-        )
-        with settings:
-            st.button("⚙", key="settings_toggle", width="stretch", on_click=_toggle_settings)
-        with sidebar_toggle:
-            st.button("▥", key="left_sidebar_toggle", width="stretch",
-                      on_click=_toggle_left_sidebar)
-        with brand:
-            st.html(
-                '<div class="ql-topbar-brand"><strong>QUANT LAB</strong></div>'
-            )
+        left, workspace, right = st.columns([3, 2, 4], vertical_alignment="center", gap="small")
+        with left, st.container(key="topbar_left"):
+            brand, sidebar_toggle, settings = st.columns([3, .65, .65], vertical_alignment="center", gap="small")
+            with brand:
+                st.html('<div class="ql-topbar-brand"><strong>QUANT LAB</strong></div>')
+            with sidebar_toggle:
+                st.button("▥", key="left_sidebar_toggle", width="stretch", on_click=_toggle_left_sidebar)
+            with settings:
+                st.button("⚙", key="settings_toggle", width="stretch", on_click=_toggle_settings)
         with workspace:
             st.html('<div class="ql-topbar-workspace">研究工作台</div>')
-        with manual:
-            st.button(
-                "使用手册", key="manual_panel_toggle", width="stretch",
-                on_click=_toggle_manual_panel,
-            )
-        with assistant:
-            st.button(
-                "DeepSeek 助手", key="deepseek_panel_toggle", width="stretch",
-                on_click=_toggle_deepseek_panel,
-            )
-        with research:
-            st.button("研究笔记", key="notes_panel_toggle", width="stretch",
-                      on_click=_toggle_notes_panel)
+        with right, st.container(key="topbar_tools"):
+            manual, assistant, research = st.columns([1, 1.2, 1], vertical_alignment="center", gap="small")
+            with manual:
+                st.button("使用手册", icon=":material/menu_book:", key="manual_panel_toggle", width="stretch", on_click=_toggle_manual_panel)
+            with assistant:
+                st.button("DeepSeek 助手", icon=":material/smart_toy:", key="deepseek_panel_toggle", width="stretch", on_click=_toggle_deepseek_panel)
+            with research:
+                st.button("研究笔记", icon=":material/edit_note:", key="notes_panel_toggle", width="stretch", on_click=_toggle_notes_panel)
         sidebar_state = "visible" if st.session_state["left_sidebar_visible"] else "hidden"
         st.html(f'<span class="ql-left-sidebar-state ql-left-sidebar-{sidebar_state}"></span>')
         st.html(f'<span class="ql-dock-active" data-panel="{st.session_state["active_dock_panel"]}"></span>')
@@ -643,6 +631,7 @@ def _render_right_dock(context: dict, bundle) -> None:
         if deepseek_open:
             render_deepseek_panel(context, bundle)
         if notes_open:
+            from quant_lab.ui_research import render_research_panel
             render_research_panel()
         st.html(DOCK_RESIZE_JS, unsafe_allow_javascript=True)
 
@@ -858,13 +847,10 @@ def _main_page(
         if has_data:
             table = _display_history(history, currency)
             table.insert(0, "股票", names.cached_security_label(market, symbol, bundle.company_name))
-            st.dataframe(table, width="stretch", hide_index=True, height=280)
             first = table["日期"].iloc[0].replace("-", "")
             last = table["日期"].iloc[-1].replace("-", "")
-            st.download_button(
-                "导出 CSV", table.to_csv(index=False).encode("utf-8-sig"),
-                file_name=f"{market}_{symbol}_{first}_{last}_{adjustment or 'raw'}.csv", mime="text/csv",
-            )
+            from quant_lab.ui_history_table import render_history_table
+            render_history_table(table, f"{market}_{symbol}_{first}_{last}_{adjustment or 'raw'}.csv")
             date_note = "日期为模拟/教学样本日期" if demonstration else "日期以实际交易日为准"
             st.caption(f"{date_note}。价格单位：{unit}/股；成交量：股；成交额：{unit}。")
         else:
@@ -956,16 +942,25 @@ def render_app() -> None:
     st.html(CSS_PATH)
     if not library_configured():
         render_library_setup()
+        signal_frontend_ready("library_setup")
         return
     initialize_settings()
     from quant_lab.ui_workspaces import initialize_workspaces
     initialize_workspaces()
+    if not st.session_state.get("_navigation_initialized"):
+        st.session_state.update(navigation_values(dict(st.session_state)))
+        st.session_state["_comparison_draft_market"] = st.session_state["market_selection"]
+        st.session_state["_navigation_initialized"] = True
     rerun_pending_settings()
     initialize_credentials()
     _protect_session_widgets()
     _global_topbar()
     st.session_state.pop("_open_ai_page", None)
     page, market, symbol, dates, adjustment, clicked = _sidebar()
+    if st.session_state["nav_section"] == "研究工作台" and market != "美股":
+        page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
+                        format_func=RESEARCH.get, label_visibility="collapsed")
+        st.session_state["nav_page"] = page
     bundle: HistoryBundle | None = None
     error: str | None = None
     query = None
@@ -995,12 +990,18 @@ def render_app() -> None:
         bundle.frame["date"].iloc[-1].strftime("%Y-%m-%d")
         if bundle is not None and not bundle.frame.empty else None
     )
-    st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else bundle_context(page, bundle).get("data_fingerprint")
+    base_context = bundle_context(page, bundle)
+    context_bundle = bundle
+    st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else base_context.get("data_fingerprint")
     if page == "市场数据":
         _market_workspace(query, market, symbol, adjustment)
         bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
     elif page == "Quant Academy":
+        from quant_lab.ui_learning import render_academy
         render_academy()
+    elif page == "美股数据":
+        from quant_lab.ui_us import render_us_source_status
+        render_us_source_status()
     elif page == "美股研究":
         from quant_lab.ui_us import render_us_research
         render_us_research()
@@ -1012,17 +1013,21 @@ def render_app() -> None:
         if error:
             st.warning(error)
         if page == "策略实验室":
+            from quant_lab.ui_strategy import render_strategy
             render_strategy(bundle)
         elif page == "历史回测":
+            from quant_lab.ui_strategy import render_backtest
             render_backtest(bundle)
         elif page == "风险与组合":
+            from quant_lab.ui_analysis import render_risk
             render_risk(bundle)
         elif page == "统计与机器学习":
+            from quant_lab.ui_analysis import render_statistics
             render_statistics(bundle)
         elif page == "研究实验台":
             from quant_lab.ui_experiments import render_experiment_lab
             render_experiment_lab(bundle)
-    context = experiment_context(record) if record else bundle_context(page, bundle)
+    context = experiment_context(record) if record else base_context if bundle is context_bundle else bundle_context(page, bundle)
     context["page"] = page
     if st.session_state.get("active_backtest_context"):
         context.update(st.session_state["active_backtest_context"])
@@ -1031,7 +1036,7 @@ def render_app() -> None:
     if page == "Quant Academy":
         context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
                    "data_status": "离线教学实验，不是股票行情。"}
-    if page == "美股研究":
+    if page in ("美股研究", "美股数据"):
         context=st.session_state.get("active_us_context",{"page":page,"data_status":"尚未加载合格真实美股数据"})
         st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")
     if page == "多股票比较":
@@ -1048,3 +1053,4 @@ def render_app() -> None:
         render_settings_panel()
     render_background_tasks()
     reset_main_scroll(page, key="page")
+    signal_frontend_ready()

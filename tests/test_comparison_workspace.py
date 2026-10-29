@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from conftest import finish_background_jobs
 from test_comparison_cash import frame,fetcher
@@ -18,7 +19,7 @@ def test_comparison_and_cash_run_offline_then_failed_refresh_keeps_old_result(mo
     data={code:frame(100+i*5+np.arange(60)*.1+np.sin(np.arange(60)+i)) for i,code in enumerate(("600519","000001","600036"))}
     monkeypatch.setattr("quant_lab.comparison.fetch_history_cached",fetcher(data,calls))
     app=AppTest.from_file(APP,default_timeout=30).run()
-    app.sidebar.radio(key="nav_page").set_value("多股票比较").run()
+    navigate(app, "多股票比较")
     assert not app.exception and not calls
     app.button(key="FormSubmitter:comparison_parameters-加载比较").click().run()
     finish_background_jobs(app,timeout=25)
@@ -43,11 +44,12 @@ def test_preset_apply_save_restore_in_new_session_without_network(monkeypatch):
     calls=[]
     monkeypatch.setattr("quant_lab.comparison.fetch_history_cached",lambda *args,**kwargs:calls.append(args))
     app=AppTest.from_file(APP,default_timeout=30).run()
-    app.sidebar.selectbox(key="workspace_name").set_value("多股票比较").run()
-    app.sidebar.button(key="workspace_apply").click().run()
+    app.button(key="settings_toggle").click().run()
+    app.selectbox(key="workspace_name").set_value("多股票比较").run()
+    app.button(key="workspace_apply").click().run()
     assert app.session_state["nav_page"]=="多股票比较"
     assert app.session_state["manual_panel_open"] is False and not calls and not app.exception
-    app.sidebar.button(key="workspace_save").click().run()
+    app.button(key="workspace_save").click().run()
     assert WorkspaceStore().load()["active"]=="多股票比较"
     restarted=AppTest.from_file(APP,default_timeout=30).run()
     assert restarted.session_state["nav_page"]=="多股票比较"

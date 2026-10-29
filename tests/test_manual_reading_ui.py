@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from quant_lab.manual_content import ContentValidationError
 
@@ -224,7 +225,7 @@ def test_manual_deepseek_and_notes_panels_coexist_and_maximize():
 
 def test_academy_and_knowledge_links_open_manual_not_guidance():
     app = _start_app()
-    app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     _widget(app, "button", "在使用手册中继续阅读").click().run()
 
     assert app.session_state["manual_panel_open"] is True

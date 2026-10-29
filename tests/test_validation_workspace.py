@@ -4,6 +4,7 @@ from pathlib import Path
 from dataclasses import replace
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from conftest import finish_background_jobs
 from test_research_validation import prepared
@@ -25,7 +26,7 @@ def loaded_lab(monkeypatch,retained=True):
     app=AppTest.from_file(APP,default_timeout=30).run()
     app.sidebar.button[0].click().run()
     finish_background_jobs(app)
-    app.sidebar.radio(key="nav_page").set_value("研究实验台").run()
+    navigate(app, "研究实验台")
     return app
 
 

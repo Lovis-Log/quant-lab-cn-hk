@@ -23,6 +23,8 @@ def _apply():
     try:
         values=WorkspaceStore().activate(st.session_state["workspace_name"])
         st.session_state.update(restore_values(values))
+        st.session_state["_comparison_draft_market"] = st.session_state["market_selection"]
+        st.session_state["settings_app_rerun_pending"] = True
         st.session_state["workspace_message"]="已应用预设；比较仍需明确加载，观察列表沿用已有刷新设置。"
     except (OSError,ValueError,TypeError):
         st.session_state["workspace_message"]="应用预设失败，原文件与当前研究结果保留。"
@@ -37,9 +39,9 @@ def _save():
 
 
 def render_workspace_presets():
-    with st.expander("工作区预设"):
-        st.selectbox("选择工作区预设",NAMES,key="workspace_name")
+    with st.expander("工作区方案"):
+        st.selectbox("选择工作区方案",NAMES,key="workspace_name")
         st.button("应用预设",key="workspace_apply",on_click=_apply,width="stretch")
         st.button("保存当前",key="workspace_save",on_click=_save,width="stretch")
-        st.caption("保存已提交参数、导航与面板开关；拖动宽度/顺序沿用当前桌面视图设置，不存研究内容。")
+        st.caption("保存参数、导航与面板开关。")
         if st.session_state.get("workspace_message"):st.caption(st.session_state["workspace_message"])

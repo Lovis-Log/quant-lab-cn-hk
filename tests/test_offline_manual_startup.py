@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 
 ENTRYPOINT = Path(__file__).resolve().parents[1] / "app.py"
@@ -24,6 +25,6 @@ def test_offline_startup_opens_manual_and_academy(monkeypatch, tmp_path):
     assert app.selectbox(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
     assert any("快速开始：从资料库到第一份可复现实验" in item.value for item in app.subheader)
 
-    app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     assert not app.exception
     assert any("Quant Academy" in item.value for item in app.subheader)

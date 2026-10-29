@@ -357,6 +357,8 @@ def run_desktop(smoke_test: bool = False) -> int:
     before_load = threading.Event()
     closed = threading.Event()
     webview_timed_out = threading.Event()
+    from quant_lab.desktop_loading import StartupOverlay
+    startup_overlay = StartupOverlay()
     test_seconds = os.environ.get("QUANT_LAB_GUI_TEST_SECONDS")
     with single_instance(root):
         try:
@@ -365,6 +367,8 @@ def run_desktop(smoke_test: bool = False) -> int:
                 LOGGER.info("Headless service smoke test passed")
                 return 0
             import webview
+            # WebView2 otherwise cancels Streamlit CSV/report downloads silently.
+            webview.settings["ALLOW_DOWNLOADS"] = True
 
             probe_debug_port = None
             if os.environ.get("QUANT_LAB_GUI_PROBE") == "1":
@@ -375,6 +379,8 @@ def run_desktop(smoke_test: bool = False) -> int:
 
             class DesktopAPI:
                 _window = None
+                def frontend_ready(self, view):
+                    return startup_overlay.mark_ready(view)
                 def close(self):
                     if self._window:
                         threading.Thread(target=self._window.destroy, daemon=True).start()
@@ -413,19 +419,20 @@ def run_desktop(smoke_test: bool = False) -> int:
             url = f"http://{HOST}:{port}"
             window = webview.create_window(
                 APP_TITLE, url, width=1440, height=900,
-                min_size=(1100, 700), background_color="#090D16",
+                min_size=(1100, 700), background_color="#151719",
                 js_api=probe_api,
             )
             probe_api._window = window
+            window.events.before_show += startup_overlay.show
             window.events.shown += shown.set
             window.events.before_load += before_load.set
             window.events.loaded += loaded.set
             window.events.closed += closed.set
 
             def monitor_webview() -> None:
-                if not loaded.wait(WEBVIEW_TIMEOUT_SECONDS) and not closed.is_set():
+                if not startup_overlay.ready.wait(WEBVIEW_TIMEOUT_SECONDS) and not closed.is_set():
                     webview_timed_out.set()
-                    LOGGER.error("WebView2 did not load the local page within %s seconds", WEBVIEW_TIMEOUT_SECONDS)
+                    LOGGER.error("WebView2 did not render app controls within %s seconds", WEBVIEW_TIMEOUT_SECONDS)
                     window.destroy()
 
             monitor = threading.Thread(target=monitor_webview, daemon=True)
@@ -467,6 +474,11 @@ def run_desktop(smoke_test: bool = False) -> int:
                     "webview_shown": shown.is_set(),
                     "webview_before_load": before_load.is_set(),
                     "webview_loaded": loaded.is_set(),
+                    "loading_shown": startup_overlay.shown.is_set(),
+                    "frontend_ready": startup_overlay.ready.is_set(),
+                    "frontend_view": startup_overlay.view,
+                    "loading_ms": round((startup_overlay.ready_at - startup_overlay.shown_at) * 1000, 1)
+                        if startup_overlay.ready_at and startup_overlay.shown_at else None,
                     "debug_port": locals().get("probe_debug_port"),
                 })
 

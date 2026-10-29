@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from conftest import finish_background_jobs
 
@@ -14,7 +15,7 @@ def test_us_workspace_offline_run_cash_ledger_export_and_parameter_retention(mon
     calls=[]
     monkeypatch.setattr("quant_lab.us_sources.inspect_sina_prices",lambda *args:calls.append(args))
     app=AppTest.from_file(APP,default_timeout=30).run()
-    app.sidebar.radio(key="nav_page").set_value("美股研究").run()
+    navigate(app, "美股研究")
     assert not app.exception and not calls
     assert any("非真实美股行情" in item.value for item in app.info)
     app.number_input(key="us_cash").set_value(5000.)
@@ -39,7 +40,7 @@ def test_free_source_failure_stays_visible_and_does_not_become_teaching_data(mon
         raise ValueError("测试：来源请求失败")
     monkeypatch.setattr("quant_lab.us_sources.inspect_sina_prices",fail)
     app=AppTest.from_file(APP,default_timeout=30).run()
-    app.sidebar.radio(key="nav_page").set_value("美股研究").run()
+    navigate(app, "美股研究")
     app.radio(key="us_source_mode").set_value("免费来源状态").run()
     app.button(key="FormSubmitter:us_source_check-核验免费日线覆盖").click().run()
     finish_background_jobs(app)

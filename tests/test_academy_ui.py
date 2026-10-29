@@ -3,13 +3,14 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 
 def test_academy_and_empty_notes_render(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
-    app.sidebar.radio[0].set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     # AppTest doesn't expose a setter for expander state; the desktop harness
     # checks real disclosure clicks. Seed the same public session-state input.
     app.session_state["knowledge_lazy_academy_simple_return"] = True

@@ -21,12 +21,17 @@ from quant_lab.us_archive import export_us_run
 from quant_lab.history_ranges import history_window
 
 
-def render_us_research():
-    st.subheader("美股研究")
+def render_us_source_status():
+    render_us_research(source_only=True)
+
+
+def render_us_research(source_only=False):
+    st.subheader("美股数据与来源" if source_only else "美元教学研究")
     st.caption("USD现金账户 · 正常交易时段下一开盘 · 只做多、无杠杆、整数股")
     st.session_state["active_us_context"]={"page":"美股研究","currency":"USD","data_status":"离线教学；真实来源尚未通过回测关卡"}
-    source=st.radio("研究输入",("离线教学样本","免费来源状态"),horizontal=True,key="us_source_mode")
+    source="免费来源状态" if source_only else st.radio("研究输入",("离线教学样本","免费来源状态"),horizontal=True,key="us_source_mode")
     if source=="免费来源状态":
+        st.session_state["active_us_context"]["data_status"]="真实美股来源尚未通过完整关卡；没有当前真实行情"
         st.info("当前没有免费来源通过完整验证，真实美股回测和美元组合暂不开放。")
         st.html('<style>.st-key-us_source_status table{table-layout:fixed;width:100%}.st-key-us_source_status td,.st-key-us_source_status th{white-space:normal!important;overflow-wrap:anywhere}</style>')
         with st.container(key="us_source_status"):
@@ -70,6 +75,9 @@ def render_us_research():
                                file_name=f"{ticker}_us_source_observation.json",mime="application/json")
         st.button("运行真实美股回测",disabled=True,key="us_live_backtest")
         st.caption("取得价格不等于取得公司行动或留存授权；未知事件不当作零事件。")
+        if source_only:
+            from quant_lab.ui_comparison import _open_us_teaching
+            st.button("进入美元教学研究", key="us_source_teaching", icon=":material/school:", on_click=_open_us_teaching)
         return
     datasets,settlement=teaching_us_inputs()
     st.info("以下为平台生成的固定教学样本，非真实美股行情。它用来核对拆股、分红应收/支付和结算现金。")

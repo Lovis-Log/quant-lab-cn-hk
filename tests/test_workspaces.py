@@ -6,6 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from quant_lab.data import HistoryBundle
 from quant_lab.storage import list_experiments
@@ -34,7 +35,7 @@ def test_all_workspaces_boot_without_extra_network_calls() -> None:
         finish_background_jobs(app)
         assert not app.exception
         for page in ("策略实验室", "历史回测", "风险与组合", "统计与机器学习"):
-            app.sidebar.radio[0].set_value(page).run()
+            navigate(app, page)
             assert not app.exception, page
         next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
         assert not app.exception
@@ -54,7 +55,7 @@ def test_research_actions_run_from_loaded_history() -> None:
             ("风险与组合", "分析同市场组合"),
             ("统计与机器学习", "运行时间序列线性回归"),
         ):
-            app.sidebar.radio[0].set_value(page).run()
+            navigate(app, page)
             button = next(item for item in app.get("button") if item.label == button_label)
             button.click().run()
             finish_background_jobs(app)
@@ -78,7 +79,7 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
         finish_background_jobs(app)
-        app.sidebar.radio[0].set_value("历史回测").run()
+        navigate(app, "历史回测")
         next(item for item in app.get("button") if item.label == "运行历史回测").click().run()
         finish_background_jobs(app)
         next(item for item in app.get("button") if item.label == "保存实验").click().run()
@@ -99,7 +100,7 @@ def test_unverified_source_cannot_create_new_archive():
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
         finish_background_jobs(app)
-        app.sidebar.radio[0].set_value("历史回测").run()
+        navigate(app, "历史回测")
         app.button(key="FormSubmitter:backtest_parameters-运行历史回测").click().run()
         finish_background_jobs(app)
         assert app.button(key="save_experiment").disabled
@@ -114,7 +115,7 @@ def test_backtest_knowledge_group_expands_collapses_and_resets(monkeypatch) -> N
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
         finish_background_jobs(app)
-        app.sidebar.radio(key="nav_page").set_value("历史回测").run()
+        navigate(app, "历史回测")
         next(item for item in app.button if item.label == "运行历史回测").click().run()
         finish_background_jobs(app)
 

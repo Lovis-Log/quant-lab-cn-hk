@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import time
+import sqlite3
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -18,20 +19,92 @@ from quant_lab.ui_jobs import submit_task,take_result,cancel_task,loading_placeh
 from quant_lab.ui_helpers import style_figure
 from quant_lab.ui_data_quality import render_history_quality
 from quant_lab.market_data import normalize_symbol
+from quant_lab.navigation import comparison_selection
 
 
 COLORS=("#78A7DB","#C6A56D","#B4BCC5","#73B798","#D7797E","#A39CC7","#86B9C6","#C99F8D","#A8B783","#B887A0")
 
 
 def _market_change():
-    market=st.session_state["compare_market"]
-    st.session_state["compare_codes"]="600519,000001,600036" if market=="A 股" else "00700,00941,00005"
-    st.session_state["compare_benchmark"]=""
-    st.session_state["compare_lots"]={}
+    change_comparison_market(st.session_state["compare_market"])
+
+
+def change_comparison_market(market):
+    previous = st.session_state.get("_comparison_draft_market", st.session_state.get("market_selection", "A 股"))
+    drafts = st.session_state.setdefault("_comparison_market_drafts", {})
+    keys = ("codes", "benchmark", "lots", "commission", "minimum", "buyfee", "sellfee", "slippage", "limit")
+    if previous != market:
+        drafts[previous] = {"compare_" + key: st.session_state["compare_" + key]
+                            for key in keys if "compare_" + key in st.session_state}
+    st.session_state["market_selection"] = market
+    st.session_state["compare_market"] = market
+    st.session_state["_comparison_draft_market"] = market
+    if previous == market:
+        return
+    values = {"compare_codes": "600519,000001,600036" if market == "A 股" else "00700,00941,00005" if market == "港股" else "",
+              "compare_benchmark": "", "compare_lots": {}, "compare_limit": "10%"}
+    if market != "美股":
+        values.update(_default_costs(market))
+    values.update(drafts.get(market, {}))
+    st.session_state.update(values)
+
+
+def _default_costs(market):
     defaults=illustrative_config(market)
-    for key,value in (("commission",defaults.commission_bps),("minimum",defaults.min_commission),
-            ("buyfee",defaults.buy_tax_bps),("sellfee",defaults.sell_tax_bps),("slippage",defaults.slippage_bps)):
-        st.session_state["compare_"+key]=value
+    return {"compare_" + key: value for key,value in (("commission",defaults.commission_bps),("minimum",defaults.min_commission),
+            ("buyfee",defaults.buy_tax_bps),("sellfee",defaults.sell_tax_bps),("slippage",defaults.slippage_bps))}
+
+
+def _open_us_teaching():
+    st.session_state["nav_section"] = "研究工作台"
+    st.session_state["us_source_mode"] = "离线教学样本"
+
+
+def _close_stock_picker():
+    st.session_state.pop("_stock_picker_market", None)
+
+
+@st.dialog("选择比较股票", width="medium", on_dismiss=_close_stock_picker)
+def _stock_picker(market):
+    from quant_lab.securities import security_directory
+    from quant_lab.storage import list_watchlist
+    labels = {}
+    try:
+        directory = security_directory(market)
+        labels = dict(directory.rows)
+        if directory.error:
+            st.warning(directory.error)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        st.warning(str(error))
+    current_text = st.session_state.get("compare_codes", "")
+    try:
+        current = comparison_selection(market, current_text)
+    except ValueError as error:
+        st.warning(f"当前手动输入需要修正：{error} 确认候选将替换这份草稿。")
+        current = ()
+    try:
+        watched = [code for item_market, code in list_watchlist() if item_market == market]
+    except (OSError, ValueError, sqlite3.Error):
+        watched = []
+    candidates = list(dict.fromkeys([*watched, *current, *labels]))
+    candidate_labels = {code: labels.get(code) or names.cached_security_name(market, code) or "名称暂不可用" for code in candidates}
+    selected = st.multiselect("搜索名称或代码，选择要比较的股票", candidates, default=list(current),
+        format_func=lambda code: f"{'★ ' if code in watched else ''}{code} · {candidate_labels[code]}",
+        max_selections=10, key="stock_picker_selection_" + market,
+        placeholder="输入名称或代码搜索")
+    st.caption(f"已选择 {len(selected)}/10 只 · ★ 自选股优先 · 至少2只才可加载比较")
+    if st.button("确认选择", key="stock_picker_apply", type="primary"):
+        st.session_state["_comparison_pending_codes"] = (market, ",".join(comparison_selection(market, "", selected)))
+        _close_stock_picker()
+        st.rerun(scope="app")
+    if not labels and st.button("更新证券目录", key="stock_picker_directory"):
+        submit_task("directory", market, security_directory, market, force=True)
+        st.rerun(scope="app")
+
+
+def _show_stock_picker(market):
+    st.session_state.pop("stock_picker_selection_" + market, None)
+    st.session_state["_stock_picker_market"] = market
 
 
 def _chart(frame,labels,view,height=330,percentage=False):
@@ -131,6 +204,23 @@ def render_comparison():
     st.caption("同市场、同币种 · 历史日线 · 价格收益比较")
     st.session_state["active_comparison_context"]={"page":"多股票比较","data_status":"尚未加载比较输入"}
     market=st.session_state.get("compare_market","A 股")
+    if market == "美股":
+        st.session_state["active_comparison_context"] = {"page":"多股票比较", "market":"美股", "currency":"USD",
+            "data_status":"真实美股多股票比较尚未开放；来源待核验"}
+        st.info("真实美股多股票比较尚未开放：免费来源尚未通过完整关卡。")
+        st.button("进入美元教学研究", key="comparison_us_teaching", on_click=_open_us_teaching, icon=":material/school:")
+        return
+    st.session_state.setdefault("_comparison_draft_market", market)
+    pending_codes = st.session_state.pop("_comparison_pending_codes", None)
+    if pending_codes and pending_codes[0] == market:
+        st.session_state["compare_codes"] = pending_codes[1]
+    st.session_state.setdefault("compare_codes", "600519,000001,600036" if market == "A 股" else "00700,00941,00005")
+    code_col, picker_col = st.columns((12, 1), vertical_alignment="bottom", gap="small")
+    code_text = code_col.text_input("比较股票代码（2–10只，逗号分隔）", key="compare_codes")
+    if picker_col.button("＋", key="comparison_add_stock", width="stretch", help="按名称或代码选择股票"):
+        _show_stock_picker(market)
+    if st.session_state.get("_stock_picker_market") == market:
+        _stock_picker(market)
     currency="CNY" if market=="A 股" else "HKD"
     start_default,end_default=history_window(datetime.now(ZoneInfo("Asia/Shanghai")).date(),1)
     with st.form("comparison_parameters",border=False):
@@ -138,8 +228,7 @@ def render_comparison():
         start=cols[0].date_input("比较开始日期",value=start_default,key="compare_start")
         end=cols[1].date_input("比较结束日期",value=end_default,key="compare_end")
         adjustment=cols[2].selectbox("统一价格口径",("","qfq","hfq"),format_func=lambda v:{"":"不复权","qfq":"前复权","hfq":"后复权"}[v],key="compare_adjustment")
-        code_col,load_col,refresh_col=st.columns((6,1.2,1.6),vertical_alignment="bottom")
-        code_text=code_col.text_input("比较股票代码（2–10只，逗号分隔）",value="600519,000001,600036" if market=="A 股" else "00700,00941,00005",key="compare_codes")
+        load_col,refresh_col,_=st.columns((1.2,1.6,6),vertical_alignment="bottom")
         requested=load_col.form_submit_button("加载比较",type="primary",width="stretch")
         force=refresh_col.form_submit_button("立即更新比较",width="stretch")
         with st.expander("高级比较设置"):

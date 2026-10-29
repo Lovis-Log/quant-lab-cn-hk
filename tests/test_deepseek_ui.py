@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 from conftest import finish_background_jobs
 
 from quant_lab.deepseek import Answer
@@ -33,7 +34,7 @@ def test_remembered_key_is_loaded_on_start_and_panel_is_global(tmp_path, monkeyp
 def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
-    navigation = app.sidebar.radio(key="nav_page")
+    navigation = app.sidebar.radio(key="nav_section")
     assert "AI 研究助手" not in navigation.options
     assert "新手使用指引" not in navigation.options
     assert "研究笔记" not in navigation.options
@@ -131,7 +132,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setattr("quant_lab.credentials.clear_key", lambda: None)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     assert not any(w.label == "DeepSeek API Key" for w in app.text_input)
-    assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
+    assert "AI 研究助手" not in app.sidebar.radio(key="nav_section").options
     widget(app,"button","DeepSeek 助手").click().run()
     assert app.session_state["ai_workspace"] == "对话与辅导"
     widget(app,"button","⚙").click().run()
@@ -146,7 +147,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     app.run()
     assert len(calls) == 1
     app.run()
-    app.sidebar.radio[0].set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     assert len(calls) == 1
     app.session_state["knowledge_lazy_academy_simple_return"] = True
     app.run()
