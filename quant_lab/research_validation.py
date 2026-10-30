@@ -89,9 +89,9 @@ def _rank_grid(raw,candidates,config,score):
     return table
 
 
-def run_validation(raw,recipe: ValidationRecipe,*,provenance=None):
+def run_validation(raw,recipe: ValidationRecipe,*,provenance=None,price_validator=None):
     if not isinstance(raw,pd.DataFrame) or raw.empty:raise ValueError("研究验证需要非空原始行情。")
-    data=clean_stock_history(raw,raw.date.iloc[0].date(),raw.date.iloc[-1].date())
+    data=price_validator(raw) if price_validator is not None else clean_stock_history(raw,raw.date.iloc[0].date(),raw.date.iloc[-1].date())
     candidates,budget=recipe.validate(len(data))
     if recipe.costs.initial_cash/(float(data.open.min())*recipe.costs.lot_size)>1_000_000:
         raise ValueError("初始最大交易单位超过100万，请调整研究资金或单位以控制计算量。")

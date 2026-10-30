@@ -366,7 +366,7 @@ def _protect_session_widgets() -> None:
         "ds_model_select", "ds_model_manual", "ai_workspace",
         "learning_mode", "refresh_enabled", "refresh_interval_seconds", "academy_search", "academy_group",
         "history_preset", "history_start", "history_end",
-        "us_source_mode", "us_candidate_symbol", "us_teaching_symbol", "us_calendar_day",
+        "us_source_mode", "us_candidate_symbol", "us_teaching_symbol", "us_calendar_day", "us_research_mode",
         "us_kind", "us_short", "us_long", "us_cash", "us_commission", "us_minimum", "us_slippage", "us_rebalance",
         "workspace_name","market_selection","compare_market","compare_codes","compare_benchmark","compare_start","compare_end","compare_adjustment","compare_window",
         "nav_section","research_page","manual_section","manual_category","manual_search_query",
@@ -378,6 +378,15 @@ def _protect_session_widgets() -> None:
         "strategy_", "backtest_", "portfolio_", "model_", "research_", "academy_parameter_",
         "ai_question", "cost_", "symbol_", "ds_effort_",
     )
+    value_keys.update({"us_price_period","us_price_start","us_price_end","us_price_symbol","us_price_page",
+        "us_compare_codes","us_compare_start","us_compare_end","us_compare_baseline","us_compare_window",
+        "us_compare_chart","us_compare_detail","us_price_port_frequency","us_price_port_fraction",
+        "us_price_bt_fraction","us_price_ml_fraction","us_price_val_fraction","us_price_val_shorts",
+        "us_price_val_longs","us_price_val_train","us_price_val_test","us_price_val_folds","us_price_validation_selection"})
+    for prefix in ("us_price_signal","us_price_bt","us_price_val"):
+        value_keys.update(prefix+"_"+name for name in ("kind","short","long"))
+    for prefix in ("us_price_bt","us_price_port","us_price_val"):
+        value_keys.update(prefix+"_"+name for name in ("cash","commission","minimum","slip","sellfee"))
     for key in list(st.session_state):
         if key.startswith(prefixes) or key in value_keys:
             st.session_state[key] = st.session_state[key]
@@ -412,7 +421,7 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             page = active_route(section, market, st.session_state["research_page"])
             st.session_state["nav_page"] = page
             if market == "美股":
-                st.caption("USD · 真实来源待核验")
+                st.caption("USD · 历史日线 · 价格模型")
                 return page, market, "", None, "", False
             market, symbol, dates, adjustment, clicked = _research_controls()
     return page, market, symbol, dates, adjustment, clicked

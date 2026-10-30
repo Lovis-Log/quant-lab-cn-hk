@@ -1,5 +1,9 @@
 # 架构与数据流
 
+2026-10-30按用户新范围新增独立`us_price_research.py`：`USPriceConfig`不扩展原`BacktestConfig`的A/H市场集合；复用`run_experiment`、`run_backtest`、`compare_inputs`、`run_portfolio_research`与统计纯计算，以独立US版本/指纹封装。只接收USD、指纹一致、已结束的来源声明未复权OHLCV；成交模型要求完整参考交易日、无≥40%原始收盘跳变。比较可以显示共同日期，但组合不删掉缺失成交日。40%仅为保守拦截阈值，不是完整公司行动检测。
+
+`research_validation.run_validation`新增可选内部价格校验器，A/H默认路径/输出不变；US传入六字段校验器，不捏造缺失成交额。US包装层重写模型声明与外层版本指纹，不将结果传给旧AH报告路由。`ui_us_price_research.py`提供五类真实价格研究，`ui_us_price_comparison.py`提供2–10只比较和等权/逆波动率USD现金持仓组合；任务、查询和参数各自隔离。控件保留与工作区JSON只列举非敏感输入，不写按钮只读状态或行情/AI内容。完整快照未获许可时只会话计算及导出明确不可复算的摘要，与A/H现有规则一致。原`us-cash-v1`和`quantlab-us-run-v1`的严格资格、事件和离线复算不改；SQLite仍v6。
+
 美股数据续作（2026-10-29）：`us_sources.fetch_sina_reference`返回独立的`USPriceReference`，不构造可执行的`USDataset`或授予留存许可。沿用AKShare的新浪原始日线端点与本地解码器，HTTP连接/读取超时为5/20秒；仅解码响应载荷，不执行源端脚本，也不请求复权因子。`$`变量名兼容类别股。交易日期编码按来源日期标签解释，不把午夜UTC平移成纽约前一天；所选区间只保留已结束的日线，再做OHLCV校验和参考日历缺口核对。区间外旧价格异常不阻断无关区间，区间内错误明确拒绝且不修造价格。
 
 24项有界内存缓存按资料目录/规范代码/区间隔离，五分钟TTL与同查询合并复用`RefreshCache`；立即更新强制上游请求，失败保留有效值和原成功时间。UI通过`us_prices`后台任务消费，重绘不联网，取消/查询变更沿用任务合同。`ui_us_prices.py`显示K线、完整日线表及质量，AI只收到当前查询的来源/日期/指纹/最近收盘与条数，失败标记同步，不传整表。没有SQLite/schema、历史算法或实验指纹迁移；旧`inspect_sina_prices`摘要入口保留。

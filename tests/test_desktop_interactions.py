@@ -70,7 +70,7 @@ def test_candidate_edit_market_drafts_and_us_gate_do_not_load_prices(monkeypatch
     assert app.session_state["compare_codes"] == "600519,600036,000001"
     app.sidebar.selectbox(key="compare_market").set_value("美股").run()
     assert not app.exception and not calls
-    assert any("尚未开放" in message.value for message in app.info)
+    assert any("显式加载后比较真实美股日线" in message.value for message in app.info)
     assert app.session_state["_current_ai_context"]["currency"] == "USD"
     assert "data_fingerprint" not in app.session_state["_current_ai_context"]
 

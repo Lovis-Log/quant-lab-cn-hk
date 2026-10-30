@@ -19,10 +19,19 @@ from quant_lab.us_archive import export_us_run
 
 
 def render_us_source_status():
-    render_us_research(source_only=True)
+    _render_us_teaching(source_only=True)
 
 
-def render_us_research(source_only=False):
+def render_us_research():
+    mode=st.radio("美股研究模式",("真实行情价格研究","离线教学样本"),horizontal=True,key="us_research_mode")
+    if mode == "真实行情价格研究":
+        from quant_lab.ui_us_price_research import render_us_price_research
+        render_us_price_research()
+    else:
+        _render_us_teaching()
+
+
+def _render_us_teaching(source_only=False):
     st.subheader("美股历史日线" if source_only else "美元教学研究")
     if not source_only:
         st.caption("USD现金账户 · 正常交易时段下一开盘 · 只做多、无杠杆、整数股")

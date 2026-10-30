@@ -29,6 +29,15 @@ OPTIONS={"nav_page":{"Quant Academy","市场数据","多股票比较","历史回
     "compare_frequency":{"monthly","daily"},"history_preset":{"1 年","3 年","5 年","10 年","自定义"},
     "compare_limit":{"10%","5%","20%","30%","不模拟"},"active_dock_panel":{"manual","notes","deepseek"},"maximized_panel":{None,"manual","notes","deepseek"}}
 DATES={"history_start","history_end","compare_start","compare_end"}
+DATES.update({"us_price_start","us_price_end","us_compare_start","us_compare_end"})
+NUMBERS.update({"us_compare_window":(2,252),"us_price_bt_fraction":(.5,.85),
+               "us_price_port_fraction":(.5,.85),"us_price_val_fraction":(.5,.85),"us_price_ml_fraction":(.55,.85)})
+for _prefix in ("us_price_bt", "us_price_port", "us_price_val"):
+    NUMBERS.update({_prefix+"_cash":(100,1e10),_prefix+"_commission":(0,1000),
+                    _prefix+"_minimum":(0,1e6),_prefix+"_slip":(0,999),_prefix+"_sellfee":(0,1000)})
+OPTIONS.update({"us_research_mode":{"真实行情价格研究","离线教学样本"},
+                "us_price_page":{"策略信号","历史回测","风险与组合","统计分析","专业验证"},
+                "us_price_period":{1,3,5,10,"自定义"},"us_price_port_frequency":{"monthly","daily"}})
 
 
 def sanitized(values):
@@ -42,7 +51,7 @@ def sanitized(values):
             number=values[key]
             if isinstance(number,bool) or not isinstance(number,(int,float)) or not math.isfinite(number) or not low<=number<=high:
                 raise ValueError("工作区数值设置超出允许范围。")
-            if key=="compare_window" and type(number) is not int:raise ValueError("滚动窗口须为整数。")
+            if key in {"compare_window","us_compare_window"} and type(number) is not int:raise ValueError("滚动窗口须为整数。")
             result[key]=number
     for key,options in OPTIONS.items():
         if key in values:
@@ -67,6 +76,14 @@ def sanitized(values):
     for market_name in ("A 股","港股"):
         key="symbol_"+market_name
         if key in values:result[key]=normalize_symbol(market_name,values[key].split(" · ")[0])
+    from quant_lab.us_market import normalize_us_symbol
+    if "us_compare_codes" in values:
+        codes=[normalize_us_symbol(value) for value in values["us_compare_codes"].replace("，",",").split(",") if value.strip()]
+        if len(codes)>10 or len(set(codes))!=len(codes):raise ValueError("美股比较代码须为至多10只唯一股票。")
+        result["us_compare_codes"]=",".join(codes)
+    for key in ("us_price_symbol","us_compare_baseline"):
+        if key in values:
+            result[key]=normalize_us_symbol(values[key]) if values[key].strip() else ""
     return result
 
 

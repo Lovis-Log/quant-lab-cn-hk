@@ -20,7 +20,7 @@ def render_us_prices():
     today = datetime.now(NY).date()
     st.session_state["active_us_context"] = {
         "page": "美股数据", "market": "美股", "currency": "USD",
-        "data_status": "尚未加载真实美股历史日线；真实回测来源关卡未通过",
+        "data_status": "尚未加载真实美股历史日线；可用于独立价格研究模型",
     }
     st.caption("免费公开历史日线 · USD · 仅会话保留 · 非实时，确切延迟未知")
     period = st.selectbox("美股历史区间", (1, 3, 5, 10, "自定义"),
@@ -75,8 +75,9 @@ def render_us_prices():
         _render_reference(reference, key, failure)
     else:
         st.info("输入代码并加载真实历史日线。请求失败会显示错误，不会换成教学行情。")
-    st.button("运行真实美股回测", disabled=True, key="us_live_backtest")
-    st.caption("真实回测与美元组合仍需核验证券身份、原始执行价、完整公司行动、结算日历和快照留存权限。")
+    from quant_lab.ui_us_price_research import open_us_price_research
+    st.button("进入真实美股研究", key="us_live_backtest", on_click=open_us_price_research)
+    st.caption("采用与现有A/H同级的价格与成本模型，不包含公司行动或结算现金；完整现金账户模拟留待后续。")
     with st.expander("免费来源资格与限制"):
         st.table([
             {"来源": "新浪 / AKShare日线接口", "状态": "真实日线价格参考可用；执行价、完整事件、身份及留存未认证"},
@@ -122,14 +123,15 @@ def _render_reference(reference, key, failure):
                    "non_session_dates": reference.non_session_dates,
                    "excluded_unfinished_rows": reference.excluded_unfinished_rows,
                    "cached": reference.cached, "update_error": reference.update_error or failure,
-                   "raw_prices_saved": False, "backtest_eligible": False}
+                   "raw_prices_saved": False, "backtest_eligible": False, "eligibility_model": "us-cash-v1",
+                   "price_research": "us-price-cost-v1；按价格模型另行校验，不适用完整现金账户资格"}
         st.download_button("导出来源核验摘要", json.dumps(summary, ensure_ascii=False, indent=2).encode(),
                            file_name=f"{info.symbol}_us_source_observation.json", mime="application/json")
     st.session_state["active_us_context"].update({
         "symbol": info.symbol, "source": info.source, "received_at": info.received_at,
         "data_period": [info.actual_start, info.actual_end], "data_fingerprint": info.content_sha256,
         "adjustment": reference.price_basis,
-        "data_status": "真实美股历史日线价格参考；非实时；真实回测未开放" +
+        "data_status": "真实美股历史日线价格参考；非实时；可进行价格与成本研究，公司行动未模拟" +
                        ("；最近更新失败，数据可能过期" if reference.update_error or failure else ""),
         "price_metrics": {"latest_close": float(frame.close.iloc[-1]), "observations": len(frame)},
     })

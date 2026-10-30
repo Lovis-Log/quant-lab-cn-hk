@@ -58,6 +58,7 @@ def _default_costs(market):
 def _open_us_teaching():
     st.session_state["nav_section"] = "研究工作台"
     st.session_state["us_source_mode"] = "离线教学样本"
+    st.session_state["us_research_mode"] = "离线教学样本"
 
 
 def _chart(frame,labels,view,height=330,percentage=False):
@@ -158,10 +159,8 @@ def render_comparison():
     st.session_state["active_comparison_context"]={"page":"多股票比较","data_status":"尚未加载比较输入"}
     market=st.session_state.get("compare_market","A 股")
     if market == "美股":
-        st.session_state["active_comparison_context"] = {"page":"多股票比较", "market":"美股", "currency":"USD",
-            "data_status":"真实美股多股票比较尚未开放；来源待核验"}
-        st.info("真实美股多股票比较尚未开放：免费来源尚未通过完整关卡。")
-        st.button("进入美元教学研究", key="comparison_us_teaching", on_click=_open_us_teaching, icon=":material/school:")
+        from quant_lab.ui_us_price_comparison import render_us_price_comparison
+        render_us_price_comparison()
         return
     st.session_state.setdefault("_comparison_draft_market", market)
     st.session_state.setdefault("compare_codes", "600519,000001,600036" if market == "A 股" else "00700,00941,00005")

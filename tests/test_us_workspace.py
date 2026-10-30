@@ -16,6 +16,7 @@ def test_us_workspace_offline_run_cash_ledger_export_and_parameter_retention(mon
     monkeypatch.setattr("quant_lab.us_sources.inspect_sina_prices",lambda *args:calls.append(args))
     app=AppTest.from_file(APP,default_timeout=30).run()
     navigate(app, "美股研究")
+    app.radio(key="us_research_mode").set_value("离线教学样本").run()
     assert not app.exception and not calls
     assert any("非真实美股行情" in item.value for item in app.info)
     app.number_input(key="us_cash").set_value(5000.)
@@ -28,7 +29,7 @@ def test_us_workspace_offline_run_cash_ledger_export_and_parameter_retention(mon
     assert report.startswith(b'{')
     assert app.session_state["_current_ai_context"]["data_status"].startswith("离线教学")
     app.radio(key="us_source_mode").set_value("免费来源状态").run()
-    assert app.button(key="us_live_backtest").disabled
+    assert not app.button(key="us_live_backtest").disabled
     assert not any(item.label=="教学策略累计收益" for item in app.metric)
     app.radio(key="us_source_mode").set_value("离线教学样本").run()
     assert app.number_input(key="us_cash").value==5000.
@@ -41,12 +42,13 @@ def test_free_source_failure_stays_visible_and_does_not_become_teaching_data(mon
     monkeypatch.setattr("quant_lab.us_sources.fetch_sina_reference",lambda *args, **kwargs: fail())
     app=AppTest.from_file(APP,default_timeout=30).run()
     navigate(app, "美股研究")
+    app.radio(key="us_research_mode").set_value("离线教学样本").run()
     app.radio(key="us_source_mode").set_value("免费来源状态").run()
     app.button(key="FormSubmitter:us_real_prices-加载真实美股日线").click().run()
     finish_background_jobs(app)
     assert not app.exception
     assert any("来源请求失败" in item.value for item in app.error)
-    assert app.button(key="us_live_backtest").disabled
+    assert not app.button(key="us_live_backtest").disabled
     assert "us_source_observation" not in app.session_state
     assert not app.metric
 
@@ -95,4 +97,4 @@ def test_real_us_prices_refresh_failure_retains_data_and_query_isolates_ai(monke
     finish_background_jobs(app)
     assert not app.metric
     assert "symbol" not in app.session_state["_current_ai_context"]
-    assert app.button(key="us_live_backtest").disabled
+    assert not app.button(key="us_live_backtest").disabled
