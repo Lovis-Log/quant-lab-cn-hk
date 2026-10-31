@@ -3,6 +3,8 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
+from conftest import finish_background_jobs
 
 from quant_lab.deepseek import Answer
 from quant_lab import ai_chat, storage
@@ -32,11 +34,12 @@ def test_remembered_key_is_loaded_on_start_and_panel_is_global(tmp_path, monkeyp
 def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
-    navigation = app.sidebar.radio(key="nav_page")
+    navigation = app.sidebar.radio(key="nav_section")
     assert "AI 研究助手" not in navigation.options
     assert "新手使用指引" not in navigation.options
     assert "研究笔记" not in navigation.options
     assert not [button for button in app.button if button.label == "新手使用指引"]
+    app.button(key="manual_panel_toggle").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究笔记").click().run()
     assert app.session_state["manual_panel_open"] is True
@@ -81,6 +84,7 @@ def test_deepseek_opens_chat_first_and_research_returns_without_model_call(tmp_p
 def test_left_sidebar_launcher_does_not_change_open_panels(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    app.button(key="manual_panel_toggle").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究笔记").click().run()
     assert app.session_state["left_sidebar_visible"] is True
@@ -130,7 +134,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     monkeypatch.setattr("quant_lab.credentials.clear_key", lambda: None)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     assert not any(w.label == "DeepSeek API Key" for w in app.text_input)
-    assert "AI 研究助手" not in app.sidebar.radio(key="nav_page").options
+    assert "AI 研究助手" not in app.sidebar.radio(key="nav_section").options
     widget(app,"button","DeepSeek 助手").click().run()
     assert app.session_state["ai_workspace"] == "对话与辅导"
     widget(app,"button","⚙").click().run()
@@ -145,9 +149,16 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     app.run()
     assert len(calls) == 1
     app.run()
-    app.sidebar.radio[0].set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     assert len(calls) == 1
+    widget(app, "selectbox", "选择课程").set_value("simple_return").run()
+    app.session_state["knowledge_lazy_academy_simple_return"] = True
+    app.run()
+    # The current AppTest serializer omits expander widget states. Keep the
+    # disclosure open for this action as a real browser does automatically.
+    app.session_state["knowledge_lazy_academy_simple_return"] = True
     widget(app,"button","向 AI 追问").click().run()
+    assert "简单收益率" in widget(app,"text_area","问题（确认后发送）").value
     assert app.session_state["deepseek_api_key"] == "sk-only-ui-mock-secret"
     widget(app,"button","⚙").click().run()
     widget(app,"selectbox","DeepSeek 模型").set_value("beta").run()
@@ -325,6 +336,7 @@ def test_research_workspace_points_to_actual_connection_location(tmp_path, monke
     monkeypatch.setattr("quant_lab.ui.fetch_history", lambda *args: sample_bundle())
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究实验").click().run()
     text = "\n".join(str(item.value) for item in (*app.caption, *app.info))
@@ -349,6 +361,7 @@ def test_history_manual_failure_keeps_previous_data(tmp_path, monkeypatch):
     monkeypatch.setattr("quant_lab.ui.fetch_history", fetch)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
     widget(app,"button","立即更新历史日线").click().run()
     assert calls[-1] == {"force": True}
     app.session_state["history_manual_at"] = float('-inf')

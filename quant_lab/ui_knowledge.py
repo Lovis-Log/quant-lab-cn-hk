@@ -45,11 +45,17 @@ def render_knowledge(
     period="所选样本区间",
     expanded=False,
     current_reading: str | None = None,
+    lazy=False,
+    rerun_on_manual=False,
 ):
     if not st.session_state.get("learning_mode", True):
         return
     item = KNOWLEDGE[topic]
-    with st.expander(f"知识解释：{item.title}", expanded=expanded):
+    with st.expander(f"知识解释：{item.title}", expanded=expanded,
+                     key=f"knowledge_lazy_{key}_{topic}" if lazy else None,
+                     on_change="rerun" if lazy else "ignore") as disclosure:
+        if lazy and not disclosure.open:
+            return
         for label, content in (("是什么", item.definition), ("刻画什么", item.feature),
                                ("为什么重要", item.importance)):
             st.markdown(f"**{label}**：{content}")
@@ -68,12 +74,14 @@ def render_knowledge(
         article_id = ARTICLE_BY_TOPIC.get(topic)
         if article_id:
             from quant_lab.ui_manual import open_manual_article
-            st.button(
+            opened = st.button(
                 "在使用手册中阅读",
                 key=f"knowledge_manual_{key}_{topic}",
                 on_click=open_manual_article,
                 args=(article_id,),
             )
+            if opened and rerun_on_manual:
+                st.rerun(scope="app")
 
 
 def _toggle_knowledge_group(state_key: str) -> None:

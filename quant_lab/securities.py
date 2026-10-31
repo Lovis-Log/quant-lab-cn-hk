@@ -9,7 +9,7 @@ from threading import RLock
 
 import requests
 
-from quant_lab.market_data import normalize_symbol
+from quant_lab.security_identity import normalize_security as normalize_symbol
 from quant_lab.paths import securities_dir, user_data_dir
 from quant_lab.refresh import RefreshCache
 
@@ -19,6 +19,7 @@ CNINFO_URL = "https://www.cninfo.com.cn/new/data/szse_stock.json"
 POPULAR = {
     "A 股": ("600519", "000001", "600036", "601318", "300750", "000858", "000333", "002594", "600900", "601398", "601857", "688981"),
     "港股": ("00700", "09988", "03690", "00941", "00005", "00939", "01211", "01810", "02318", "00388", "00981", "09618"),
+    "美股": ("AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "BRK.B", "BABA"),
 }
 
 
@@ -60,6 +61,10 @@ def fetch_directory(market: str) -> Directory:
             rows = [(row["code"], row["zwjc"]) for row in response.json()["stockList"]
                     if row.get("category") == "A股"]
         source = "巨潮资讯公开证券基础目录"
+    elif market == "美股":
+        from quant_lab.us_profiles import directory_rows, SOURCE
+        rows = directory_rows()
+        source = SOURCE
     else:
         rows = []
         pages, page = 1, 1
@@ -97,7 +102,7 @@ _file_lock = RLock()
 
 
 def _read_directory(market: str) -> Directory:
-    filename = "a_shares.json" if market == "A 股" else "hk_shares.json"
+    filename = _filename(market)
     candidates = (securities_dir() / filename,
                   Path(__file__).parent / "resources" / filename)
     error = None
@@ -119,7 +124,7 @@ def security_directory(market: str, *, force: bool = False) -> Directory:
         if not force:
             return _read_directory(market)
         directory = fetch_directory(market)
-        filename = "a_shares.json" if market == "A 股" else "hk_shares.json"
+        filename = _filename(market)
         path = securities_dir() / filename
         with _file_lock:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,3 +136,7 @@ def security_directory(market: str, *, force: bool = False) -> Directory:
         failure_message="证券目录更新失败；保留上次有效目录和原获取时间。")
     directory = view.value or _read_directory(market)
     return replace(directory, error=view.error or directory.error)
+
+
+def _filename(market):
+    return {"A 股": "a_shares.json", "港股": "hk_shares.json", "美股": "us_shares.json"}[market]

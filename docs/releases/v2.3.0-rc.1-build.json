@@ -1,0 +1,24 @@
+{
+  "completed_at_utc": "2026-10-31T16:28:40.1142855Z",
+  "python": "Python 3.12.10",
+  "started_at_utc": "2026-10-31T16:22:17.3905580Z",
+  "version": "2.3.0-rc.1",
+  "source_commit": "d4ff064ff7eb63e1f8ee5bafb618cf10987645ac",
+  "tests": "passed",
+  "assets": [
+    {
+      "sha256": "6d1425be6e57ea1c9d3f0fb18ee9edd5d09532f0a0d362a48b8a79ad93a6e175",
+      "name": "QuantLab.exe",
+      "size": 33196816
+    },
+    {
+      "sha256": "e030b270e27381807195942589ebf47efc6a722cc62a44e015ca36fcce73c11e",
+      "name": "QuantLab-CN-HK-2.3.0-rc.1-Setup.exe",
+      "size": 102390965
+    }
+  ],
+  "source_dirty": false,
+  "build_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\build_windows.ps1 -BuildInstaller",
+  "pytest_environment": "PYTEST_ADDOPTS=--basetemp=<new isolated workspace directory>",
+  "detailed_log": "dist/release/2.3.0-rc.1/build.log"
+}

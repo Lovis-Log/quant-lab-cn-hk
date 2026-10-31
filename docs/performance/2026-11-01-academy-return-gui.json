@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-01",
+  "source_baseline": "b1497ba",
+  "task": 36,
+  "status": "passed",
+  "offline_test": {
+    "command": "pytest -q tests/test_academy_ui.py::test_prerequisite_return_restores_chained_course_filters_and_parameter",
+    "passed": 1,
+    "seconds": 5.07
+  },
+  "actual_webview2": true,
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "flow": "09风险专题/搜索方差/参数4 -> 05 -> 01 -> 返回05 -> 返回09；专题、搜索、参数恢复，返回按钮耗尽后消失",
+  "console_errors": [],
+  "native_close": true,
+  "child_stopped": true,
+  "warnings": "既有中文公式KaTeX兼容性提示，未扩大修复",
+  "evidence_directory": "D:\\Projects\\quant-lab\\.tools\\academy-return-gui-e5df0bfcf9f7445a8357f8d424eedf7f",
+  "screenshots": [
+    "prerequisite-return.png",
+    "course-restored.png"
+  ],
+  "harness_correction": "首次在跳转前按aria-valuenow读取range输入失败；真实DOM显示value=4，改为value断言后只完成同一尚未执行流程。",
+  "not_run": [
+    "完整pytest重跑",
+    "其他课程/市场GUI",
+    "性能采样",
+    "安装包/标签/Release"
+  ]
+}

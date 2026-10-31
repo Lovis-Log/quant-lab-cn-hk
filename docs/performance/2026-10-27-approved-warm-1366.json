@@ -1,0 +1,106 @@
+{
+  "label": "warm-final-1366",
+  "synthetic": true,
+  "source_commit": "aae6f97ba68e17742c73aac9e8ec554a0701b7de",
+  "source_dirty": true,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+  "logical_cpus": 20,
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "data_rows": 252,
+  "fixture_revision": "ohlc-v2",
+  "measurements": {
+    "page_switch": {
+      "samples": 20,
+      "median_ms": 469.8,
+      "p95_ms": 543.0,
+      "max_ms": 657.2
+    },
+    "lesson_switch": {
+      "samples": 20,
+      "median_ms": 341.2,
+      "p95_ms": 478.8,
+      "max_ms": 525.2
+    },
+    "lesson_parameter": {
+      "samples": 20,
+      "median_ms": 257.0,
+      "p95_ms": 394.9,
+      "max_ms": 409.5
+    },
+    "manual_toggle": {
+      "samples": 20,
+      "median_ms": 482.7,
+      "p95_ms": 557.9,
+      "max_ms": 591.6
+    },
+    "load_252_synthetic_rows_ms": 2872.0
+  },
+  "errors": [],
+  "synthetic_io_delay_seconds": 2.0,
+  "legacy_theme_profile": true,
+  "warm_up_cycles": 2,
+  "scope": "actual source desktop WebView2; synthetic data; not a real-provider or installed-build measurement",
+  "startup_ms": 18447.1,
+  "lazy_explanation_open_close": true,
+  "page_switch_during_io": true,
+  "layout": {
+    "stSidebar": {
+      "x": 0,
+      "y": 52,
+      "width": 248,
+      "height": 716,
+      "padding": "0px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgb(24, 27, 30)"
+    },
+    "stSidebarHeader": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "padding": "0px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stSidebarContent": {
+      "x": 0,
+      "y": 52,
+      "width": 248,
+      "height": 716,
+      "padding": "0px 10px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stSidebarUserContent": {
+      "x": 20,
+      "y": 52,
+      "width": 208,
+      "height": 1208.140625,
+      "padding": "12px 4px 24px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stMainBlockContainer": {
+      "x": 248,
+      "y": 0,
+      "width": 1108,
+      "height": 1799.6875,
+      "padding": "72px 24px 32px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    }
+  },
+  "compact_dock": true,
+  "notes_editable_in_dock": true,
+  "dock_switch": true,
+  "page_switch_during_cpu": true,
+  "actual_cpu_backtest_completed": true,
+  "panel_drag": true,
+  "cpu_cancel": true,
+  "child_stopped": true,
+  "exit_code": 0
+}

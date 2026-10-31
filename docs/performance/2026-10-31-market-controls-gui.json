@@ -1,0 +1,26 @@
+{
+  "real_us_prices": true,
+  "ah_fixture_only": true,
+  "checks": {
+    "A 股_shared_controls": true,
+    "港股_shared_controls": true,
+    "美股_shared_controls": true,
+    "typed_class_share": true,
+    "viewport_1366": true,
+    "viewport_1920": true,
+    "load_real_aapl_directly_on_research": true,
+    "changed_symbol_hides_old_research": true,
+    "shared_multi_picker_and_submit": true,
+    "desktop_exit": true
+  },
+  "page_errors": [],
+  "title": "Quant Lab",
+  "date": "2026-10-31",
+  "base_commit": "f983240",
+  "source_dirty": true,
+  "isolated_user_data": true,
+  "test_app_id": "QuantLab.Validation.UnifiedMarket",
+  "actual_surface": "Windows WebView2 via project CDP probe",
+  "first_restricted_attempt": "local page load timeout; authorized desktop run passed",
+  "not_performance_acceptance": true
+}

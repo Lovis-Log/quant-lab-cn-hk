@@ -1,0 +1,46 @@
+{
+  "version": "2.3.0-rc.1",
+  "source_commit": "d4ff064ff7eb63e1f8ee5bafb618cf10987645ac",
+  "prerelease": true,
+  "core_tests": {
+    "passed": 332,
+    "warnings": 108,
+    "seconds": 107.14,
+    "business_test_runs": 1,
+    "initial_setup_errors": 332,
+    "initial_business_tests_executed": 0,
+    "initial_error": "System pytest temp directory access denied; stopped build, retained log, used fresh workspace basetemp without changing tests."
+  },
+  "packaged_actual_webview_dom": "passed",
+  "isolated_install_uninstall": "passed",
+  "test_app_id": "079DCBDE-7792-48D5-9351-78404103140A",
+  "installed_payload_sha256_matches": true,
+  "installed_version": "2.3.0-rc.1",
+  "installed_app_entry_unmodified": true,
+  "source_injection": false,
+  "mock_api": false,
+  "checks": [
+    "market startup/manual closed",
+    "28-course frozen catalog",
+    "prerequisite chain and return/filter/parameter",
+    "teaching report replay",
+    "manual link"
+  ],
+  "viewport": [
+    {
+      "width": 1366,
+      "height": 768
+    }
+  ],
+  "native_close": true,
+  "child_stopped": true,
+  "user_data_preserved_after_uninstall": true,
+  "qa_installer": "Same recipe and byte-identical payload; random AppId/name/shortcuts, private path, lowest privilege, uncompressed container to avoid repeated compression; public installer unmodified.",
+  "console_errors": [],
+  "console_warnings": "Existing KaTeX Chinese math unicode warnings; content visible.",
+  "real_paid_deepseek": "not_run",
+  "new_real_market_validation": "not_run",
+  "p95_performance": "not_run; existing unmet targets remain",
+  "code_signed": false,
+  "production_data_or_credentials_accessed": false
+}

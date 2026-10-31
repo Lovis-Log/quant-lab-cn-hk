@@ -8,7 +8,9 @@ import streamlit as st
 
 from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
 from quant_lab.metrics import performance_stats
-from quant_lab.portfolio import analyze_portfolio
+from quant_lab.portfolio import analyze_portfolio, collect_portfolio_histories
+from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
+from quant_lab.jobs import JobState
 from quant_lab.processing import DataValidationError
 from quant_lab.statistics import evaluate_linear_model, one_sample_return_test
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
@@ -18,11 +20,11 @@ from quant_lab import names
 
 def render_risk(bundle: HistoryBundle | None) -> None:
     st.subheader("风险与投资组合")
-    st.caption("同一市场、同一币种的历史描述与样本外配置比较；不包含交易费用或汇率转换。")
+    st.caption("旧简化模型：同一市场同币种、固定权重每日再平衡，不核算持仓现金、交易费用或汇率。新的现金持仓模型在“多股票比较”中。")
     if not require_history(bundle):
         return
     history = bundle.frame
-    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     if len(history) >= 3:
         daily = history["close"].pct_change().dropna()
         price_stats = performance_stats(history["close"])
@@ -46,12 +48,14 @@ def render_risk(bundle: HistoryBundle | None) -> None:
     other = "000001" if bundle.market == "A 股" and bundle.symbol != "000001" else (
         "600519" if bundle.market == "A 股" else "00941" if bundle.symbol != "00941" else "00700"
     )
-    code_text = st.text_input(
-        "组合股票代码（逗号分隔，2–4 只）", value=f"{bundle.symbol},{other}",
-        help="只允许当前市场的股票；A 股六位，港股可输入 1–5 位并自动补足五位。不会混合 CNY 与 HKD。",
-        key=f"portfolio_codes_{bundle.market}_{bundle.symbol}",
-    )
-    fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05, key="portfolio_fraction")
+    with st.form("portfolio_parameters", border=False):
+        code_text = st.text_input(
+            "组合股票代码（逗号分隔，2–4 只）", value=f"{bundle.symbol},{other}",
+            help="只允许当前市场股票，不会混合 CNY 与 HKD。",
+            key=f"portfolio_codes_{bundle.market}_{bundle.symbol}",
+        )
+        fraction = st.slider("组合权重训练比例", 0.50, 0.85, 0.70, 0.05, key="portfolio_fraction")
+        requested = st.form_submit_button("分析同市场组合")
     codes = [part.strip() for part in code_text.split(",") if part.strip()]
     pattern = r"\d{6}" if bundle.market == "A 股" else r"\d{5}"
     valid = 2 <= len(codes) <= 4 and len(set(codes)) == len(codes) and all(
@@ -61,36 +65,37 @@ def render_risk(bundle: HistoryBundle | None) -> None:
         st.warning("请输入 2–4 个不重复的当前市场股票代码。")
         return
     key = (bundle_key(bundle), tuple(codes), fraction)
-    if st.button("分析同市场组合"):
-        try:
-            histories: dict[str, pd.DataFrame] = {}
-            first = bundle.frame["date"].iloc[0].date()
-            last = bundle.frame["date"].iloc[-1].date()
-            with st.spinner("读取组合股票并对齐共同交易日…"):
-                for code in codes:
-                    histories[code] = (
-                        bundle.frame if code == bundle.symbol
-                        else fetch_history(bundle.market, code, first, last, bundle.adjustment).frame
-                    )
-                analysis = analyze_portfolio(histories, fraction)
+    if requested:
+        submit_task("portfolio_data", key, collect_portfolio_histories, bundle, codes, fetch_history)
+    prepared = take_result("portfolio_data", key)
+    if prepared:
+        if prepared.state == JobState.SUCCEEDED:
+            submit_task("portfolio", key, analyze_portfolio, prepared.result, fraction, cpu=True)
+        elif prepared.state == JobState.FAILED:
+            st.session_state["portfolio_error"] = prepared.error
+    completed = take_result("portfolio", key)
+    if completed:
+        if completed.state == JobState.SUCCEEDED:
+            analysis = completed.result
             st.session_state["portfolio_key"] = key
             st.session_state["portfolio_result"] = analysis
             st.session_state["portfolio_error"] = None
-        except (ValueError, DataUnavailableError, DataValidationError) as exc:
-            st.session_state["portfolio_key"] = key
-            st.session_state["portfolio_result"] = None
-            st.session_state["portfolio_error"] = str(exc)
-    if st.session_state.get("portfolio_key") != key:
-        return
+        elif completed.state == JobState.FAILED:
+            st.session_state["portfolio_error"] = completed.error
     if st.session_state.get("portfolio_error"):
         st.error(st.session_state["portfolio_error"])
+    if "portfolio_data" in st.session_state.get("_task_tickets", {}) or "portfolio" in st.session_state.get("_task_tickets", {}):
+        st.caption("组合研究进行中，可继续使用其他工作区。")
+        if st.session_state.get("portfolio_result") is None:
+            loading_placeholder()
+    if st.session_state.get("portfolio_key") != key:
         return
     result = st.session_state.get("portfolio_result")
     if result is None:
         return
     st.caption(f"共同交易日 {len(result.closes)} 天；权重只使用截至 {result.train_last_date:%Y-%m-%d} 的训练收益率。")
     st.markdown("#### 组合权重")
-    labels = {code: names.security_label(bundle.market, code) for code in codes}
+    labels = {code: names.cached_security_label(bundle.market, code) for code in codes}
     st.dataframe(result.weights.rename(index=labels).style.format("{:.1%}"), width="stretch")
     cols = st.columns(2)
     with cols[0]:
@@ -109,7 +114,7 @@ def render_risk(bundle: HistoryBundle | None) -> None:
             key="portfolio",
         )
     figure = go.Figure()
-    for name, color in (("等权", "#4F8CFF"), ("逆波动率", "#24D6A0")):
+    for name, color in (("等权", "#78A7DB"), ("逆波动率", "#73B798")):
         figure.add_trace(go.Scatter(
             x=result.test_equity.index, y=result.test_equity[name],
             name=name, line={"color": color, "width": 2},
@@ -126,17 +131,8 @@ def render_risk(bundle: HistoryBundle | None) -> None:
 
 
 def render_statistics(bundle: HistoryBundle | None) -> None:
-    st.subheader("统计学与机器学习")
+    st.subheader("统计分析")
     st.caption("先描述样本，再做假设检验与时间序列预测；这些结果不构成投资建议。")
-    with st.expander("这个页面怎么用", expanded=bundle is None):
-        st.markdown(
-            "1. 左侧选股票，历史区间建议至少一年，再点“加载真实历史日线”。所有统计使用当前价格口径；跨除权时先核对复权影响。\n"
-            "2. 先看日收益率样本量、日均收益、年化波动和 p 值。p < 0.05 只表示在检验假设下对零均值的反证较强，不能理解成未来上涨概率。\n"
-            "3. 训练比例先保留 70%，点击“运行时间序列线性回归”：较早 70% 用来学习，较晚样本用来检验，中间留一日间隔。至少需要 60 行有效特征，通常要 80 个以上交易日。\n"
-            "4. 比较模型 MAE 和零收益基线 MAE：越小越好，模型必须先胜过每天预测 0 的简单方法。再看 R²、方向一致率与两条曲线，别只看命中方向。\n"
-            "5. 系数对应标准化后的特征，表示训练期关联。换股票或区间后需要重新运行；反复根据测试结果调参会过拟合。"
-        )
-        st.caption("输入特征：1 日收益、5 日收益、5/20 日均线比值减 1、成交量变化率、10 日收益波动。预测目标：下一交易日收盘相对当日收盘的收益率。")
     if not require_history(bundle):
         return
     try:
@@ -160,20 +156,23 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     fraction = st.slider("机器学习训练比例", 0.55, 0.85, 0.70, 0.05, key="model_fraction")
     key = (bundle_key(bundle), fraction)
     if st.button("运行时间序列线性回归"):
-        try:
-            with st.spinner("按日期训练并评估样本外预测…"):
-                evaluation = evaluate_linear_model(bundle.frame, fraction)
+        submit_task("statistics", key, evaluate_linear_model, bundle.frame, fraction, cpu=True)
+    completed = take_result("statistics", key)
+    if completed:
+        if completed.state == JobState.SUCCEEDED:
+            evaluation = completed.result
             st.session_state["model_key"] = key
             st.session_state["model_result"] = evaluation
             st.session_state["model_error"] = None
-        except ValueError as exc:
-            st.session_state["model_key"] = key
-            st.session_state["model_result"] = None
-            st.session_state["model_error"] = str(exc)
-    if st.session_state.get("model_key") != key:
-        return
+        elif completed.state == JobState.FAILED:
+            st.session_state["model_error"] = completed.error
     if st.session_state.get("model_error"):
         st.error(st.session_state["model_error"])
+    if "statistics" in st.session_state.get("_task_tickets", {}):
+        st.caption("模型在后台计算，可继续阅读或切换工作区。")
+        if st.session_state.get("model_result") is None:
+            loading_placeholder()
+    if st.session_state.get("model_key") != key:
         return
     result = st.session_state.get("model_result")
     if result is None:
@@ -211,11 +210,11 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
     figure = go.Figure()
     figure.add_trace(go.Scatter(
         x=result.predictions["target_date"], y=result.predictions["actual"],
-        name="实际次日收盘收益率", line={"color": "#4F8CFF"},
+        name="实际次日收盘收益率", line={"color": "#78A7DB"},
     ))
     figure.add_trace(go.Scatter(
         x=result.predictions["target_date"], y=result.predictions["predicted"],
-        name="模型预测", line={"color": "#F5B942"},
+        name="模型预测", line={"color": "#C6A56D"},
     ))
     st.plotly_chart(style_figure(figure), width="stretch", theme=None)
     st.dataframe(result.coefficients.to_frame(), width="stretch")

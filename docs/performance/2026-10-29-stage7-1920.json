@@ -1,0 +1,107 @@
+{
+  "label": "stage7-native-1920",
+  "synthetic": true,
+  "source_commit": "f7ced80c2c8acae67fbfcfbbc4bf458a32f44623",
+  "source_dirty": true,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+  "logical_cpus": 20,
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "data_rows": 2520,
+  "fixture_revision": "ohlc-v3-symbol-seeds",
+  "measurements": {
+    "page_switch": {
+      "samples": 2,
+      "median_ms": 797.8,
+      "p95_ms": 797.8,
+      "max_ms": 797.8
+    },
+    "lesson_switch": {
+      "samples": 2,
+      "median_ms": 467.1,
+      "p95_ms": 467.1,
+      "max_ms": 467.1
+    },
+    "lesson_parameter": {
+      "samples": 2,
+      "median_ms": 292.0,
+      "p95_ms": 292.0,
+      "max_ms": 292.0
+    },
+    "manual_toggle": {
+      "samples": 2,
+      "median_ms": 660.2,
+      "p95_ms": 660.2,
+      "max_ms": 660.2
+    },
+    "load_2520_synthetic_rows_ms": 2568.1
+  },
+  "errors": [],
+  "synthetic_io_delay_seconds": 1.0,
+  "legacy_theme_profile": false,
+  "warm_up_cycles": 2,
+  "scope": "actual source desktop WebView2; synthetic data; not a real-provider or installed-build measurement",
+  "startup_ms": 9233.9,
+  "research_scan_walk_stress": true,
+  "research_two_archives_saved_and_replayed": true,
+  "research_report_export_visible": true,
+  "research_full_archive_validation_replayed": true,
+  "page_switch_during_io": true,
+  "layout": {
+    "stSidebar": {
+      "x": 0,
+      "y": 52,
+      "width": 248,
+      "height": 1028,
+      "padding": "0px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgb(24, 27, 30)"
+    },
+    "stSidebarHeader": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "padding": "0px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stSidebarContent": {
+      "x": 0,
+      "y": 52,
+      "width": 248,
+      "height": 1028,
+      "padding": "0px 10px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stSidebarUserContent": {
+      "x": 20,
+      "y": 52,
+      "width": 208,
+      "height": 1559.640625,
+      "padding": "12px 4px 24px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stMainBlockContainer": {
+      "x": 248,
+      "y": 0,
+      "width": 1662,
+      "height": 1894.8828125,
+      "padding": "72px 24px 32px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    }
+  },
+  "page_switch_during_cpu": true,
+  "actual_cpu_backtest_completed": true,
+  "panel_drag": true,
+  "cpu_cancel": true,
+  "close_method": "owned-native-WM_CLOSE",
+  "child_stopped": true,
+  "exit_code": 0
+}

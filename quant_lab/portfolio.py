@@ -16,6 +16,23 @@ class PortfolioAnalysis:
     train_last_date: pd.Timestamp
 
 
+def collect_portfolio_histories(bundle, codes, fetcher):
+    """I/O phase, separate from the CPU allocation calculation and UI."""
+    histories = {}
+    first, last = bundle.frame.date.iloc[0].date(), bundle.frame.date.iloc[-1].date()
+    for code in codes:
+        if code == bundle.symbol:
+            histories[code] = bundle.frame
+        else:
+            other = fetcher(bundle.market, code, first, last, bundle.adjustment)
+            if other.currency != bundle.currency or other.market != bundle.market:
+                raise ValueError("组合股票必须属于同一市场和币种。")
+            if other.update_error:
+                raise ValueError("组合行情更新失败，请检查数据来源后重试。")
+            histories[code] = other.frame
+    return histories
+
+
 def align_closes(histories: dict[str, pd.DataFrame]) -> pd.DataFrame:
     if not 2 <= len(histories) <= 4:
         raise ValueError("组合分析需要 2 到 4 只同币种股票。")

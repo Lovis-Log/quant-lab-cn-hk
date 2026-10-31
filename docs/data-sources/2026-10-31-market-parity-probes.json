@@ -1,0 +1,45 @@
+{
+  "checked_on": "2026-10-31",
+  "source": "新浪财经 · AKShare原始日线接口",
+  "raw_prices_saved": false,
+  "results": [
+    {
+      "symbol": "MSFT",
+      "requested": [
+        "2010-01-01",
+        "2026-10-29"
+      ],
+      "actual": [
+        "2010-01-04",
+        "2026-10-29"
+      ],
+      "rows": 4230,
+      "missing_count": 2,
+      "missing_dates": [
+        "2012-06-29",
+        "2014-07-16"
+      ],
+      "received_at": "2026-10-31T14:48:09.808656+00:00",
+      "data_sha256": "d216ca5406435edd3a9a539bf4ce1199950a7ea7eac6349b3a7905a76e19ab27",
+      "execution_eligible": false,
+      "execution_error": "成交区间有缺失交易日；不能删日或填价进行回测。"
+    },
+    {
+      "symbol": "MSFT",
+      "requested": [
+        "2015-01-01",
+        "2026-10-29"
+      ],
+      "actual": [
+        "2015-01-02",
+        "2026-10-29"
+      ],
+      "rows": 2974,
+      "missing_count": 0,
+      "received_at": "2026-10-31T14:49:43.636187+00:00",
+      "data_sha256": "1fe1e67f7575b08c9b5286a579ef11f74e8120e258fd9754a9a5968c5c462be5",
+      "execution_eligible": true,
+      "execution_validated_rows": 2974
+    }
+  ]
+}

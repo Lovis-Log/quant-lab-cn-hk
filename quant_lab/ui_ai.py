@@ -15,20 +15,16 @@ from quant_lab.processing import DataValidationError
 from quant_lab.research import run_experiment
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec
 from quant_lab.ui_helpers import bundle_key, require_history
+from quant_lab.data_quality import require_completed_close
 from quant_lab import names
 from quant_lab.security import redact
 from quant_lab.deepseek import DeepSeekClient, AIRequestError
 from quant_lab.ai_context import bundle_context
+from quant_lab.research_inputs import prepare_inputs
 
 
 def _raw_history(bundle: HistoryBundle) -> pd.DataFrame:
-    if bundle.adjustment == "":
-        return bundle.frame
-    return fetch_history(
-        bundle.market, bundle.symbol,
-        bundle.frame["date"].iloc[0].date(),
-        bundle.frame["date"].iloc[-1].date(), "",
-    ).frame
+    return prepare_inputs(bundle, fetch=fetch_history).raw
 
 
 def current_experiment_context(bundle: HistoryBundle | None) -> dict:
@@ -50,8 +46,13 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     st.caption("模型只草拟可检验假设与文字报告；所有计算在本地内置函数中执行，模型生成的代码永不自动运行。")
     if not require_history(bundle):
         return
+    try:
+        require_completed_close(bundle)
+    except DataValidationError as exc:
+        st.warning(str(exc))
+        return
     data_key = bundle_key(bundle)
-    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     api_key = st.session_state.get("deepseek_api_key", "")
     model = st.session_state.get("ds_model_select") if st.session_state.get("deepseek_models") else st.session_state.get("ds_model_manual", st.session_state.get("deepseek_model", ""))
     metadata = next((m for m in st.session_state.get("deepseek_models", []) if m["id"] == model), {})
@@ -155,8 +156,8 @@ def render_ai(bundle: HistoryBundle | None) -> None:
             for item in items:
                 st.write(f"• {item}")
     report_text = (
-        f"# Quant Lab CN/HK 研究审计\n\n"
-        f"标的：{names.security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
+        f"# Quant Lab 研究审计\n\n"
+        f"标的：{names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name)}\n\n"
         f"来源：{bundle.source}；价格口径：{bundle.adjustment_label}；币种：{bundle.currency}\n\n"
         f"实际交易日：{bundle.frame['date'].iloc[0]:%Y-%m-%d} 至 "
         f"{bundle.frame['date'].iloc[-1]:%Y-%m-%d}；记录数：{len(bundle.frame)}\n\n"

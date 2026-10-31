@@ -4,6 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import select_security
+from conftest import navigate
+from conftest import finish_background_jobs
 
 from quant_lab.data import DataUnavailableError, HistoryBundle
 
@@ -17,12 +20,12 @@ def test_terminal_boots_with_clear_data_status() -> None:
     assert len(app.get("plotly_chart")) == 2
     assert any("固定随机种子" in item.value for item in app.get("caption"))
     assert next(w for w in app.sidebar.selectbox if w.label == "价格口径").value == "不复权"
-    assert any("腾讯证券" in item.value for item in app.get("caption"))
+    assert not any("目录快照：" in item.value or "来源：" in item.value for item in app.sidebar.caption)
 
     app.sidebar.selectbox[0].select("港股").run()
     assert not app.exception
     assert any("港股" in item.value and "00700" in item.value for item in app.get("html"))
-    app.sidebar.radio[0].set_value("策略实验室").run()
+    navigate(app, "策略实验室")
     assert not app.exception
 
 
@@ -40,14 +43,15 @@ def test_loaded_history_replaces_demo_metrics(monkeypatch) -> None:
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("+10.00%" in item.value for item in app.get("html"))
     assert any("已加载真实历史数据" in item.value for item in app.get("html"))
     assert any("来源：腾讯证券" in item.value for item in app.get("caption"))
-    assert len(app.get("plotly_chart")) == 2
+    assert len(app.get("plotly_chart")) == 1
 
-    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
+    select_security(app, "symbol_A 股", "000001")
     assert not app.exception
     assert not any("+10.00%" in item.value for item in app.get("html"))
 
@@ -60,6 +64,7 @@ def test_provider_error_keeps_metrics_empty(monkeypatch) -> None:
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("暂时无法获取" in item.value for item in app.get("error"))
@@ -78,6 +83,7 @@ def test_simulated_history_is_never_labeled_real(monkeypatch) -> None:
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("已加载模拟/教学数据" in item.value for item in app.get("html"))
@@ -98,6 +104,7 @@ def test_hk_history_uses_hkd_and_its_own_source(monkeypatch) -> None:
     app = AppTest.from_file(entrypoint, default_timeout=20).run()
     app.sidebar.selectbox[0].select("港股").run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
 
     assert not app.exception
     assert any("HK$" in item.value for item in app.get("html"))

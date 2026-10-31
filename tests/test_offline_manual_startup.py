@@ -3,12 +3,13 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 
 ENTRYPOINT = Path(__file__).resolve().parents[1] / "app.py"
 
 
-def test_offline_startup_opens_manual_and_academy(monkeypatch, tmp_path):
+def test_offline_startup_opens_market_with_manual_available_on_request(monkeypatch, tmp_path):
     def blocked(*args, **kwargs):
         raise AssertionError("启动和离线阅读不得访问上游网络")
 
@@ -16,14 +17,25 @@ def test_offline_startup_opens_manual_and_academy(monkeypatch, tmp_path):
     monkeypatch.setenv("QUANT_LAB_CREDENTIAL_TARGET", "QuantLabCNHK/Stage5OfflineTest")
     monkeypatch.setattr("requests.sessions.Session.request", blocked)
     monkeypatch.setattr("socket.create_connection", blocked)
+    from quant_lab.workspaces import WorkspaceStore
+    store = WorkspaceStore()
+    store.save("学习", {"nav_page": "Quant Academy", "manual_panel_open": True,
+                       "maximized_panel": "manual", "symbol_A 股": "000001"})
+    saved = store.load()
 
     app = AppTest.from_file(ENTRYPOINT, default_timeout=30).run()
 
     assert not app.exception
+    assert app.session_state["nav_section"] == "市场数据"
+    assert app.session_state["manual_panel_open"] is False
+    assert app.session_state["maximized_panel"] is None
+    assert app.session_state["symbol_A 股"] == "000001"
+    assert store.load() == saved
+    app.button(key="manual_panel_toggle").click().run()
     assert app.session_state["manual_panel_open"] is True
     assert app.selectbox(key="manual_section").options == ["快速开始", "功能说明", "专业知识库"]
     assert any("快速开始：从资料库到第一份可复现实验" in item.value for item in app.subheader)
 
-    app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
     assert not app.exception
     assert any("Quant Academy" in item.value for item in app.subheader)

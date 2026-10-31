@@ -1,0 +1,39 @@
+{
+  "real_us_prices": true,
+  "ah_fixture_only": true,
+  "checks": {
+    "A 股_shared_refresh_controls": true,
+    "港股_shared_refresh_controls": true,
+    "美股_shared_refresh_controls": true,
+    "search_chinese_name": true,
+    "real_msft_more_than_eleven_years_loaded": true,
+    "us_watchlist_add_and_sidebar_refill": true,
+    "real_usd_watchlist_close": true,
+    "history_fullscreen_escape_csv": true,
+    "manual_price_and_name_refresh": true,
+    "real_msft_eleven_year_backtest": true,
+    "viewport_1366": true,
+    "viewport_1920": true,
+    "comparison_name_search_class_share": true,
+    "desktop_exit": true
+  },
+  "page_errors": [],
+  "title": "Quant Lab",
+  "date": "2026-10-31",
+  "base_commit": "0b24c5c",
+  "source_dirty": true,
+  "scope": "actual WebView2, isolated user directory/source copy/test AppId; real US data and profile service; AH fixture only",
+  "test_app_id": "QuantLab.Validation.MarketParityComplete",
+  "viewport_sizes": [
+    [
+      1366,
+      768
+    ],
+    [
+      1920,
+      1080
+    ]
+  ],
+  "not_performance_acceptance": true,
+  "csv_scope": "shared CSV control enabled in actual fullscreen view; native file-save dialog not exercised"
+}

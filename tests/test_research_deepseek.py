@@ -5,6 +5,8 @@ import json
 
 import pytest
 from streamlit.testing.v1 import AppTest
+from conftest import select_security
+from conftest import finish_background_jobs
 
 from quant_lab.ai_research import HYPOTHESIS_SCHEMA
 from quant_lab.deepseek import DeepSeekClient, AIRequestError
@@ -57,6 +59,7 @@ def test_research_ui_shares_key_model_and_isolates_current_data(monkeypatch, tmp
     monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", Client)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
     app.sidebar.button[0].click().run()
+    finish_background_jobs(app)
     next(w for w in app.button if w.label == "DeepSeek 助手").click().run()
     next(w for w in app.button if w.label == "研究实验").click().run()
     assert not any("OPENAI" in item.value for item in app.info)
@@ -83,6 +86,6 @@ def test_research_ui_shares_key_model_and_isolates_current_data(monkeypatch, tmp
     assert any('"audit_id"' in item.value for item in app.json)
     assert len(calls) == 2
     next(w for w in app.button if w.label == "研究实验").click().run()
-    app.sidebar.selectbox(key="symbol_A 股").set_value("000001").run()
+    select_security(app, "symbol_A 股", "000001")
     assert len(calls) == 2 and "ai_experiment" in app.session_state
     assert not any(w.label == "让 AI 审阅实验" for w in app.button)

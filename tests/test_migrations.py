@@ -45,17 +45,17 @@ def test_populated_legacy_migration_and_replay(tmp_path):
     with ZipFile(BytesIO(storage.export_experiment_zip(record))) as archive:
         assert archive.read("raw_history.csv") == record["raw_csv_bytes"]
     with sqlite3.connect(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 6
         assert db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_conversations'").fetchone()
         assert db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_messages'").fetchone()
         assert db.execute("SELECT raw_csv,signal_csv,notes FROM experiments").fetchone() == prior
-    backups = list((tmp_path / "backups").glob("research.pre-v5.*.sqlite3"))
+    backups = list((tmp_path / "backups").glob("research.pre-v6.*.sqlite3"))
     assert len(backups) == 1
     with sqlite3.connect(backups[0]) as backup:
         assert backup.execute("PRAGMA user_version").fetchone()[0] == 0
         assert backup.execute("SELECT raw_csv,signal_csv,notes FROM experiments").fetchone() == prior
     storage.list_experiments(old)
-    assert len(list((tmp_path / "backups").glob("research.pre-v5.*.sqlite3"))) == 1
+    assert len(list((tmp_path / "backups").glob("research.pre-v6.*.sqlite3"))) == 1
 
 
 def test_migration_failure_rolls_back_schema_and_rows(tmp_path, monkeypatch):
@@ -70,6 +70,30 @@ def test_migration_failure_rolls_back_schema_and_rows(tmp_path, monkeypatch):
         assert db.execute("PRAGMA user_version").fetchone()[0] == 0
         assert "company_name" not in {r[1] for r in db.execute("PRAGMA table_info(experiments)")}
         assert db.execute("SELECT notes FROM experiments").fetchone()[0] == "旧私人笔记"
+
+
+def test_v5_upgrade_backups_and_preserves_all_existing_payloads(tmp_path):
+    _, audit = legacy_database(tmp_path)
+    path = tmp_path/"fresh.sqlite3"
+    # The populated pre-upgrade schema has neither the v6 manifest nor cache
+    # tables. Keep this fixture independent of git history or a network clone.
+    with sqlite3.connect(path) as db:
+        db.execute("DROP TABLE history_snapshot_heads")
+        db.execute("DROP TABLE history_snapshots")
+        db.execute("ALTER TABLE experiments DROP COLUMN input_manifest_json")
+        db.execute("PRAGMA user_version=5")
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        payload = db.execute("SELECT raw_csv,signal_csv,audit_id,notes FROM experiments").fetchone()
+    record = storage.get_experiment(1, path)
+    assert record["input_manifest"] == {} and storage.replay_experiment(record).audit_id == audit
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 6
+        assert db.execute("SELECT raw_csv,signal_csv,audit_id,notes FROM experiments").fetchone() == payload
+    backups = list((tmp_path/"backups").glob("research.pre-v6.*.sqlite3"))
+    assert len(backups)==1
+    with sqlite3.connect(backups[0]) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert db.execute("SELECT raw_csv,signal_csv,audit_id,notes FROM experiments").fetchone() == payload
 
 
 def test_manual_branch_preserves_legacy_learning_rows(tmp_path):
@@ -91,7 +115,7 @@ def test_manual_branch_preserves_legacy_learning_rows(tmp_path):
     storage.list_watchlist(path)
 
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 6
         assert db.execute("SELECT kind,item_id,status FROM learning_progress").fetchone() == (
             "course", "drawdown", "completed"
         )
@@ -100,7 +124,7 @@ def test_manual_branch_preserves_legacy_learning_rows(tmp_path):
         )
 
 
-def test_v4_notes_upgrade_to_v5_without_rewriting(tmp_path):
+def test_v4_notes_upgrade_to_current_without_rewriting(tmp_path):
     path = tmp_path / "research.sqlite3"
     storage.save_learning_note("旧笔记", "保留正文", path=path)
     with sqlite3.connect(path) as db:
@@ -110,10 +134,10 @@ def test_v4_notes_upgrade_to_v5_without_rewriting(tmp_path):
         prior_note = db.execute("SELECT title,content FROM learning_notes").fetchone()
     storage.list_learning_notes(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 6
         assert db.execute("SELECT title,content FROM learning_notes").fetchone() == prior_note
         assert db.execute("SELECT name FROM sqlite_master WHERE name='ai_messages'").fetchone()
-    backups = list((tmp_path / "backups").glob("research.pre-v5.*.sqlite3"))
+    backups = list((tmp_path / "backups").glob("research.pre-v6.*.sqlite3"))
     assert len(backups) == 1
     with sqlite3.connect(backups[0]) as backup:
         assert backup.execute("PRAGMA user_version").fetchone()[0] == 4

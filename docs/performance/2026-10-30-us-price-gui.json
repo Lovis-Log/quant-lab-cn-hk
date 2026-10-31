@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-30",
+  "source_base": "6d073cc",
+  "surface": "actual isolated source desktop WebView2 DOM",
+  "title": "Quant Lab",
+  "viewports": [
+    [
+      1366,
+      768
+    ],
+    [
+      1920,
+      1080
+    ]
+  ],
+  "real_us_prices": true,
+  "checks": {
+    "real_sina_daily": true,
+    "real_price_backtest_and_summary": true,
+    "viewport_1366": true,
+    "viewport_1920": true,
+    "real_statistical_regression": true,
+    "real_scan_rolling_stress": true,
+    "real_us_comparison": true,
+    "real_us_cash_holdings_costs_oos": true,
+    "teaching_remains_separate": true,
+    "desktop_exit": true
+  },
+  "page_errors": [],
+  "raw_prices_archived": false,
+  "personal_data_or_credentials_read": false,
+  "paid_requests": false,
+  "models": [
+    "us-price-cost-v1",
+    "us-price-portfolio-v1",
+    "us-price-validation-v1"
+  ],
+  "source_sample": {
+    "AAPL": {
+      "actual_start": "2025-10-30",
+      "actual_end": "2026-10-29",
+      "rows": 251
+    },
+    "comparison": [
+      "AAPL",
+      "MSFT"
+    ]
+  },
+  "gui_first_attempt": "same input-state preservation bug as full pytest; price-reference load passed, research-tab switch failed. Fixed and reran only affected US flow.",
+  "browser_path": "repository actual WebView2/Playwright CDP; bundled Browser runtime module missing",
+  "performance_claim": false,
+  "evidence_directory": ".tools\\us-price-parity-gui-887c0dcddae34d55a4d11b027f116948"
+}

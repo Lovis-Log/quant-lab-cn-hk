@@ -8,13 +8,19 @@ import streamlit as st
 from quant_lab.backtest import BacktestConfig, illustrative_config
 from quant_lab.data import DataUnavailableError, HistoryBundle, fetch_history_cached as fetch_history
 from quant_lab.processing import DataValidationError
-from quant_lab.research import run_experiment, sensitivity_table
+from quant_lab.research import run_experiment, sensitivity_table, experiment_with_sensitivity
+from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
+from quant_lab.jobs import JobState
+from quant_lab.data_quality import require_completed_close
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec, build_signals
 from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
 from quant_lab.storage import save_experiment
 from quant_lab import names
 from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
 from dataclasses import asdict
+from quant_lab.research_inputs import prepare_inputs
+from quant_lab.research_versions import LEGACY_VERSIONS
+from quant_lab.research_diagnostics import backtest_diagnostics
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -45,35 +51,40 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
     st.caption("这里只生成收盘后才能知道的研究信号；图中标记不是实际成交。")
     if not require_history(bundle):
         return
+    try:
+        require_completed_close(bundle)
+    except DataValidationError as exc:
+        st.warning(str(exc))
+        return
     spec = _strategy_controls("strategy")
     if spec is None:
         return
     signals = build_signals(bundle.frame, spec)
-    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     chart = go.Figure()
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["close"], name="收盘价",
-        line={"color": "#4F8CFF", "width": 2},
+        line={"color": "#78A7DB", "width": 2},
     ))
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["ma_short"], name=f"MA {spec.short_window}",
-        line={"color": "#F5B942", "width": 1.5},
+        line={"color": "#C6A56D", "width": 1.5},
     ))
     chart.add_trace(go.Scatter(
         x=signals["date"], y=signals["ma_long"], name=f"MA {spec.long_window}",
-        line={"color": "#24D6A0", "width": 1.5},
+        line={"color": "#73B798", "width": 1.5},
     ))
     changes = signals["signal"].diff().fillna(0)
     for state, name, color, marker in (
-        (1, "收盘后买入信号", "#F06A78", "triangle-up"),
-        (-1, "收盘后卖出信号", "#24D6A0", "triangle-down"),
+        (1, "收盘后买入信号", "#D7797E", "triangle-up"),
+        (-1, "收盘后卖出信号", "#73B798", "triangle-down"),
     ):
         points = signals.loc[changes == state]
         chart.add_trace(go.Scatter(
             x=points["date"], y=points["close"], mode="markers", name=name,
             marker={"color": color, "symbol": marker, "size": 10},
         ))
-    chart.update_layout(title_text=names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    chart.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     st.plotly_chart(style_figure(chart, 480), width="stretch", theme=None)
     if st.session_state.get("learning_mode", True):
         render_knowledge("moving_average", float(signals.ma_long.iloc[-1]) if signals.ma_long.notna().any() else None,
@@ -123,15 +134,8 @@ def _backtest_config(market: str) -> BacktestConfig:
     )
 
 
-def _raw_fills(bundle: HistoryBundle) -> pd.DataFrame:
-    if bundle.adjustment == "":
-        return bundle.frame
-    start = bundle.frame["date"].iloc[0].date()
-    end = bundle.frame["date"].iloc[-1].date()
-    raw = fetch_history(bundle.market, bundle.symbol, start, end, "", force=True)
-    if raw.update_error:
-        raise DataUnavailableError("不复权成交数据更新失败；请稍后重试，不能混用不同获取批次。")
-    return raw.frame
+def _raw_fills(bundle: HistoryBundle):
+    return prepare_inputs(bundle, fetch=fetch_history)
 
 
 def render_backtest(bundle: HistoryBundle | None) -> None:
@@ -139,35 +143,61 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     st.caption("研究模型：收盘后产生信号，下一交易日开盘尝试成交；只做多，不借钱，不执行真实交易。")
     if not require_history(bundle):
         return
-    spec = _strategy_controls("backtest")
-    config = _backtest_config(bundle.market)
-    train_fraction = st.slider("样本内比例", 0.50, 0.85, 0.70, 0.05, key="backtest_fraction")
+    try:
+        require_completed_close(bundle)
+    except DataValidationError as exc:
+        st.warning(str(exc))
+        return
+    with st.form("backtest_parameters", border=False):
+        spec = _strategy_controls("backtest")
+        config = _backtest_config(bundle.market)
+        train_fraction = st.slider("样本内比例", 0.50, 0.85, 0.70, 0.05, key="backtest_fraction")
+        requested = st.form_submit_button("运行历史回测", type="primary")
     if spec is None:
         return
-    key = (bundle_key(bundle), spec, config, train_fraction)
-    if st.button("运行历史回测", type="primary"):
-        try:
-            with st.spinner("计算交易、成本和样本外结果…"):
-                raw = _raw_fills(bundle)
-                result = run_experiment(raw, bundle.frame, spec, config, train_fraction)
+    key = (bundle_key(bundle), bundle.source, bundle.currency, spec, config, train_fraction)
+    if requested:
+        if bundle.adjustment:
+            submit_task("backtest_raw", key, _raw_fills, bundle)
+        else:
+            inputs = prepare_inputs(bundle)
+            st.session_state["backtest_pending_manifest"] = (key, inputs.manifest)
+            submit_task("backtest", key, experiment_with_sensitivity, inputs.raw, inputs.signal,
+                        spec, config, train_fraction, cpu=True)
+    prepared = take_result("backtest_raw", key)
+    if prepared:
+        if prepared.state == JobState.SUCCEEDED:
+            st.session_state["backtest_pending_manifest"] = (key, prepared.result.manifest)
+            submit_task("backtest", key, experiment_with_sensitivity, prepared.result.raw, prepared.result.signal,
+                        spec, config, train_fraction, cpu=True)
+        elif prepared.state == JobState.FAILED:
+            st.session_state["backtest_error"] = prepared.error
+    completed = take_result("backtest", key)
+    if completed:
+        if completed.state == JobState.SUCCEEDED:
+            result, grid, raw = completed.result
             st.session_state["backtest_key"] = key
             st.session_state["backtest_result"] = result
+            st.session_state["backtest_grid"] = grid
             st.session_state["backtest_raw"] = raw
+            pending = st.session_state.get("backtest_pending_manifest")
+            st.session_state["backtest_manifest"] = pending[1] if pending and pending[0] == key else {}
             st.session_state["backtest_error"] = None
-        except (ValueError, DataUnavailableError, DataValidationError) as exc:
-            st.session_state["backtest_key"] = key
-            st.session_state["backtest_result"] = None
-            st.session_state["backtest_error"] = str(exc)
-    if st.session_state.get("backtest_key") != key:
-        st.info("设置参数后点击“运行历史回测”。")
-        return
+        elif completed.state == JobState.FAILED:
+            st.session_state["backtest_error"] = completed.error
     if st.session_state.get("backtest_error"):
         st.error(st.session_state["backtest_error"])
+    if "backtest" in st.session_state.get("_task_tickets", {}) or "backtest_raw" in st.session_state.get("_task_tickets", {}):
+        st.caption("正在计算新的回测；已显示的结果对应上一次完成的参数。")
+        if st.session_state.get("backtest_result") is None:
+            loading_placeholder(260)
+    if st.session_state.get("backtest_key") != key:
+        st.info("设置参数后点击“运行历史回测”。")
         return
     result = st.session_state.get("backtest_result")
     if result is None:
         return
-    st.caption(names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    st.caption(names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     st.session_state["active_backtest_context"] = {
         "strategy": asdict(spec), "costs": asdict(config), "audit_id": result.audit_id,
         "performance": {"strategy": asdict(result.full_stats), "benchmark": asdict(result.benchmark_stats),
@@ -198,15 +228,15 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     figure.add_trace(go.Scatter(
         x=result.strategy.equity["date"],
         y=result.strategy.equity["equity"] / config.initial_cash,
-        name="策略净值", line={"color": "#24D6A0", "width": 2},
+        name="策略净值", line={"color": "#73B798", "width": 2},
     ))
     figure.add_trace(go.Scatter(
         x=result.benchmark.equity["date"],
         y=result.benchmark.equity["equity"] / config.initial_cash,
-        name="同成本买入并持有", line={"color": "#4F8CFF", "width": 1.5},
+        name="同成本买入并持有", line={"color": "#78A7DB", "width": 1.5},
     ))
-    figure.add_vline(x=result.split_date, line_color="#F5B942", line_dash="dot")
-    figure.update_layout(title_text=names.security_label(bundle.market, bundle.symbol, bundle.company_name))
+    figure.add_vline(x=result.split_date, line_color="#C6A56D", line_dash="dot")
+    figure.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
     st.plotly_chart(style_figure(figure, 430), width="stretch", theme=None)
     st.caption(f"黄色虚线起为样本外区间（{result.split_date:%Y-%m-%d}）。前复权/后复权只用于生成信号；开盘成交与净值始终使用不复权价格。")
     st.dataframe(pd.DataFrame(
@@ -227,21 +257,25 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
             file_name=f"{bundle.symbol}_{result.audit_id}_orders.csv", mime="text/csv",
         )
     st.markdown("#### 参数敏感性（仅样本内）")
-    shorts = sorted({max(2, spec.short_window - 5), spec.short_window,
-                     min(249, spec.short_window + 5)})
-    longs = sorted({max(3, spec.long_window - 10), spec.long_window,
-                    min(250, spec.long_window + 10)})
-    grid = sensitivity_table(
-        st.session_state["backtest_raw"], bundle.frame, spec.kind,
-        config, shorts, longs, train_fraction,
-    )
+    grid = st.session_state["backtest_grid"]
     st.dataframe(grid, width="stretch", hide_index=True)
     st.caption("A 股模拟 T+1、用户设定的买入单位、零成交量和简化涨跌停；港股交易单位也由用户输入。停牌、涨跌停队列、公司行动、幸存者偏差和真实费用无法由日线完整重建。")
+    with st.expander("成本、未成交与仓位诊断"):
+        diagnostic=backtest_diagnostics(st.session_state["backtest_raw"],result.strategy,config)
+        labels={"order_attempts":"订单尝试","filled_orders":"成交订单","blocked_orders":"未成交订单","commission":"佣金",
+            "additional_fees":"附加费用","charged_fees":"实收费用","slippage_estimate":"滑点价差估计","traded_notional":"累计成交金额",
+            "notional_turnover":"成交金额/平均权益","average_exposure":"平均仓位暴露","maximum_exposure":"最大仓位暴露"}
+        st.table(pd.DataFrame([{"指标":labels.get(key,key),"数值":value} for key,value in diagnostic.summary.items()]))
+        st.dataframe(diagnostic.blocked,width="stretch",hide_index=True)
+        st.caption("换手为累计双边成交金额/平均日权益；滑点价差另列，不重复计入费用。规则为研究假设。更多滚动验证与压力测试在研究实验台。")
     with st.expander("保存本次实验与研究笔记"):
-        title = st.text_input("研究标题", value=f"{names.security_label(bundle.market, bundle.symbol, bundle.company_name)} {STRATEGY_NAMES[spec.kind]}实验", key=f"research_title_{bundle.market}_{bundle.symbol}")
+        may_save = bundle.retention.allowed and bool(bundle.retention.evidence)
+        if not may_save:
+            st.caption("来源本地留存许可未核实，新增行情实验保存暂不可用；已有实验、笔记仍可使用。")
+        title = st.text_input("研究标题", value=f"{names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name)} {STRATEGY_NAMES[spec.kind]}实验", key=f"research_title_{bundle.market}_{bundle.symbol}")
         hypothesis = st.text_area("研究假设", value="该均线规则在样本外仍具有可观察的风险收益特征。", key=f"research_hypothesis_{bundle.market}_{bundle.symbol}")
         notes = st.text_area("学习笔记", value="", key=f"research_notes_{bundle.market}_{bundle.symbol}")
-        if st.button("保存实验", key="save_experiment"):
+        if st.button("保存实验", key="save_experiment", disabled=not may_save):
             try:
                 record_id = save_experiment(
                     title=title, hypothesis=hypothesis, notes=notes,
@@ -252,6 +286,8 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
                     source=bundle.source, adjustment=bundle.adjustment,
                     received_at=bundle.received_at,
                     company_name=bundle.company_name,
+                    input_manifest=st.session_state.get("backtest_manifest", {}),
+                    version_metadata=LEGACY_VERSIONS,
                 )
                 st.success(f"实验 #{record_id} 已保存。可到“研究笔记”导出报告。")
             except (OSError, ValueError, sqlite3.Error) as exc:

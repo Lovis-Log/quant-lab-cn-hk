@@ -51,6 +51,7 @@ class MarketSnapshot:
     update_result: str = "取得新数据"
     update_error: str | None = None
     last_attempt_at: datetime | None = None
+    quality_status: str = "质量覆盖未记录（旧参考或仅报价输入）"
 
 
 class MarketDataProvider(Protocol):

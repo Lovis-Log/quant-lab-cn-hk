@@ -1,0 +1,48 @@
+{
+  "synthetic": false,
+  "raw_prices_saved": false,
+  "market": "A 股",
+  "symbol": "600519",
+  "checked_at": "2026-10-29T05:47:38.171754+00:00",
+  "requested_start": "2025-10-28",
+  "requested_end": "2026-10-28",
+  "scope": "AH price/cost research assumptions, not market-rule certification",
+  "status": "passed",
+  "source": "腾讯证券 · AKShare",
+  "received_at": "2026-10-29T05:47:39.730569+00:00",
+  "actual_start": "2025-10-28",
+  "actual_end": "2026-10-28",
+  "rows": 243,
+  "candidates": 4,
+  "folds": 3,
+  "rolling_rows": 121,
+  "stress_status": [
+    {
+      "multiplier": 0.0,
+      "status": "success"
+    },
+    {
+      "multiplier": 1.0,
+      "status": "success"
+    },
+    {
+      "multiplier": 2.0,
+      "status": "success"
+    },
+    {
+      "multiplier": 3.0,
+      "status": "success"
+    }
+  ],
+  "versions": {
+    "algorithm": "research-validation-v1",
+    "execution": "ah-single-v1",
+    "rules": "ah-research-assumptions-v1",
+    "fingerprint": "validation-manifest-sha256-v1",
+    "data": "ohlcv-snapshot-v1"
+  },
+  "raw_sha256": "5b6d47d98c8d8278e446730b9dab975bbeacfe00759d31ab1ac7a2e00a732d57",
+  "audit_id": "validation-v1:20ba159758135c1be6330e66",
+  "charged_fees": 2997.9343357199996,
+  "report_export_allowed": false
+}

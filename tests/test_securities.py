@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
+from conftest import select_security
 
 from quant_lab import securities
 
@@ -58,13 +59,13 @@ def test_corrupt_user_directory_is_visible_and_not_reused(monkeypatch, tmp_path)
 def test_candidate_fills_code_and_market_switch_is_isolated(monkeypatch, tmp_path):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
-    app.sidebar.selectbox(key="symbol_A 股").select("000001").run()
-    assert not app.exception and app.sidebar.selectbox(key="symbol_A 股").value == "000001"
+    select_security(app, "symbol_A 股", "000001")
+    assert not app.exception and app.session_state["symbol_A 股"] == "000001"
     app.sidebar.selectbox(key="market_selection").select("港股").run()
-    app.sidebar.selectbox(key="symbol_港股").select("00941").run()
-    assert not app.exception and app.sidebar.selectbox(key="symbol_港股").value == "00941"
+    select_security(app, "symbol_港股", "00941")
+    assert not app.exception and app.session_state["symbol_港股"] == "00941"
     app.sidebar.selectbox(key="market_selection").select("A 股").run()
-    assert app.sidebar.selectbox(key="symbol_A 股").value == "000001"
+    assert app.session_state["symbol_A 股"] == "000001"
     assert not app.sidebar.text_input
     assert not app.exception
 
@@ -73,7 +74,7 @@ def test_candidate_fills_code_and_market_switch_is_isolated(monkeypatch, tmp_pat
 def test_custom_code_validation_without_directory(monkeypatch, code, can_load):
     def unavailable(*args):
         raise OSError("目录暂不可用")
-    monkeypatch.setattr("quant_lab.ui.security_directory", unavailable)
+    monkeypatch.setattr("quant_lab.ui_security_picker.security_directory", unavailable)
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30)
     # Seed a fresh widget state; real typing is covered by WebView acceptance.
     app.session_state["market_selection"] = "港股"

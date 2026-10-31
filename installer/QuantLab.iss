@@ -1,9 +1,9 @@
-#define MyAppName "Quant Lab CN/HK"
+#define MyAppName "Quant Lab"
 #ifndef MyAppVersion
-  #define MyAppVersion "2.2.0-rc.1"
+  #define MyAppVersion "2.3.0-rc.1"
 #endif
 #ifndef MyAppFileVersion
-  #define MyAppFileVersion "2.2.0.0"
+  #define MyAppFileVersion "2.3.0.0"
 #endif
 #define MyAppExeName "QuantLab.exe"
 #ifndef MyPayloadDir
@@ -15,9 +15,9 @@ AppId={{1F4CE834-8E9B-4F8B-A228-FD09E48E60D3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 VersionInfoVersion={#MyAppFileVersion}
-AppPublisher=Quant Lab CN/HK
+AppPublisher=Quant Lab
 DefaultDirName={autopf}\Quant Lab CN-HK
-DefaultGroupName=Quant Lab CN-HK
+DefaultGroupName=Quant Lab
 UninstallDisplayIcon={app}\{#MyAppExeName}
 OutputDir=..\dist\installer
 OutputBaseFilename=QuantLab-CN-HK-Setup
@@ -38,8 +38,8 @@ Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: 
 Source: "{#MyPayloadDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\Quant Lab CN-HK"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\Quant Lab CN-HK"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\Quant Lab"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\Quant Lab"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "启动 Quant Lab CN/HK"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "启动 Quant Lab"; Flags: nowait postinstall skipifsilent

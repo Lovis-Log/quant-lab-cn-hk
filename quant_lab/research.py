@@ -88,3 +88,12 @@ def sensitivity_table(
                  "成交次数": len(filled)}
             )
     return pd.DataFrame(rows)
+
+
+def experiment_with_sensitivity(raw_history, signal_history, spec, config, train_fraction):
+    """One immutable CPU request; never recompute the grid on UI rerenders."""
+    result = run_experiment(raw_history, signal_history, spec, config, train_fraction)
+    shorts = sorted({max(2, spec.short_window - 5), spec.short_window, min(249, spec.short_window + 5)})
+    longs = sorted({max(3, spec.long_window - 10), spec.long_window, min(250, spec.long_window + 10)})
+    grid = sensitivity_table(raw_history, signal_history, spec.kind, config, shorts, longs, train_fraction)
+    return result, grid, raw_history

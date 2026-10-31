@@ -6,9 +6,13 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from quant_lab.data import HistoryBundle
 from quant_lab.storage import list_experiments
+from conftest import finish_background_jobs
+from dataclasses import replace
+from quant_lab.source_rights import TEACHING_RETENTION
 
 
 def sample_bundle() -> HistoryBundle:
@@ -28,9 +32,10 @@ def test_all_workspaces_boot_without_extra_network_calls() -> None:
     with patch("quant_lab.ui.fetch_history", return_value=bundle):
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
+        finish_background_jobs(app)
         assert not app.exception
         for page in ("策略实验室", "历史回测", "风险与组合", "统计与机器学习"):
-            app.sidebar.radio[0].set_value(page).run()
+            navigate(app, page)
             assert not app.exception, page
         next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
         assert not app.exception
@@ -44,16 +49,21 @@ def test_research_actions_run_from_loaded_history() -> None:
     ):
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
+        finish_background_jobs(app)
         for page, button_label in (
             ("历史回测", "运行历史回测"),
             ("风险与组合", "分析同市场组合"),
             ("统计与机器学习", "运行时间序列线性回归"),
         ):
-            app.sidebar.radio[0].set_value(page).run()
+            navigate(app, page)
             button = next(item for item in app.get("button") if item.label == button_label)
             button.click().run()
+            finish_background_jobs(app)
             assert not app.exception, page
             assert not app.get("error"), page
+            result_key = {"历史回测": "backtest_result", "风险与组合": "portfolio_result",
+                          "统计与机器学习": "model_result"}[page]
+            assert app.session_state[result_key] is not None
         next(item for item in app.get("button") if item.label == "DeepSeek 助手").click().run()
         next(item for item in app.get("button") if item.label == "研究实验").click().run()
         next(item for item in app.get("button") if item.label == "运行受控实验（内置策略）").click().run()
@@ -63,13 +73,15 @@ def test_research_actions_run_from_loaded_history() -> None:
 
 def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
-    bundle = sample_bundle()
+    bundle = replace(sample_bundle(), source="平台生成的教学样本", retention=TEACHING_RETENTION)
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     with patch("quant_lab.ui.fetch_history", return_value=bundle):
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
-        app.sidebar.radio[0].set_value("历史回测").run()
+        finish_background_jobs(app)
+        navigate(app, "历史回测")
         next(item for item in app.get("button") if item.label == "运行历史回测").click().run()
+        finish_background_jobs(app)
         next(item for item in app.get("button") if item.label == "保存实验").click().run()
         assert not app.exception
         assert len(list_experiments(tmp_path / "research.sqlite3")) == 1
@@ -81,14 +93,31 @@ def test_backtest_can_be_saved_and_opened_as_research_note(tmp_path, monkeypatch
         assert any("从存档数据重新计算" == item.label for item in app.button)
 
 
+def test_unverified_source_cannot_create_new_archive():
+    bundle = sample_bundle()
+    entrypoint = Path(__file__).resolve().parents[1] / "app.py"
+    with patch("quant_lab.ui.fetch_history", return_value=bundle):
+        app = AppTest.from_file(entrypoint, default_timeout=30).run()
+        app.sidebar.button[0].click().run()
+        finish_background_jobs(app)
+        navigate(app, "历史回测")
+        app.button(key="FormSubmitter:backtest_parameters-运行历史回测").click().run()
+        finish_background_jobs(app)
+        assert app.button(key="save_experiment").disabled
+        assert any("本地留存许可未核实" in caption.value for caption in app.caption)
+        assert not list_experiments()
+
+
 def test_backtest_knowledge_group_expands_collapses_and_resets(monkeypatch) -> None:
     bundle = sample_bundle()
     entrypoint = Path(__file__).resolve().parents[1] / "app.py"
     with patch("quant_lab.ui.fetch_history", return_value=bundle):
         app = AppTest.from_file(entrypoint, default_timeout=30).run()
         app.sidebar.button[0].click().run()
-        app.sidebar.radio(key="nav_page").set_value("历史回测").run()
+        finish_background_jobs(app)
+        navigate(app, "历史回测")
         next(item for item in app.button if item.label == "运行历史回测").click().run()
+        finish_background_jobs(app)
 
         explanations = [item for item in app.expander if item.label.startswith("知识解释：")]
         assert len(explanations) == 2

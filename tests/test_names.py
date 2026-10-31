@@ -8,6 +8,19 @@ from quant_lab.names import NameProvider, NameCache
 from quant_lab.market_data import display_security, normalize_symbol
 
 
+def test_cached_name_read_never_fetches_upstream(monkeypatch):
+    from quant_lab import storage
+    class Provider:
+        def lookup(self, *args):
+            pytest.fail("cache-only display attempted a network lookup")
+    cache = NameCache(Provider())
+    assert cache.peek("港股", "700") == ""
+    fetched = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    storage.save_security_name("港股", "00700", "腾讯控股", "测试来源", fetched)
+    assert cache.peek("港股", "700") == "腾讯控股"
+    assert storage.cached_security_name("港股", "00700")["fetched_at"] == fetched.isoformat()
+
+
 def test_a_profile_mapping_preserves_leading_zero(monkeypatch):
     profile(monkeypatch, "000001.SZ", "平安银行")
     assert NameProvider().lookup("A 股", "SZ000001") == "平安银行"

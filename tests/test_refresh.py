@@ -18,7 +18,8 @@ def test_history_force_cache_timestamp_and_failure():
             self.calls += 1
             if self.fail:
                 raise ConnectionError("upstream")
-            return HistoryBundle(pd.DataFrame({"date": pd.to_datetime(["2026-10-08"]), "close": [10.0]}),
+            return HistoryBundle(pd.DataFrame({"date": pd.to_datetime(["2026-10-08"]),
+                "open": [10.], "high": [11.], "low": [9.], "close": [10.], "volume": [100.], "amount": [1000.]}),
                 market, symbol, "mock", "CNY", adjustment,
                 datetime(2026, 10, 8, tzinfo=timezone.utc) + timedelta(seconds=self.calls))
     provider = Provider()

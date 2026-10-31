@@ -61,3 +61,32 @@ def test_saved_run_replays_and_zip_contains_inputs(tmp_path: Path) -> None:
         assert json.loads(archive.read("assumptions.json"))["audit_id"] == result.audit_id
         assert hashlib.sha256(archive.read("raw_history.csv")).hexdigest() == record["raw_sha256"]
         assert b"600519" in archive.read("report.md")
+
+
+def test_paired_manifest_is_preserved_and_mismatched_snapshots_rejected(tmp_path):
+    from dataclasses import replace
+    from quant_lab.data import HistoryBundle
+    from quant_lab.research_inputs import prepare_inputs
+    from quant_lab.source_rights import TEACHING_RETENTION
+    raw = history()
+    bundle = HistoryBundle(raw,"A 股","600519","固定教学样本","CNY","",
+                           datetime.now(timezone.utc),retention=TEACHING_RETENTION)
+    inputs = prepare_inputs(bundle)
+    spec, config = StrategySpec("dual_ma",2,3), BacktestConfig(limit_pct=None)
+    result = run_experiment(inputs.raw,inputs.signal,spec,config)
+    path = tmp_path/"paired.sqlite3"
+    kwargs = dict(title="配对研究",hypothesis="检查输入",notes="",market="A 股",symbol="600519",
+        raw_history=inputs.raw,signal_history=inputs.signal,spec=spec,config=config,train_fraction=.7,
+        result=result,source=bundle.source,adjustment="",received_at=bundle.received_at,path=path,
+        input_manifest=inputs.manifest)
+    saved = save_experiment(**kwargs)
+    record = get_experiment(saved,path)
+    assert record["input_manifest"] == inputs.manifest
+    assert replay_experiment(record).audit_id == result.audit_id
+    with ZipFile(BytesIO(export_experiment_zip(record))) as archive:
+        assert json.loads(archive.read("assumptions.json"))["input_manifest"] == inputs.manifest
+    changed = inputs.raw.copy()
+    changed.loc[0,"open"] += .1
+    with pytest.raises(ValueError,match="清单与保存行情"):
+        save_experiment(**{**kwargs,"raw_history":changed})
+    assert len(list_experiments(path)) == 1

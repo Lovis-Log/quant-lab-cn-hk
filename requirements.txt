@@ -1,5 +1,5 @@
 # Quant Lab CN/HK; the optional DeepSeek assistant uses session/vault credentials.
-streamlit>=1.54,<2
+streamlit>=1.65,<2
 plotly>=6.3,<7
 numpy>=1.26,<3
 pandas>=2.2,<3
@@ -9,3 +9,4 @@ scipy>=1.16,<2
 scikit-learn>=1.7,<2
 openai>=2,<3
 requests>=2.32,<3
+exchange-calendars==4.13.2

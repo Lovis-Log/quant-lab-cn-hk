@@ -14,6 +14,7 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import msvcrt
+import multiprocessing
 import os
 from pathlib import Path
 import shutil
@@ -23,12 +24,13 @@ import sys
 import tempfile
 import threading
 import time
+from uuid import uuid4
 from typing import Iterator
 from urllib.error import URLError
 from urllib.request import ProxyHandler, build_opener
 
 
-APP_TITLE = "Quant Lab CN/HK"
+APP_TITLE = "Quant Lab"
 HOST = "127.0.0.1"
 STARTUP_TIMEOUT_SECONDS = 35
 WEBVIEW_TIMEOUT_SECONDS = 30
@@ -100,7 +102,7 @@ def single_instance(root: Path) -> Iterator[None]:
         try:
             msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError as exc:
-            raise LaunchError("Quant Lab CN/HK 已在运行，请切换到已有窗口。") from exc
+            raise LaunchError("Quant Lab 已在运行，请切换到已有窗口。") from exc
         try:
             yield
         finally:
@@ -179,7 +181,11 @@ def serve_streamlit(port: int) -> int:
     prepare_user_data(root)
     os.environ["QUANT_LAB_DATA_DIR"] = str(root)
     os.chdir(root)
+    stop_signal = os.environ.get("QUANT_LAB_STOP_SIGNAL")
+    if stop_signal:
+        start_shutdown_listener(Path(stop_signal), root)
     from streamlit.web import cli
+    from quant_lab import theme
 
     arguments = [
         "run", str(app_script()),
@@ -193,8 +199,32 @@ def serve_streamlit(port: int) -> int:
         "--browser.serverAddress=127.0.0.1",
         "--browser.gatherUsageStats=false",
     ]
+    # Apply the approved application theme even when an older profile still
+    # contains its original copied config. The user's file stays untouched.
+    palette = {"base": "dark", "primaryColor": theme.ACCENT,
+        "backgroundColor": theme.BACKGROUND, "secondaryBackgroundColor": theme.SURFACE,
+        "textColor": theme.TEXT, "borderColor": theme.BORDER,
+        "sidebar.backgroundColor": theme.NAVIGATION,
+        "sidebar.secondaryBackgroundColor": theme.SURFACE,
+        "sidebar.textColor": theme.TEXT, "sidebar.borderColor": theme.BORDER}
+    arguments.extend(f"--theme.{key}={value}" for key, value in palette.items())
     cli.main(args=arguments, prog_name="streamlit", standalone_mode=False)
     return 0
+
+
+def start_shutdown_listener(signal: Path, root: Path):
+    """Private per-launch handshake: stop CPU workers before killing the server."""
+    signal = signal.resolve()
+    signal.relative_to((root / "cache" / "runtime").resolve())
+    def listen():
+        while not signal.exists():
+            time.sleep(.05)
+        from quant_lab.jobs import shutdown_jobs
+        shutdown_jobs()
+        signal.with_suffix(".done").write_text("workers-stopped", encoding="ascii")
+    thread = threading.Thread(target=listen, name="quant-shutdown", daemon=True)
+    thread.start()
+    return thread
 
 
 def _health_ok(port: int) -> bool:
@@ -222,6 +252,10 @@ def start_service(root: Path, timeout: float = STARTUP_TIMEOUT_SECONDS) -> tuple
         port = choose_loopback_port()
         environment = os.environ.copy()
         environment["QUANT_LAB_DATA_DIR"] = str(root)
+        runtime = root / "cache" / "runtime"
+        runtime.mkdir(parents=True, exist_ok=True)
+        stop_signal = runtime / (uuid4().hex + ".stop")
+        environment["QUANT_LAB_STOP_SIGNAL"] = str(stop_signal)
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         with (root / "logs" / "streamlit.log").open("a", encoding="utf-8") as log_file:
             log_file.write(f"\n=== launch attempt {attempt + 1} port {port} ===\n")
@@ -231,6 +265,7 @@ def start_service(root: Path, timeout: float = STARTUP_TIMEOUT_SECONDS) -> tuple
                 stdin=subprocess.DEVNULL, stdout=log_file, stderr=subprocess.STDOUT,
                 creationflags=creationflags,
             )
+        child.quant_stop_signal = stop_signal
         LOGGER.info("Started Streamlit child pid=%s port=%s", child.pid, port)
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
@@ -259,6 +294,28 @@ def stop_service(child: subprocess.Popen | None) -> None:
     if child is None or child.poll() is not None:
         return
     LOGGER.info("Stopping Streamlit child pid=%s", child.pid)
+    signal = getattr(child, "quant_stop_signal", None)
+    workers_stopped = signal is None
+    if signal is not None:
+        signal.write_text("shutdown", encoding="ascii")
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and child.poll() is None:
+            if signal.with_suffix(".done").exists():
+                workers_stopped = True
+                break
+            time.sleep(.05)
+    if os.name == "nt" and not workers_stopped:
+        # Only a failed handshake needs forceful cleanup of our exact tree.
+        try:
+            subprocess.run(["taskkill", "/PID", str(child.pid), "/T", "/F"],
+                           capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+            child.wait(timeout=3)
+            if signal is not None:
+                signal.unlink(missing_ok=True)
+                signal.with_suffix(".done").unlink(missing_ok=True)
+            return
+        except (OSError, subprocess.TimeoutExpired):
+            LOGGER.warning("Process-tree shutdown failed; stopping owned server directly")
     child.terminate()
     try:
         child.wait(timeout=5)
@@ -266,6 +323,9 @@ def stop_service(child: subprocess.Popen | None) -> None:
         LOGGER.warning("Child did not exit after terminate; killing pid=%s", child.pid)
         child.kill()
         child.wait(timeout=5)
+    if signal is not None:
+        signal.unlink(missing_ok=True)
+        signal.with_suffix(".done").unlink(missing_ok=True)
 
 
 def _write_probe_result(payload: dict[str, object]) -> None:
@@ -297,6 +357,8 @@ def run_desktop(smoke_test: bool = False) -> int:
     before_load = threading.Event()
     closed = threading.Event()
     webview_timed_out = threading.Event()
+    from quant_lab.desktop_loading import StartupOverlay
+    startup_overlay = StartupOverlay()
     test_seconds = os.environ.get("QUANT_LAB_GUI_TEST_SECONDS")
     with single_instance(root):
         try:
@@ -305,6 +367,8 @@ def run_desktop(smoke_test: bool = False) -> int:
                 LOGGER.info("Headless service smoke test passed")
                 return 0
             import webview
+            # WebView2 otherwise cancels Streamlit CSV/report downloads silently.
+            webview.settings["ALLOW_DOWNLOADS"] = True
 
             probe_debug_port = None
             if os.environ.get("QUANT_LAB_GUI_PROBE") == "1":
@@ -315,6 +379,8 @@ def run_desktop(smoke_test: bool = False) -> int:
 
             class DesktopAPI:
                 _window = None
+                def frontend_ready(self, view):
+                    return startup_overlay.mark_ready(view)
                 def close(self):
                     if self._window:
                         threading.Thread(target=self._window.destroy, daemon=True).start()
@@ -353,19 +419,20 @@ def run_desktop(smoke_test: bool = False) -> int:
             url = f"http://{HOST}:{port}"
             window = webview.create_window(
                 APP_TITLE, url, width=1440, height=900,
-                min_size=(1100, 700), background_color="#090D16",
+                min_size=(1100, 700), background_color="#151719",
                 js_api=probe_api,
             )
             probe_api._window = window
+            window.events.before_show += startup_overlay.show
             window.events.shown += shown.set
             window.events.before_load += before_load.set
             window.events.loaded += loaded.set
             window.events.closed += closed.set
 
             def monitor_webview() -> None:
-                if not loaded.wait(WEBVIEW_TIMEOUT_SECONDS) and not closed.is_set():
+                if not startup_overlay.ready.wait(WEBVIEW_TIMEOUT_SECONDS) and not closed.is_set():
                     webview_timed_out.set()
-                    LOGGER.error("WebView2 did not load the local page within %s seconds", WEBVIEW_TIMEOUT_SECONDS)
+                    LOGGER.error("WebView2 did not render app controls within %s seconds", WEBVIEW_TIMEOUT_SECONDS)
                     window.destroy()
 
             monitor = threading.Thread(target=monitor_webview, daemon=True)
@@ -407,6 +474,11 @@ def run_desktop(smoke_test: bool = False) -> int:
                     "webview_shown": shown.is_set(),
                     "webview_before_load": before_load.is_set(),
                     "webview_loaded": loaded.is_set(),
+                    "loading_shown": startup_overlay.shown.is_set(),
+                    "frontend_ready": startup_overlay.ready.is_set(),
+                    "frontend_view": startup_overlay.view,
+                    "loading_ms": round((startup_overlay.ready_at - startup_overlay.shown_at) * 1000, 1)
+                        if startup_overlay.ready_at and startup_overlay.shown_at else None,
                     "debug_port": locals().get("probe_debug_port"),
                 })
 
@@ -415,6 +487,9 @@ def main() -> int:
     if os.name != "nt":
         raise LaunchError("桌面启动器目前只支持 Windows。")
     arguments = sys.argv[1:]
+    if arguments == ["--compute-worker"]:
+        from quant_lab.cpu_worker import main as compute_main
+        return compute_main()
     if arguments and arguments[0] == "--serve":
         if len(arguments) != 3 or arguments[1] != "--port":
             raise LaunchError("服务启动参数无效。")
@@ -423,6 +498,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     try:
         sys.exit(main())
     except Exception as error:

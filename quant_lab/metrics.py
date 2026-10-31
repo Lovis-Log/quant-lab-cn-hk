@@ -36,6 +36,22 @@ def simple_price_return(first_close: float, last_close: float) -> float:
     return last_close / first_close - 1.0
 
 
+def price_risk_metrics(prices: pd.Series, periods_per_year: int = 252) -> tuple[float | None, float | None]:
+    """Existing sample volatility/drawdown definitions, without annual-return overflow."""
+    values = pd.to_numeric(prices, errors="coerce").astype(float)
+    if not np.isfinite(values.to_numpy()).all() or (values <= 0).any() or not math.isfinite(periods_per_year) or periods_per_year < 1:
+        raise ValueError("价格必须为正的有限值，年交易日参数必须为正。")
+    if len(values) < 2:
+        return None, None
+    returns = values.pct_change().dropna()
+    if not np.isfinite(returns.to_numpy()).all():
+        raise ValueError("收益率包含无效数值，无法计算风险。")
+    volatility = float(returns.std(ddof=1) * math.sqrt(periods_per_year)) if len(returns) >= 2 else None
+    if volatility is not None and not math.isfinite(volatility):
+        raise ValueError("风险计算溢出，请检查价格异常或缩短区间。")
+    return volatility, float((values / values.cummax() - 1).min())
+
+
 def summarize_prices(history: pd.DataFrame) -> PriceSummary:
     """Summarize the selected trading observations in chronological order."""
     if history.empty:

@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-28T12:25:36.712298+00:00",
+  "synthetic": true,
+  "scope": "offline US teaching; not live provider or broker execution",
+  "algorithm": "us-cash-v1",
+  "rules": "us-cash-regular-v1",
+  "rows": 37,
+  "symbols": [
+    "TEACHA",
+    "TEACHB"
+  ],
+  "orders": 4,
+  "currency": "USD",
+  "rule_versions_in_orders": [
+    "sec-t1-20240528",
+    "sec-t2-20170905"
+  ],
+  "corporate_action_kinds": [
+    "buy_cash",
+    "dividend_available",
+    "dividend_receivable",
+    "split_shares"
+  ],
+  "minimum_settled_cash": 32.485388056717646,
+  "maximum_equity_reconciliation_error_usd": 1.8189894035458565e-12,
+  "strategy_audit": "us-v1:a4727f14dfb848fa6940de81",
+  "portfolio_audit": "us-v1:efa62ef215233b4e572153f3",
+  "archive_replay_exact": true,
+  "archive_bytes": 19189,
+  "real_prices_saved": false
+}

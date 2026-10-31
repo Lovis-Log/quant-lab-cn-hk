@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from conftest import navigate
 
 from quant_lab.manual_content import ContentValidationError
 
@@ -41,7 +42,7 @@ def test_manual_replaces_beginner_guidance_and_is_offline(monkeypatch):
     monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", no_network)
     app = _start_app()
 
-    assert app.session_state["manual_panel_open"] is True
+    assert app.session_state["manual_panel_open"] is False
     assert not [button for button in app.button if button.label == "新手使用指引"]
     assert not [button for button in app.button if button.label == "查看本页使用指南"]
     assert not [button for button in app.button if button.label in {"开始入门任务", "跳过首次引导"}]
@@ -114,8 +115,10 @@ def test_professional_categories_article_status_and_relationship_navigation():
     _widget(app, "button", "证券身份与代码规范化 / Instrument Identity and Symbol Normalization").click().run()
     assert "证券身份" in _visible_text(app)
     back = app.button(key="manual_toolbar_back")
-    assert back.label == "← 返回" and back.help == "返回知识库目录"
+    assert back.label == "← 返回" and back.help == "返回上一词条"
     back.click().run()
+    assert app.session_state["manual_article_id"] == "ohlcv"
+    app.button(key="manual_toolbar_back").click().run()
     assert app.selectbox(key="manual_category")
 
 
@@ -179,6 +182,22 @@ def test_manual_related_term_opens_article_directly():
     assert "使用手册 / 专业知识库 / 市场与数据 / 证券身份与代码规范化" in _visible_text(app)
 
 
+def test_related_term_back_restores_manual_then_its_original_catalog():
+    app = _open_manual(_start_app())
+    app.selectbox(key="manual_section").set_value("功能说明").run()
+    app.button(key="manual_index_statistics_ml").click().run()
+    original = app.session_state["manual_page_id"]
+    related = next(button for button in app.button if button.key and button.key.startswith("manual_term_statistics_ml_"))
+    related.click().run()
+    assert app.session_state["manual_article_id"]
+    app.button(key="manual_toolbar_back").click().run()
+    assert app.session_state["manual_section"] == "功能说明"
+    assert app.session_state["manual_page_id"] == original
+    app.button(key="manual_toolbar_back").click().run()
+    assert not app.session_state.get("manual_page_id")
+    assert len([button for button in app.button if button.key and button.key.startswith("manual_index_")]) == 9
+
+
 def test_all_four_software_statuses_render_accurately():
     app = _open_manual(_start_app())
     cases = (
@@ -224,7 +243,8 @@ def test_manual_deepseek_and_notes_panels_coexist_and_maximize():
 
 def test_academy_and_knowledge_links_open_manual_not_guidance():
     app = _start_app()
-    app.sidebar.radio(key="nav_page").set_value("Quant Academy").run()
+    navigate(app, "Quant Academy")
+    _widget(app, "selectbox", "选择课程").set_value("simple_return").run()
     _widget(app, "button", "在使用手册中继续阅读").click().run()
 
     assert app.session_state["manual_panel_open"] is True

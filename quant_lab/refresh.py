@@ -23,6 +23,14 @@ class RefreshCache:
         self._flight = {}
         self._lock = Lock()
 
+    def seed(self, key, value, *, age_seconds):
+        """Restore verified data without advancing its upstream-success clock."""
+        age = max(0.0, age_seconds)
+        with self._lock:
+            if key not in self._entries and key not in self._flight:
+                self._entries[key] = (time.monotonic()-age,
+                    RefreshView(value, True, age, "读取已校验磁盘快照；不是新获取", None))
+
     def get(self, key, loader, *, force=False, same=lambda a, b: a == b,
             failure_message="请求失败；保留上次有效数据，数据可能过期。") -> RefreshView:
         with self._lock:
@@ -51,11 +59,15 @@ class RefreshCache:
             view = RefreshView(value, False, 0,
                                "检查成功，数据未变化" if unchanged else "取得新数据", attempted)
             successful_at = time.monotonic()
-        except Exception:
+        except Exception as error:
             value = old[1].value if old else None
             successful_at = old[0] if old else time.monotonic() - self.ttl
+            try:
+                message = failure_message(error) if callable(failure_message) else failure_message
+            except Exception:
+                message = "请求失败；保留上次有效数据，数据可能过期。"
             view = RefreshView(value, bool(old), max(0, time.monotonic()-successful_at),
-                               "请求失败", attempted, failure_message)
+                               "请求失败", attempted, message)
         finally:
             with self._lock:
                 self._entries[key] = (successful_at, view)

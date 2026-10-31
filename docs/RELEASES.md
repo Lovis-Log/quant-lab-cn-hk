@@ -23,3 +23,5 @@
 | [v2.0.1-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.0.1-rc.1) | 已发布，界面整合预发布 | [发布说明与过程](releases/v2.0.1-rc.1.md) |
 | [v2.1.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.1.0-rc.1) | 已发布，研究笔记工作台预发布 | [发布说明与过程](releases/v2.1.0-rc.1.md) |
 | [v2.2.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.2.0-rc.1) | 已发布，文字手册与研究工作台预发布 | [发布说明与过程](releases/v2.2.0-rc.1.md) |
+
+| [v2.3.0-rc.1](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.3.0-rc.1) | 已发布，桌面研究与28课预发布 | [发布说明与过程](releases/v2.3.0-rc.1.md) |

@@ -15,6 +15,7 @@ datas = [
     (str(ROOT / "quant_lab" / "resources"), "quant_lab/resources"),
     (str(ROOT / "docs" / "knowledge-drafts"), "docs/knowledge-drafts"),
     (str(ROOT / "assets" / "quantlab.ico"), "assets"),
+    (str(ROOT / "assets" / "quantlab.png"), "assets"),
 ]
 binaries = []
 hiddenimports = collect_submodules("quant_lab") + [
@@ -23,7 +24,7 @@ hiddenimports = collect_submodules("quant_lab") + [
     "webview.platforms.edgechromium",
 ]
 
-for package in ("streamlit", "webview", "plotly", "altair", "akshare"):
+for package in ("streamlit", "webview", "plotly", "altair", "akshare", "exchange_calendars"):
     package_data, package_binaries, package_hidden = collect_all(package)
     datas += package_data
     binaries += package_binaries

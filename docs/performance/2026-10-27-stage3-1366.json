@@ -1,0 +1,107 @@
+{
+  "label": "stage3-final-1366",
+  "synthetic": true,
+  "source_commit": "2b62038fbfe8e381184ba605e0c883d59c32f4f1",
+  "source_dirty": true,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+  "logical_cpus": 20,
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "data_rows": 2520,
+  "fixture_revision": "ohlc-v2",
+  "measurements": {
+    "page_switch": {
+      "samples": 2,
+      "median_ms": 482.4,
+      "p95_ms": 482.4,
+      "max_ms": 482.4
+    },
+    "lesson_switch": {
+      "samples": 2,
+      "median_ms": 318.0,
+      "p95_ms": 318.0,
+      "max_ms": 318.0
+    },
+    "lesson_parameter": {
+      "samples": 2,
+      "median_ms": 257.4,
+      "p95_ms": 257.4,
+      "max_ms": 257.4
+    },
+    "manual_toggle": {
+      "samples": 2,
+      "median_ms": 466.2,
+      "p95_ms": 466.2,
+      "max_ms": 466.2
+    },
+    "load_2520_synthetic_rows_ms": 2477.3
+  },
+  "errors": [],
+  "synthetic_io_delay_seconds": 1.0,
+  "legacy_theme_profile": false,
+  "warm_up_cycles": 2,
+  "scope": "actual source desktop WebView2; synthetic data; not a real-provider or installed-build measurement",
+  "startup_ms": 11118.6,
+  "ten_year_preset": {
+    "start": "2016-10-27",
+    "end": "2026-10-27"
+  },
+  "page_switch_during_io": true,
+  "layout": {
+    "stSidebar": {
+      "x": 0,
+      "y": 52,
+      "width": 248,
+      "height": 716,
+      "padding": "0px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgb(24, 27, 30)"
+    },
+    "stSidebarHeader": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "padding": "0px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stSidebarContent": {
+      "x": 0,
+      "y": 52,
+      "width": 248,
+      "height": 716,
+      "padding": "0px 10px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stSidebarUserContent": {
+      "x": 20,
+      "y": 52,
+      "width": 208,
+      "height": 1376.140625,
+      "padding": "12px 4px 24px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "stMainBlockContainer": {
+      "x": 248,
+      "y": 0,
+      "width": 1108,
+      "height": 1878.8828125,
+      "padding": "72px 24px 32px",
+      "font": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
+      "background": "rgba(0, 0, 0, 0)"
+    }
+  },
+  "quality_panel": true,
+  "page_switch_during_cpu": true,
+  "actual_cpu_backtest_completed": true,
+  "panel_drag": true,
+  "cpu_cancel": true,
+  "child_stopped": true,
+  "exit_code": 0
+}

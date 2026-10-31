@@ -1,0 +1,90 @@
+{
+  "task": "Academy stage 4, 28 courses, one whole-stage delivery",
+  "date": "2026-10-31",
+  "source_baseline": "1605a28",
+  "recovery_branch": "codex/recovery-academy28-20261031-1605a28",
+  "unit_and_integration": {
+    "full_runs": 1,
+    "command": ".venv/Scripts/python.exe -m pytest -q",
+    "passed": 331,
+    "warnings": 107,
+    "seconds": 110.08,
+    "targeted_after_ui_fix": {
+      "command": "pytest -q tests/test_manual_reading_ui.py::test_academy_and_knowledge_links_open_manual_not_guidance",
+      "passed": 1,
+      "seconds": 5.67
+    }
+  },
+  "gui": {
+    "surface": "actual Windows WebView2, isolated source/data directory and test AppId",
+    "browser_path": "Bundled Browser setup failed: missing browser-service.mjs in 26.1027.30824; task explicitly requires actual WebView2, so used existing Playwright CDP pattern.",
+    "identity": {
+      "url": "http://127.0.0.1:52773/",
+      "title": "Quant Lab"
+    },
+    "no_outbound_requests": true,
+    "production_credentials_read": false,
+    "viewports": [
+      {
+        "width": 1366,
+        "height": 768,
+        "evidence": ".tools\\academy28-gui-f418845ce6544c44b94a460f89d2946b\\result.json",
+        "screenshot": ".tools\\academy28-gui-f418845ce6544c44b94a460f89d2946b\\academy-1366-overview.png",
+        "checks": [
+          "seven topic directory",
+          "search",
+          "no match and recovery",
+          "prerequisite",
+          "next lesson",
+          "Python disclosure",
+          "parameter update"
+        ]
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "evidence": ".tools\\academy28-gui-0ec39c2311ee467f84161e7dc106e8c4\\result.json",
+        "screenshot": ".tools\\academy28-gui-0ec39c2311ee467f84161e7dc106e8c4\\academy-1920.png",
+        "checks": [
+          "final course / report / answer (main run)",
+          "primary manual link (targeted run)",
+          "additional article compound_return (DOM in targeted run)",
+          "knowledge manual link simple_return (final run)",
+          "no runtime errors",
+          "native close and child stopped"
+        ]
+      }
+    ],
+    "application_issue_fixed": "Academy fragment manual buttons now request app-scope rerun to reveal the external manual dock immediately; optional knowledge-button flag affects Academy only.",
+    "console_errors": [],
+    "warnings": "KaTeX unicodeTextInMathMode warnings for Chinese text in formulas; visually rendered, no application exception.",
+    "native_close": true,
+    "child_stopped": true,
+    "evidence_records": [
+      ".tools\\academy28-gui-f418845ce6544c44b94a460f89d2946b\\result.json",
+      ".tools\\academy28-gui-78035e1a66ff419780917b854b430295\\result.json",
+      ".tools\\academy28-gui-0ec39c2311ee467f84161e7dc106e8c4\\result.json"
+    ],
+    "harness_corrections": [
+      "Old brand title corrected to Quant Lab",
+      "Navigation input click changed to visible label",
+      "Hidden alias / nonexistent heading assumptions corrected to actual article-path caption"
+    ],
+    "validation_policy": "Only affected flows. Earlier successful interactions were retained as evidence; only a real UI fix or failed locator was followed up. No second full pytest, unrelated market calls or performance sampling."
+  },
+  "unchanged": [
+    "SQLite v6",
+    "production algorithms and fingerprints",
+    "market data qualification",
+    "default market-data startup",
+    "installed EXE"
+  ],
+  "not_performed": [
+    "packaging",
+    "tag/Release",
+    "P95 benchmark",
+    "new real-market validation",
+    "28-course manual desktop traversal (all 28 covered offline by AppTest)"
+  ],
+  "delivery_date": "2026-11-01"
+}
