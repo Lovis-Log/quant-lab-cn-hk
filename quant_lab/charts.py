@@ -175,6 +175,33 @@ def history_candlestick_chart(history: pd.DataFrame, currency: str = "CNY") -> g
     return _historical_layout(fig, currency)
 
 
+def course_chart(result, course_id: str) -> go.Figure:
+    """Render experiment metadata; curriculum order never selects columns."""
+    spec, frame = result.chart, result.table
+    figure = go.Figure()
+    colors = (ACCENT, AMBER, UP, DOWN)
+    for index, name in enumerate(spec.series):
+        color = colors[index % len(colors)]
+        if spec.kind == "bar":
+            figure.add_bar(x=frame[spec.x], y=frame[name], name=name, marker_color=color)
+        else:
+            figure.add_scatter(x=frame[spec.x], y=frame[name], name=name,
+                               mode="markers" if spec.kind == "scatter" else "lines+markers",
+                               line={"color": color, "width": 2}, marker={"color": color, "size": 6})
+    figure.update_layout(height=300, paper_bgcolor=SURFACE, plot_bgcolor=SURFACE,
+                         margin={"l": 45, "r": 20, "t": 25, "b": 40},
+                         font={"family": FONT, "color": MUTED, "size": 12},
+                         uirevision=f"course-{course_id}", hovermode="x unified",
+                         showlegend=len(spec.series) > 1, legend={"orientation": "h", "y": 1.15},
+                         xaxis_title=spec.x)
+    figure.update_xaxes(showgrid=True, gridcolor=BORDER, zeroline=False)
+    figure.update_yaxes(showgrid=True, gridcolor=BORDER, zeroline=False,
+                         tickformat=".1%" if spec.percent else None)
+    if len(frame) <= 12 and pd.api.types.is_numeric_dtype(frame[spec.x]):
+        figure.update_xaxes(dtick=1)
+    return figure
+
+
 def teaching_chart(choice: int, frame: pd.DataFrame) -> go.Figure:
     """Render the exact fixed experiment values; never fetch market data."""
     columns = (("期数", ("本金",)), ("交易日", ("价格", "均线")),

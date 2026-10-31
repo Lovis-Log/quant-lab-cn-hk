@@ -244,6 +244,7 @@ def test_manual_deepseek_and_notes_panels_coexist_and_maximize():
 def test_academy_and_knowledge_links_open_manual_not_guidance():
     app = _start_app()
     navigate(app, "Quant Academy")
+    _widget(app, "selectbox", "选择课程").set_value("simple_return").run()
     _widget(app, "button", "在使用手册中继续阅读").click().run()
 
     assert app.session_state["manual_panel_open"] is True

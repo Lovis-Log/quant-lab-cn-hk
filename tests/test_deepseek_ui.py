@@ -151,6 +151,7 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     app.run()
     navigate(app, "Quant Academy")
     assert len(calls) == 1
+    widget(app, "selectbox", "选择课程").set_value("simple_return").run()
     app.session_state["knowledge_lazy_academy_simple_return"] = True
     app.run()
     # The current AppTest serializer omits expander widget states. Keep the

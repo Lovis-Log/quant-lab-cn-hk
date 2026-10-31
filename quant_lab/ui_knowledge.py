@@ -46,6 +46,7 @@ def render_knowledge(
     expanded=False,
     current_reading: str | None = None,
     lazy=False,
+    rerun_on_manual=False,
 ):
     if not st.session_state.get("learning_mode", True):
         return
@@ -73,12 +74,14 @@ def render_knowledge(
         article_id = ARTICLE_BY_TOPIC.get(topic)
         if article_id:
             from quant_lab.ui_manual import open_manual_article
-            st.button(
+            opened = st.button(
                 "在使用手册中阅读",
                 key=f"knowledge_manual_{key}_{topic}",
                 on_click=open_manual_article,
                 args=(article_id,),
             )
+            if opened and rerun_on_manual:
+                st.rerun(scope="app")
 
 
 def _toggle_knowledge_group(state_key: str) -> None:

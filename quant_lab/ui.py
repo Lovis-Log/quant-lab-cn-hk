@@ -361,7 +361,7 @@ TOPBAR_REORDER_JS = """
 def _protect_session_widgets() -> None:
     """Keep active research and AI controls across Streamlit page redraws."""
     value_keys = {
-        "academy_lesson", "deepseek_api_key", "deepseek_remember",
+        "academy_lesson", "academy_course_id", "deepseek_api_key", "deepseek_remember",
         "deepseek_prompt", "deepseek_answer_mode", "deepseek_attach",
         "ds_model_select", "ds_model_manual", "ai_workspace",
         "learning_mode", "refresh_enabled", "refresh_interval_seconds", "academy_search", "academy_group",
@@ -1045,8 +1045,8 @@ def render_app() -> None:
                 if st.session_state.get("active_analysis_context"):
                     context["statistics"] = st.session_state["active_analysis_context"]
                 if page == "Quant Academy":
-                    context = {"page": page, "lesson": st.session_state.get("academy_lesson", 0),
-                               "data_status": "离线教学实验，不是股票行情。"}
+                    context = dict(st.session_state.get("_current_ai_context", {
+                        "page": page, "data_status": "课程检索，无当前实验。"}))
                 if page in ("美股研究", "美股数据"):
                     context=st.session_state.get("active_us_context",{"page":page,"data_status":"尚未加载合格真实美股数据"})
                     st.session_state["active_data_fingerprint"]=context.get("data_fingerprint")

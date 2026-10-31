@@ -1,5 +1,7 @@
 # 架构与数据流
 
+2026-10-31 Academy 28课：`quant_lab.courses`注册稳定ID、专题、先修、文章和实验入口。`run_experiment(course_id, {"value": number})`返回TeachingResult（表格、ChartSpec、数值指标、百分比列和解释/可选教学报告）；模型与计算不导入Streamlit、无网络或存储副作用。内容/引用/先修环在启动与首次进入学院时校验，错误显式显示。`ui_learning`按元数据呈现，`course_chart`不依赖课程排序。原`learning.LESSONS`、`lesson_experiment`与`teaching_chart`保持8课兼容；旧数字选择映射到稳定ID而非新课程位置。SQLite/生产算法/指纹均不变。详情见docs/ACADEMY_STAGE4.md。
+
 启动视图（2026-10-31）：`initialize_workspaces`只在新会话执行一次，读取已有工作区研究参数后将启动导航设为市场数据、关闭手册并清除手册最大化。`_global_topbar`的手册默认值同步为关闭；显式应用工作区仍恢复其导航/面板，普通重绘不覆盖用户操作。原预设文件不改写，无数据迁移或依赖变更。
 
 2026-10-31 补齐三市场价格研究操作：`security_identity.normalize_security`只服务名称、目录及自选股，A/H仍调用原`normalize_symbol`，不扩展原历史Provider、BacktestConfig或严格US模型。`us_profiles.py`复用AKShare美股财务查询使用的东方财富公司资料端点，只请求来源代码和中英文名称，校验.N/.O后将来源类别股下划线规范为点号；名称/目录按原市场+代码缓存及原获取时间管理，失败保留旧值。发行基础名称快照`resources/us_shares.json`非行情，目录刷新显式进行。`WatchlistProvider`按市场分派A/H或US历史收盘参考，SnapshotCache保持并发合并、节流、币种/时间/价格校验和失败保留。SQLite仍v6，名称与自选使用既有表，不重写行情或旧实验。US去掉独立十年限制，市场页复用图表、表格全屏/CSV与自选股控件，定时刷新只在市场页运行。US摘要增加可选company_name，旧空值可读，金融版本和审计算法不变。
