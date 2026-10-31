@@ -139,6 +139,12 @@ def test_cache_never_reuses_invalid_rows_and_keeps_validation_reason():
 def test_snapshot_uses_last_completed_close_not_intraday_last_bar(monkeypatch):
     from quant_lab.data import HistoryBundle
     from quant_lab.data_quality import CalendarReference
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 10, 9, 3, tzinfo=timezone.utc).astimezone(tz)
+    # Keep the fixed intraday bars inside snapshot's rolling 21-day request.
+    monkeypatch.setattr("quant_lab.data.datetime", Clock)
     reference = CalendarReference("TEST", "1", tuple((date(2026,10,day),datetime(2026,10,day,8,tzinfo=timezone.utc)) for day in (8,9)), True, "test")
     monkeypatch.setattr("quant_lab.data_quality.calendar_reference", lambda *args: reference)
     raw = rows().sort_values("date").reset_index(drop=True)

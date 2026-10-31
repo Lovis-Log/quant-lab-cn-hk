@@ -22,11 +22,11 @@ def render_us_source_status():
     _render_us_teaching(source_only=True)
 
 
-def render_us_research():
+def render_us_research(section=None):
     mode=st.radio("美股研究模式",("真实行情价格研究","离线教学样本"),horizontal=True,key="us_research_mode")
     if mode == "真实行情价格研究":
         from quant_lab.ui_us_price_research import render_us_price_research
-        render_us_price_research()
+        render_us_price_research(section)
     else:
         _render_us_teaching()
 

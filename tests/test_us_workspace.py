@@ -44,7 +44,7 @@ def test_free_source_failure_stays_visible_and_does_not_become_teaching_data(mon
     navigate(app, "美股研究")
     app.radio(key="us_research_mode").set_value("离线教学样本").run()
     app.radio(key="us_source_mode").set_value("免费来源状态").run()
-    app.button(key="FormSubmitter:us_real_prices-加载真实美股日线").click().run()
+    next(item for item in app.sidebar.button if item.label == "加载真实历史日线").click().run()
     finish_background_jobs(app)
     assert not app.exception
     assert any("来源请求失败" in item.value for item in app.error)
@@ -72,9 +72,9 @@ def test_real_us_prices_refresh_failure_retains_data_and_query_isolates_ai(monke
     app = AppTest.from_file(APP, default_timeout=30).run()
     app.sidebar.selectbox(key="market_selection").set_value("美股").run()
     assert not app.exception and not calls
-    app.date_input(key="us_price_start").set_value(date(2026, 10, 27))
-    app.date_input(key="us_price_end").set_value(date(2026, 10, 28))
-    app.button(key="FormSubmitter:us_real_prices-加载真实美股日线").click().run()
+    app.date_input(key="history_start").set_value(date(2026, 10, 27))
+    app.date_input(key="history_end").set_value(date(2026, 10, 28))
+    next(item for item in app.sidebar.button if item.label == "加载真实历史日线").click().run()
     finish_background_jobs(app)
     assert not app.exception and not app.error and calls == ["AAPL"]
     assert app.metric[0].value == "103.0000"
@@ -82,18 +82,19 @@ def test_real_us_prices_refresh_failure_retains_data_and_query_isolates_ai(monke
     assert app.session_state["_current_ai_context"]["symbol"] == "AAPL"
     assert app.session_state["_current_ai_context"]["data_status"].startswith("真实美股历史日线")
     app.run()
-    app.button(key="FormSubmitter:us_real_prices-加载真实美股日线").click().run()
+    next(item for item in app.sidebar.button if item.label == "加载真实历史日线").click().run()
     finish_background_jobs(app)
     assert calls == ["AAPL"]  # rerender and ordinary load reuse verified memory
-    app.button(key="FormSubmitter:us_real_prices-立即更新美股日线").click().run()
+    app.button(key="us_history_refresh").click().run()
     finish_background_jobs(app)
     assert not app.exception and len(calls) == 2 and app.error
     retained = app.session_state["us_price_reference"][1]
     assert retained.observation == first and retained.update_error
     assert app.metric[0].value == "103.0000"
     assert "更新失败" in app.session_state["_current_ai_context"]["data_status"]
-    app.text_input(key="us_price_symbol").set_value("MSFT")
-    app.button(key="FormSubmitter:us_real_prices-加载真实美股日线").click().run()
+    app.session_state["us_price_symbol"] = "MSFT"
+    app.run()
+    next(item for item in app.sidebar.button if item.label == "加载真实历史日线").click().run()
     finish_background_jobs(app)
     assert not app.metric
     assert "symbol" not in app.session_state["_current_ai_context"]

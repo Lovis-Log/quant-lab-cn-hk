@@ -17,17 +17,21 @@ def render_us_price_comparison():
                                                      "data_status": "尚未加载美股比较输入"}
     today = datetime.now(NY).date()
     first, last = history_window(today, 1)
-    with st.form("us_price_comparison"):
-        text = st.text_input("美股比较代码（逗号分隔，2–10只）", value="AAPL,MSFT", key="us_compare_codes")
-        cols = st.columns(2)
-        start = cols[0].date_input("美股比较开始日期", value=first, key="us_compare_start", max_value=today)
-        end = cols[1].date_input("美股比较结束日期", value=last, key="us_compare_end", max_value=today)
-        cols = st.columns(2)
-        baseline = cols[0].text_input("美股基准代码（留空使用首只）", key="us_compare_baseline")
-        window = cols[1].number_input("美股滚动波动窗口", min_value=2, max_value=252, value=20, key="us_compare_window")
-        cols = st.columns(2)
-        load = cols[0].form_submit_button("加载美股比较", type="primary")
-        force = cols[1].form_submit_button("立即更新美股比较")
+    from quant_lab.ui_security_picker import render_security_picker
+    st.session_state.setdefault("us_compare_codes", "AAPL,MSFT")
+    text = render_security_picker("美股", "us_compare_codes", multiple=True, label="比较股票（2–10只，代码 / 名称）")
+    with st.form("us_price_comparison", border=False):
+        cols = st.columns(3)
+        start = cols[0].date_input("比较开始日期", value=first, key="us_compare_start", max_value=today)
+        end = cols[1].date_input("比较结束日期", value=last, key="us_compare_end", max_value=today)
+        cols[2].selectbox("统一价格口径", ("不复权",), disabled=True)
+        load_col, refresh_col, _ = st.columns((1.2, 1.6, 6), vertical_alignment="bottom")
+        load = load_col.form_submit_button("加载比较", type="primary", width="stretch")
+        force = refresh_col.form_submit_button("立即更新比较", width="stretch")
+        with st.expander("高级比较设置"):
+            cols = st.columns(2)
+            baseline = cols[0].text_input("基准代码（留空使用首只）", key="us_compare_baseline")
+            window = cols[1].number_input("滚动波动窗口（共同记录数）", min_value=2, max_value=252, value=20, key="us_compare_window")
     try:
         codes = normalize_us_codes([v.strip() for v in text.replace("，", ",").split(",") if v.strip()])
         benchmark = normalize_us_symbol(baseline) if baseline.strip() else codes[0]

@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from quant_lab import us_sources
-from quant_lab.history_ranges import history_window
 from quant_lab.jobs import JobState
 from quant_lab.paths import user_data_dir
 from quant_lab.ui_helpers import style_figure
@@ -16,38 +15,18 @@ from quant_lab.ui_jobs import loading_placeholder, submit_task, take_result
 from quant_lab.us_market import NY, normalize_us_symbol
 
 
-def render_us_prices():
-    today = datetime.now(NY).date()
-    st.session_state["active_us_context"] = {
-        "page": "美股数据", "market": "美股", "currency": "USD",
-        "data_status": "尚未加载真实美股历史日线；可用于独立价格研究模型",
-    }
-    st.caption("免费公开历史日线 · USD · 仅会话保留 · 非实时，确切延迟未知")
-    period = st.selectbox("美股历史区间", (1, 3, 5, 10, "自定义"),
-                          format_func=lambda value: f"{value}年" if isinstance(value, int) else value,
-                          key="us_price_period")
-    if st.session_state.get("_us_price_period") != period:
-        if isinstance(period, int):
-            start, end = history_window(today, period)
-            st.session_state["us_price_start"] = start
-            st.session_state["us_price_end"] = end
-        st.session_state["_us_price_period"] = period
-    with st.form("us_real_prices"):
-        ticker = st.text_input("美股代码", value="AAPL", key="us_price_symbol",
-                               help="例如AAPL、MSFT、NVDA；类别股使用点号。输入代码不代表证券身份已核验。")
-        columns = st.columns(2)
-        start = columns[0].date_input("开始日期", key="us_price_start", min_value=history_window(today, 10)[0], max_value=today)
-        end = columns[1].date_input("结束日期", key="us_price_end", max_value=today)
-        columns = st.columns(2)
-        load = columns[0].form_submit_button("加载真实美股日线", type="primary")
-        refresh = columns[1].form_submit_button("立即更新美股日线", help="绕过五分钟查询缓存；相同的进行中请求会合并。")
+def sync_us_prices(ticker, dates, load=False, refresh=False):
+    """Consume the shared sidebar query on market and research pages alike."""
+    st.session_state["_us_price_query"] = None
+    if dates is None:
+        return None
     try:
         ticker = normalize_us_symbol(ticker)
+        start, end = dates
         if start > end:
-            raise ValueError("开始日期不能晚于结束日期。")
-    except ValueError as error:
-        st.warning(str(error))
-        return
+            return None
+    except ValueError:
+        return None
     key = (str(user_data_dir()), ticker, start, end)
     if load or refresh:
         submit_task("us_prices", key, us_sources.fetch_sina_reference, ticker, start, end,
@@ -61,6 +40,18 @@ def render_us_prices():
             st.session_state["us_price_error"] = (key, "来源返回类型无效；没有使用教学数据。")
     elif completed and completed.state == JobState.FAILED:
         st.session_state["us_price_error"] = (key, completed.error)
+    st.session_state["_us_price_query"] = key
+    return key
+
+
+def render_us_prices():
+    st.subheader("市场数据实验室")
+    st.session_state["active_us_context"] = {
+        "page": "美股数据", "market": "美股", "currency": "USD",
+        "data_status": "尚未加载当前查询的真实美股历史日线；可用于独立价格研究模型",
+    }
+    st.caption("免费公开历史日线 · USD · 仅会话保留 · 非实时，确切延迟未知")
+    key = st.session_state.get("_us_price_query")
     saved = st.session_state.get("us_price_reference")
     reference = saved[1] if saved and saved[0] == key else None
     error = st.session_state.get("us_price_error")
@@ -74,7 +65,7 @@ def render_us_prices():
     if reference is not None:
         _render_reference(reference, key, failure)
     else:
-        st.info("输入代码并加载真实历史日线。请求失败会显示错误，不会换成教学行情。")
+        st.info("请在左侧选择股票与日期，点击“加载真实历史日线”。请求失败会显示错误，不会换成教学行情。")
     from quant_lab.ui_us_price_research import open_us_price_research
     st.button("进入真实美股研究", key="us_live_backtest", on_click=open_us_price_research)
     st.caption("采用与现有A/H同级的价格与成本模型，不包含公司行动或结算现金；完整现金账户模拟留待后续。")

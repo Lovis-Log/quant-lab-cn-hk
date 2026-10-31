@@ -1,5 +1,7 @@
 # 架构与数据流
 
+2026-10-31 三市场操作共用`ui._research_controls`、`ui_security_picker`与`research_page`导航；A/H继续走原Provider，美股由`ui_us_prices.sync_us_prices`处理同侧栏输入，在市场/研究页共同提交和消费后台任务。当前查询含资料目录、规范ticker及起止日期；`ui_us_price_research`只使用与当前查询一致的引用，避免更改输入后沿用上一份数据/AI摘要。US代码由`normalize_us_symbol`校验，A/H继续`normalize_symbol`，不扩展原A/H交易/存储市场集合。美股比较复用选股组件及加载布局，保留独立USD服务。工作区v1/v2读取时把旧US日期/区间/子页映射到共享控件，共享新值优先；SQLite和金融算法不变。
+
 2026-10-30按用户新范围新增独立`us_price_research.py`：`USPriceConfig`不扩展原`BacktestConfig`的A/H市场集合；复用`run_experiment`、`run_backtest`、`compare_inputs`、`run_portfolio_research`与统计纯计算，以独立US版本/指纹封装。只接收USD、指纹一致、已结束的来源声明未复权OHLCV；成交模型要求完整参考交易日、无≥40%原始收盘跳变。比较可以显示共同日期，但组合不删掉缺失成交日。40%仅为保守拦截阈值，不是完整公司行动检测。
 
 `research_validation.run_validation`新增可选内部价格校验器，A/H默认路径/输出不变；US传入六字段校验器，不捏造缺失成交额。US包装层重写模型声明与外层版本指纹，不将结果传给旧AH报告路由。`ui_us_price_research.py`提供五类真实价格研究，`ui_us_price_comparison.py`提供2–10只比较和等权/逆波动率USD现金持仓组合；任务、查询和参数各自隔离。控件保留与工作区JSON只列举非敏感输入，不写按钮只读状态或行情/AI内容。完整快照未获许可时只会话计算及导出明确不可复算的摘要，与A/H现有规则一致。原`us-cash-v1`和`quantlab-us-run-v1`的严格资格、事件和离线复算不改；SQLite仍v6。

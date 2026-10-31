@@ -376,7 +376,7 @@ def _protect_session_widgets() -> None:
     }
     prefixes = (
         "strategy_", "backtest_", "portfolio_", "model_", "research_", "academy_parameter_",
-        "ai_question", "cost_", "symbol_", "ds_effort_",
+        "ai_question", "cost_", "symbol_", "ds_effort_", "history_adjustment_",
     )
     value_keys.update({"us_price_period","us_price_start","us_price_end","us_price_symbol","us_price_page",
         "us_compare_codes","us_compare_start","us_compare_end","us_compare_baseline","us_compare_window",
@@ -420,18 +420,16 @@ def _sidebar() -> tuple[str, str, str, tuple[date, date] | None, str, bool]:
             market = st.selectbox("市场", MARKETS, key="market_selection", on_change=_select_market_changed)
             page = active_route(section, market, st.session_state["research_page"])
             st.session_state["nav_page"] = page
-            if market == "美股":
-                st.caption("USD · 历史日线 · 价格模型")
-                return page, market, "", None, "", False
             market, symbol, dates, adjustment, clicked = _research_controls()
     return page, market, symbol, dates, adjustment, clicked
 
 
 def _research_controls():
     market = st.session_state["market_selection"]
-    st.session_state.setdefault(f"symbol_{market}", "600519" if market == "A 股" else "00700")
+    symbol_key = "us_price_symbol" if market == "美股" else f"symbol_{market}"
+    st.session_state.setdefault(symbol_key, {"A 股": "600519", "港股": "00700", "美股": "AAPL"}[market])
     from quant_lab.ui_security_picker import render_security_picker
-    symbol = render_security_picker(market, f"symbol_{market}").strip()
+    symbol = render_security_picker(market, symbol_key).strip()
     today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
     initial_start, initial_end = history_window(today, 1)
     st.session_state.setdefault("history_start", initial_start)
@@ -444,9 +442,16 @@ def _research_controls():
     dates = (start, end) if isinstance(start, date) and isinstance(end, date) else None
     if dates and start > end:
         st.warning("开始日期不能晚于结束日期。")
-    adjustment = ADJUSTMENTS[st.selectbox("价格口径", tuple(ADJUSTMENTS))]
+    adjustment = ADJUSTMENTS[st.selectbox("价格口径", ("不复权",) if market == "美股" else tuple(ADJUSTMENTS),
+                                       key="history_adjustment_" + market, disabled=market == "美股")]
+    if market == "美股":
+        st.caption("USD · 当前来源仅提供不复权历史价格")
     try:
-        symbol = normalize_symbol(market, symbol)
+        if market == "美股":
+            from quant_lab.us_market import normalize_us_symbol
+            symbol = normalize_us_symbol(symbol)
+        else:
+            symbol = normalize_symbol(market, symbol)
         valid_symbol = True
     except ValueError:
         valid_symbol = False
@@ -454,6 +459,12 @@ def _research_controls():
         valid_symbol and dates is not None and dates[0] <= dates[1]
     )
     clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
+    if market == "美股":
+        st.session_state["_us_force_refresh"] = st.button("立即更新", key="us_history_refresh",
+            disabled=not can_load, width="stretch", help="绕过查询缓存；相同的进行中请求会合并。")
+        st.caption("当前选择：" + symbol + "（名称暂不可用）" if valid_symbol else "请输入美股代码，例如 AAPL、MSFT、BRK.B。")
+        st.caption("历史日线 · 本地研究")
+        return market, symbol, dates, adjustment, clicked
     directory_result = take_result("directory", market)
     if directory_result and directory_result.state == JobState.FAILED:
         st.warning(directory_result.error)
@@ -954,9 +965,10 @@ def render_app() -> None:
     with st.container(key="workbench_scroller"):
         with st.container(key="workbench_track"):
             with st.container(key="main_workspace"):
-                if st.session_state["nav_section"] == "研究工作台" and market != "美股":
-                    page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
+                if st.session_state["nav_section"] == "研究工作台":
+                    research_page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
                                     format_func=RESEARCH.get, label_visibility="collapsed")
+                    page = active_route("研究工作台", market, research_page)
                     st.session_state["nav_page"] = page
                 bundle: HistoryBundle | None = None
                 error: str | None = None
@@ -965,7 +977,10 @@ def render_app() -> None:
                 st.session_state["active_analysis_context"] = None
                 st.session_state["active_learning_context"] = None
                 record = None
-                if dates is not None:
+                if market == "美股" and page != "多股票比较":
+                    from quant_lab.ui_us_prices import sync_us_prices
+                    query = sync_us_prices(symbol, dates, clicked, st.session_state.pop("_us_force_refresh", False))
+                elif dates is not None and market != "美股":
                     query = (market, symbol, dates[0], dates[1], adjustment)
                     if clicked:
                         _submit_history(query)
@@ -997,11 +1012,11 @@ def render_app() -> None:
                     from quant_lab.ui_learning import render_academy
                     render_academy()
                 elif page == "美股数据":
-                    from quant_lab.ui_us import render_us_source_status
-                    render_us_source_status()
+                    from quant_lab.ui_us_prices import render_us_prices
+                    render_us_prices()
                 elif page == "美股研究":
                     from quant_lab.ui_us import render_us_research
-                    render_us_research()
+                    render_us_research(RESEARCH[st.session_state["research_page"]])
                 elif page == "多股票比较":
                     from quant_lab.ui_comparison import render_comparison
                     render_comparison()

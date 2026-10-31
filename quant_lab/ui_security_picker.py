@@ -100,7 +100,7 @@ export default function(component) {
       if(focused>=0&&filtered[focused]){choose(filtered[focused].code);return;}
       const exact=config.options.find(item=>item.code===raw||item.name===raw);
       if(exact){choose(exact.code);return;}
-      if(raw&&/[0-9]/.test(raw)){
+      if(raw&&(config.market==='美股'||/[0-9]/.test(raw))){
         const additions=raw.split(/[,，;；\s]+/).filter(Boolean).map(code=>code.split(/[（(]/)[0]);
         const next=config.multiple?[...new Set([...selected,...additions])]:additions.slice(0,1);
         if(next.length>10){count.textContent='最多选择10只股票，请先移除部分股票';return;}
@@ -129,19 +129,31 @@ def commit_selection(market, target, multiple, selection):
     """Validate client values before replacing the last valid selection."""
     if not isinstance(selection, list) or any(not isinstance(value, str) for value in selection):
         raise ValueError("股票选择数据无效。")
-    codes = comparison_selection(market, "", selection)
+    codes = _selection(market, "", selection)
     if not multiple and len(codes) > 1:
         raise ValueError("单股研究只能选择一只股票。")
     return ",".join(codes) if multiple else next(iter(codes), "")
 
 
+def _selection(market, text, additions=()):
+    if market != "美股":
+        return comparison_selection(market, text, additions)
+    from quant_lab.us_market import normalize_us_symbol
+    codes = tuple(dict.fromkeys(normalize_us_symbol(code) for code in
+        [*text.replace("，", ",").split(","), *additions] if code.strip()))
+    if len(codes) > 10:
+        raise ValueError("最多选择10只同市场股票，请先移除部分股票。")
+    return codes
+
+
 def render_security_picker(market, target, *, multiple=False, label="股票（代码 / 名称）"):
     labels = {}
     try:
-        directory = security_directory(market)
-        labels = dict(directory.rows)
-        if directory.error:
-            st.warning(directory.error)
+        if market != "美股":
+            directory = security_directory(market)
+            labels = dict(directory.rows)
+            if directory.error:
+                st.warning(directory.error)
     except (OSError, ValueError, KeyError, TypeError) as error:
         st.warning(str(error))
     try:
@@ -150,11 +162,11 @@ def render_security_picker(market, target, *, multiple=False, label="股票（�
         watched = []
     current = st.session_state.get(target, "")
     try:
-        selected = list(comparison_selection(market, current))
+        selected = list(_selection(market, current))
     except ValueError:
         selected = []
     candidates = list(dict.fromkeys([*watched, *selected, *labels]))
-    options = [{"code": code, "name": labels.get(code) or names.cached_security_name(market, code) or "名称暂不可用", "watched": code in watched} for code in candidates]
+    options = [{"code": code, "name": labels.get(code) or (names.cached_security_name(market, code) if market != "美股" else "") or "名称暂不可用", "watched": code in watched} for code in candidates]
     component_key = target + "_picker_" + market
 
     def changed():
@@ -170,7 +182,7 @@ def render_security_picker(market, target, *, multiple=False, label="股票（�
         "selected": selected, "options": options}, default={"selection": selected}, on_selection_change=changed)
     if st.session_state.get("_picker_error_" + target):
         st.warning(st.session_state["_picker_error_" + target])
-    if not labels and st.button("更新证券目录", key="picker_directory_" + market):
+    if market != "美股" and not labels and st.button("更新证券目录", key="picker_directory_" + market):
         from quant_lab.ui_jobs import submit_task
         submit_task("directory", market, security_directory, market, force=True)
     return st.session_state.get(target, "")

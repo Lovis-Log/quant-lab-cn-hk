@@ -82,30 +82,28 @@ def line_chart(series, key, *, height=340):
     st.plotly_chart(figure, width="stretch", theme=None)
 
 
-def render_us_price_research():
+def render_us_price_research(section=None):
     st.subheader("美股价格研究")
     st.caption(ASSUMPTIONS)
     st.session_state["active_us_context"] = {"page": "美股价格研究", "market": "美股", "currency": "USD",
                                              "data_status": "尚未加载真实美股日线"}
+    source_error = st.session_state.get("us_price_error")
+    if source_error and source_error[0] == st.session_state.get("_us_price_query"):
+        st.error("当前查询最近一次更新失败，请先更新行情："+source_error[1])
+        st.session_state["active_us_context"]["data_status"] = "当前查询最近更新失败；未运行新研究"
+        return
     saved = st.session_state.get("us_price_reference")
-    if not saved:
-        st.info("请先在市场数据中加载真实美股日线；研究页不会自动请求或替换为教学数据。")
-        st.button("前往美股行情", key="us_price_go_market", on_click=open_us_market)
+    if not saved or saved[0] != st.session_state.get("_us_price_query"):
+        st.info("请在左侧选择股票与日期，点击“加载真实历史日线”。")
         return
     query, reference = saved
     info = reference.observation
     st.write(f"当前已加载：{info.symbol}（名称暂不可用） · USD · {info.actual_start} 至 {info.actual_end} · {info.observations}条")
     st.caption(f"{info.source} · {reference.price_basis} · 成功接收 {info.received_at}")
-    st.button("更换证券或更新行情", key="us_price_change_market", on_click=open_us_market)
     st.session_state["active_us_context"].update({"symbol": info.symbol, "source": info.source,
         "data_period": [info.actual_start, info.actual_end], "received_at": info.received_at,
         "data_fingerprint": info.content_sha256, "adjustment": reference.price_basis,
         "data_status": "真实美股历史日线；价格与成本研究；公司行动和结算未模拟"})
-    source_error = st.session_state.get("us_price_error")
-    if source_error and source_error[0] == query:
-        st.error("当前查询最近一次更新失败，请先更新行情："+source_error[1])
-        st.session_state["active_us_context"]["data_status"] = "当前查询最近更新失败；未运行新研究"
-        return
     try:
         raw = validate_price_input(reference, execution=False)
     except ValueError as error:
@@ -114,8 +112,9 @@ def render_us_price_research():
         return
     if (raw.close.pct_change(fill_method=None).abs() >= .4).any():
         st.warning("区间有至少40%的原始价格跳变；价格统计可能受公司行动影响，成交回测与验证需缩短区间。")
-    section = st.radio("美股研究内容", ("策略信号", "历史回测", "风险与组合", "统计分析", "专业验证"),
-                       horizontal=True, key="us_price_page")
+    if section is None:
+        section = st.radio("研究内容", ("策略信号", "历史回测", "风险与组合", "统计分析", "专业验证"),
+                           horizontal=True, key="us_price_page")
     fingerprint = (info.symbol, info.content_sha256, info.received_at, PRICE_VERSION)
     if section == "策略信号":
         values = strategy_controls("us_price_signal")

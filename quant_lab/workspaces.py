@@ -137,4 +137,14 @@ class WorkspaceStore:
 
 def restore_values(values):
     restored = {key:date.fromisoformat(value) if key in DATES else value for key,value in values.items()}
+    # Old US-only controls remain readable; shared values take precedence.
+    if restored.get("market_selection") == "美股":
+        for old, new in (("us_price_start", "history_start"), ("us_price_end", "history_end")):
+            if old in restored:
+                restored.setdefault(new, restored[old])
+        if "us_price_period" in restored:
+            period = restored["us_price_period"]
+            restored.setdefault("history_preset", f"{period} 年" if isinstance(period, int) else "自定义")
+        if "us_price_page" in restored and "research_page" not in restored:
+            restored["research_page"] = next(key for key, label in RESEARCH.items() if label == restored["us_price_page"])
     return {**restored, **navigation_values(restored)}

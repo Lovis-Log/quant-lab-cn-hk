@@ -140,10 +140,12 @@ def test_real_us_ui_backtest_comparison_portfolio_and_teaching_separation(monkey
     from quant_lab import us_price_research as service
     app = AppTest.from_file(Path(__file__).resolve().parents[1]/"app.py", default_timeout=30).run()
     item = reference()
-    app.session_state["us_price_reference"] = (("isolated", "AAPL"), item)
+    monkeypatch.setattr("quant_lab.us_sources.fetch_sina_reference", lambda *args, **kwargs: item)
     navigate(app, "美股研究")
+    next(button for button in app.sidebar.button if button.label == "加载真实历史日线").click().run()
+    finish_background_jobs(app)
     assert app.radio(key="us_research_mode").value == "真实行情价格研究"
-    app.radio(key="us_price_page").set_value("历史回测").run()
+    app.radio(key="research_page").set_value("历史回测").run()
     app.button(key="FormSubmitter:us_price_backtest-运行真实美股价格回测").click().run()
     finish_background_jobs(app, timeout=30)
     assert not app.exception and not app.error
@@ -151,7 +153,7 @@ def test_real_us_ui_backtest_comparison_portfolio_and_teaching_separation(monkey
     assert "公司行动/结算未模拟" in app.session_state["_current_ai_context"]["data_status"]
     monkeypatch.setattr(service, "fetch_sina_reference", lambda symbol, *args, **kwargs: reference(symbol, scale=2 if symbol == "MSFT" else 1))
     app.sidebar.radio(key="nav_section").set_value("多股票比较").run()
-    app.button(key="FormSubmitter:us_price_comparison-加载美股比较").click().run()
+    app.button(key="FormSubmitter:us_price_comparison-加载比较").click().run()
     finish_background_jobs(app, timeout=30)
     assert not app.exception and not app.error
     assert app.session_state["us_price_comparison_result"][1][0].currency == "USD"
@@ -160,8 +162,9 @@ def test_real_us_ui_backtest_comparison_portfolio_and_teaching_separation(monkey
     assert not app.exception and not app.error
     assert set(app.session_state["us_price_portfolio_result"][1].runs) == {"等权", "逆波动率"}
     app.selectbox(key="us_compare_detail").set_value("MSFT").run()
-    app.text_input(key="us_compare_codes").set_value("AAPL,BRK.B")
-    app.button(key="FormSubmitter:us_price_comparison-加载美股比较").click().run()
+    app.session_state["us_compare_codes"] = "AAPL,BRK.B"
+    app.run()
+    app.button(key="FormSubmitter:us_price_comparison-加载比较").click().run()
     finish_background_jobs(app, timeout=30)
     assert not app.exception and not app.error
     assert app.selectbox(key="us_compare_detail").value == "AAPL"
