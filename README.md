@@ -1,6 +1,6 @@
 # Quant Lab
 
-2026-11-01发行：本轮按明确授权将当前桌面研究升级、28课与先修返回打包为2.3.0-rc.1预发布。说明与发行记录见[版本说明](docs/releases/v2.3.0-rc.1.md)；旧安装版“未更新”的表述属于此前源码交付记录。
+2026-11-01已发布 **v2.3.0-rc.1预发布版**：[Windows安装包](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.3.0-rc.1/QuantLab-CN-HK-2.3.0-rc.1-Setup.exe)、[Release与附件](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.3.0-rc.1)、[版本说明/验证记录](docs/releases/v2.3.0-rc.1.md)。包含当前桌面研究升级、28课和先修返回；332项核心测试及隔离安装版实际WebView2关键流程通过。此前“安装包未更新”的表述属于历史源码交付。
 
 2026-11-01课程导航修复：先修课程连续跳转后，标题下提供“← 返回”逐层回到来源课程，同时恢复专题、搜索和实验参数；返回链仅保存在当前会话。
 
