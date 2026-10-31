@@ -7,7 +7,7 @@ import pandas as pd
 import requests
 import sqlite3
 
-from quant_lab.market_data import normalize_symbol, display_security
+from quant_lab.security_identity import normalize_security as normalize_symbol
 from quant_lab import storage
 from quant_lab.securities import PROFILE_URL
 
@@ -17,6 +17,9 @@ class NameProvider:
 
     def lookup(self, market: str, symbol: str) -> str:
         symbol = normalize_symbol(market, symbol)
+        if market == "美股":
+            from quant_lab.us_profiles import security_name
+            return security_name(symbol)
         # The old A-share push2 endpoint can disconnect while the basic
         # company directory remains available. No quote values are used here.
         response = requests.get(
@@ -38,6 +41,12 @@ class NameProvider:
             raise ValueError("证券资料字段或代码不匹配。")
         return name.strip()
 
+    def source_for(self, market):
+        if market == "美股":
+            from quant_lab.us_profiles import SOURCE
+            return SOURCE
+        return self.source
+
 
 class NameCache:
     def __init__(self, provider=None, ttl=timedelta(hours=24), retry=timedelta(minutes=5)):
@@ -48,6 +57,12 @@ class NameCache:
         self._lock = RLock()
         self._flight = {}
         self.errors = {}
+
+    def fresh(self, market, symbol):
+        key = (str(storage.database_path()), market, normalize_symbol(market, symbol))
+        with self._lock:
+            value = self._values.get(key)
+            return bool(value and datetime.now(timezone.utc) - value[1] < self.ttl)
 
     def lookup(self, market: str, symbol: str, *, force: bool = False) -> str:
         symbol = normalize_symbol(market, symbol)
@@ -85,7 +100,8 @@ class NameCache:
                 self._values[key] = (name, successful_at)
                 self.errors.pop(key, None)
             try:
-                storage.save_security_name(market, symbol, name, self.provider.source, successful_at)
+                source = self.provider.source_for(market) if hasattr(self.provider, "source_for") else self.provider.source
+                storage.save_security_name(market, symbol, name, source, successful_at)
             except (OSError, sqlite3.Error):
                 pass
             return name
@@ -119,6 +135,19 @@ class NameCache:
             with self._lock:
                 self._values[key] = (row["name"], datetime.fromisoformat(row["fetched_at"]))
             return row["name"]
+        if market != "美股":
+            return ""
+        # Directory snapshots are local identity data with their original clock.
+        from quant_lab.securities import security_directory
+        try:
+            directory = security_directory(market)
+            name = dict(directory.rows).get(symbol, "")
+            if name:
+                with self._lock:
+                    self._values[key] = (name, datetime.fromisoformat(directory.received_at))
+            return name
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
         return ""
 
 
@@ -137,6 +166,10 @@ def cached_security_label(market: str, symbol: str, name: str | None = None) -> 
         return display_security(market, symbol, name if name is not None else cached_security_name(market, symbol))
     except ValueError:
         return f"{market} {symbol}（名称暂不可用）"
+
+
+def display_security(market, symbol, name=None):
+    return f"{market} {normalize_symbol(market, symbol)}（{name or '名称暂不可用'}）"
 
 
 def security_name(market: str, symbol: str, *, force: bool = False) -> str:

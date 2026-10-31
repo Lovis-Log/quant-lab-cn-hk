@@ -6,6 +6,7 @@ import json
 import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
+from quant_lab import names
 
 from quant_lab.jobs import JobState
 from quant_lab.metrics import performance_stats
@@ -98,9 +99,10 @@ def render_us_price_research(section=None):
         return
     query, reference = saved
     info = reference.observation
-    st.write(f"当前已加载：{info.symbol}（名称暂不可用） · USD · {info.actual_start} 至 {info.actual_end} · {info.observations}条")
+    st.write(f"当前已加载：{names.cached_security_label('美股', info.symbol)} · USD · {info.actual_start} 至 {info.actual_end} · {info.observations}条")
     st.caption(f"{info.source} · {reference.price_basis} · 成功接收 {info.received_at}")
     st.session_state["active_us_context"].update({"symbol": info.symbol, "source": info.source,
+        "company_name": names.cached_security_name("美股", info.symbol),
         "data_period": [info.actual_start, info.actual_end], "received_at": info.received_at,
         "data_fingerprint": info.content_sha256, "adjustment": reference.price_basis,
         "data_status": "真实美股历史日线；价格与成本研究；公司行动和结算未模拟"})
@@ -178,7 +180,8 @@ def _backtest(reference, fingerprint):
         st.write(diagnostics.summary)
         st.dataframe(diagnostics.costs, width="stretch", hide_index=True)
     st.caption(f"{result.audit_id} · 样本外起点 {result.split_date:%Y-%m-%d}；按原A/H模型连续持仓切分，并非在测试起点重置账户。费用为研究假设。")
-    st.download_button("导出美股价格回测摘要", price_report(reference, result, spec, config, fraction),
+    st.download_button("导出美股价格回测摘要", price_report(reference, result, spec, config, fraction,
+        company_name=names.cached_security_name("美股", reference.observation.symbol)),
                        file_name="us_price_research_summary.json", mime="application/json", key="us_price_bt_export")
     st.caption("来源留存条件与A/H一致：当前可会话研究、导出摘要；暂不新增含完整行情的实验档案或可复算快照。")
     st.session_state["active_us_context"].update({"data_fingerprint": result.audit_id,
@@ -239,6 +242,7 @@ def _validation(reference, fingerprint):
     st.caption(f"{result.audit_id}；测试区间不参与对应折选参，跨折账户连续；成本压力使用固定基础策略。")
     shelf = st.session_state.setdefault("us_price_validation_shelf", {})
     shelf[result.audit_id] = {"audit_id": result.audit_id, "symbol": reference.observation.symbol,
+        "company_name": names.cached_security_name("美股", reference.observation.symbol),
         "data_sha256": reference.observation.content_sha256, "period": [reference.observation.actual_start, reference.observation.actual_end],
         "recipe": asdict(recipe), "return": result.base.full_stats.cumulative_return,
         "rolling_return": float(result.rolling.equity.equity.iloc[-1]/config.initial_cash-1)}
@@ -255,6 +259,7 @@ def _validation(reference, fingerprint):
             st.caption("相同数据与资金/费用假设；仍需核对参数和训练比例差异。" if comparable else "数据、证券或资金/费用不同，不能直接归因比较。")
             st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
     st.download_button("导出美股验证摘要", json.dumps({"format": "us-price-validation-summary-v1",
+        "company_name": names.cached_security_name("美股", reference.observation.symbol),
         "manifest": result.manifest, "audit_id": result.audit_id, "scan": result.scan.to_json(orient="table"),
         "folds": result.folds.to_json(orient="table"), "stress": result.stress.to_json(orient="table"),
         "raw_prices_included": False, "offline_replay_available": False}, ensure_ascii=False, default=str).encode(),

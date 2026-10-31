@@ -105,7 +105,7 @@ def _historical_layout(fig: go.Figure, currency: str) -> go.Figure:
     )
     fig.update_xaxes(showgrid=True, gridcolor=BORDER, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor=BORDER, zeroline=False)
-    unit = "元/股" if currency == "CNY" else "港元/股"
+    unit = {"CNY": "元/股", "HKD": "港元/股", "USD": "美元/股"}.get(currency, currency + "/股")
     fig.update_yaxes(title_text=f"价格（{unit}）", title_standoff=10,
                      tickformat=",.0f", row=1, col=1)
     fig.update_yaxes(title_text="成交量（股）", title_standoff=10,
@@ -129,7 +129,7 @@ def history_price_chart(history: pd.DataFrame, currency: str = "CNY") -> go.Figu
         rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.055,
         row_heights=[0.75, 0.25],
     )
-    unit = "元/股" if currency == "CNY" else "港元/股"
+    unit = {"CNY": "元/股", "HKD": "港元/股", "USD": "美元/股"}.get(currency, currency + "/股")
     fig.add_trace(
         go.Scatter(
             x=history["date"], y=history["close"], mode="lines",

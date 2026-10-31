@@ -18,13 +18,16 @@ from quant_lab.ui_updates import status_rows
 def render_watchlist(market: str, symbol: str) -> None:
     st.markdown("#### 自选股 · 最近历史日线收盘参考")
     st.caption("立即更新会绕过所选自选股的缓存。最多 10 只，上游请求至少间隔 1 秒；连续点击需等 5 秒。")
+    if st.session_state.get("watch_message"):
+        st.success(st.session_state.pop("watch_message"))
     left, right = st.columns(2)
     with left:
         if st.button("加入自选", key="watch_add"):
             try:
                 name = names.cached_security_name(market, symbol)
                 normalized = add_watchlist(market, symbol, company_name=name)
-                st.success(f"已加入 {names.cached_security_label(market, normalized, name)}")
+                st.session_state["watch_message"] = f"已加入 {names.cached_security_label(market, normalized, name)}"
+                st.rerun(scope="app")
             except (ValueError, OSError, sqlite3.Error) as exc:
                 st.error(str(exc))
     try:
@@ -39,7 +42,8 @@ def render_watchlist(market: str, symbol: str) -> None:
                 try:
                     remove_watchlist(*chosen)
                     items = list_watchlist()
-                    st.success("已移除。")
+                    st.session_state["watch_message"] = "已移除。"
+                    st.rerun(scope="app")
                 except (OSError, sqlite3.Error):
                     st.error("移除失败，请稍后重试。")
     now = datetime.now(timezone.utc)

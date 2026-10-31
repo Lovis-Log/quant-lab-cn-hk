@@ -163,8 +163,7 @@ def _render_declarations():
     st.caption("证券目录只提供代码与名称候选，不是投资推荐，也不验证当前上市状态。")
     market = st.session_state.get("market_selection", "A 股")
     if market == "美股":
-        st.info("美股以USD独立研究；当前真实来源尚未通过完整关卡。教学样本不代表真实行情。")
-        return
+        st.info("美股以USD进行价格研究；完整公司行动/结算资格另行核验。证券目录不授予行情或留存资格。")
     completed = take_result("directory", market)
     if completed and completed.state == JobState.FAILED:
         st.warning(completed.error)
@@ -177,7 +176,7 @@ def _render_declarations():
     except (OSError, ValueError, KeyError, TypeError) as error:
         st.warning(str(error))
     if st.button("更新股票候选目录", key="refresh_security_directory"):
-        submit_task("directory", market, security_directory, market, force=True)
+        submit_task("directory", market, security_directory, market, force=True, job_timeout=300)
         st.session_state["settings_app_rerun_pending"] = True
     selected = st.session_state.get("_selected_security")
     if selected and selected[0] == market:

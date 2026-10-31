@@ -3,6 +3,7 @@
 from datetime import datetime
 
 import streamlit as st
+from quant_lab import names
 
 from quant_lab.history_ranges import history_window
 from quant_lab.paths import user_data_dir
@@ -46,13 +47,14 @@ def render_us_price_comparison():
         st.info("显式加载后比较真实美股日线；同查询合并，立即更新绕过缓存，失败不会换成教学数据。")
         return
     inputs, result = saved
-    st.caption(f"USD · 共同范围 {result.closes.index[0]:%Y-%m-%d} 至 {result.closes.index[-1]:%Y-%m-%d} · {len(result.closes)}条 · 基准 {benchmark} · 来源声明未复权")
+    labels = {code: names.cached_security_label("美股", code) for code in codes}
+    st.caption(f"USD · 共同范围 {result.closes.index[0]:%Y-%m-%d} 至 {result.closes.index[-1]:%Y-%m-%d} · {len(result.closes)}条 · 基准 {labels[benchmark]} · 来源声明未复权")
     if any((item.frame.close.pct_change(fill_method=None).abs() >= .4).any() for item in inputs.bundles.values()):
         st.warning("存在至少40%的原始价格跳变，价格收益/相关性可能受公司行动影响；现金组合需缩短区间。")
     selected = st.radio("美股比较图表", ("标准化价格", "回撤", "滚动波动率"), horizontal=True, key="us_compare_chart")
     values = {"标准化价格": result.normalized, "回撤": result.drawdowns, "滚动波动率": result.rolling_volatility}[selected]
-    line_chart({code: (values.index, values[code]) for code in codes}, (inputs.fingerprint, selected))
-    st.dataframe(result.risk_return.rename(columns={"price_return": "价格收益", "relative_to_benchmark": "相对基准收益",
+    line_chart({labels[code]: (values.index, values[code]) for code in codes}, (inputs.fingerprint, selected))
+    st.dataframe(result.risk_return.rename(index=labels, columns={"price_return": "价格收益", "relative_to_benchmark": "相对基准收益",
                  "annualized_volatility": "年化波动估计", "max_drawdown": "最大回撤", "observations": "共同记录数"}), width="stretch")
     with st.expander("相关性、覆盖和完整单股数据", expanded=True):
         st.dataframe(result.correlation, width="stretch")
@@ -60,8 +62,15 @@ def render_us_price_comparison():
         st.dataframe(result.coverage, width="stretch", hide_index=True)
         if st.session_state.get("us_compare_detail") not in codes:
             st.session_state["us_compare_detail"] = codes[0]
-        code = st.selectbox("查看美股完整日线", codes, key="us_compare_detail")
+        code = st.selectbox("查看美股完整日线", codes, format_func=labels.get, key="us_compare_detail")
         st.dataframe(inputs.bundles[code].frame, width="stretch", hide_index=True)
+    if st.toggle("显示观察列表", value=False, key="comparison_watch_open"):
+        from quant_lab.ui_terminal import render_watchlist
+        interval = st.session_state.get("refresh_interval_seconds", 300)
+        @st.fragment(run_every=interval if st.session_state.get("refresh_enabled", True) else None)
+        def watch():
+            render_watchlist("美股", codes[0])
+        watch()
     with st.expander("美元现金持仓组合", expanded=False):
         with st.form("us_price_portfolio"):
             config = config_controls("us_price_port")
@@ -89,5 +98,6 @@ def render_us_price_comparison():
     st.caption("与A/H同为价格研究，不计公司行动或股息；完整行情档案的留存条件仍沿用现有规则。")
     st.session_state["active_comparison_context"] = {"page": "多股票比较", "market": "美股", "currency": "USD",
         "symbol": ",".join(codes), "data_fingerprint": inputs.fingerprint,
+        "company_names": {code: names.cached_security_name("美股", code) for code in codes},
         "data_period": [str(result.closes.index[0].date()), str(result.closes.index[-1].date())],
         "data_status": ("本次更新失败，显示上次结果；" if failed else "")+"真实美股共同区间价格研究；非实时；公司行动未模拟"}

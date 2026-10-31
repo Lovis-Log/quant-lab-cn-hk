@@ -192,10 +192,10 @@ def run_us_price_validation(reference, recipe):
     return replace(suite, manifest=manifest, audit_id="us-price-validation-v1:" + _hash(manifest)[:24])
 
 
-def price_report(reference, experiment, spec, config, fraction):
+def price_report(reference, experiment, spec, config, fraction, *, company_name=""):
     """Summary only, like live AH inputs without a durable-retention grant."""
     return json.dumps({"format": "quantlab-us-price-summary-v1", "audit_id": experiment.audit_id,
-                       "inputs": reference_manifest(reference), "strategy": asdict(spec), "costs": asdict(config),
+                       "inputs": {**reference_manifest(reference), "company_name": company_name}, "strategy": asdict(spec), "costs": asdict(config),
                        "train_fraction": fraction, "strategy_stats": asdict(experiment.full_stats),
                        "benchmark_stats": asdict(experiment.benchmark_stats), "test_stats": asdict(experiment.test_stats),
                        "raw_prices_included": False, "offline_replay_available": False,

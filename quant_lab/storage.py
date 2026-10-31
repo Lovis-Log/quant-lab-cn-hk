@@ -58,7 +58,8 @@ def list_watchlist(path: Path | None = None) -> list[tuple[str, str]]:
 
 
 def add_watchlist(market: str, symbol: str, path: Path | None = None, *, company_name: str = "") -> str:
-    symbol = normalize_symbol(market, symbol)
+    from quant_lab.security_identity import normalize_security
+    symbol = normalize_security(market, symbol)
     with _connect(path) as db:
         count = db.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0]
         present = db.execute("SELECT 1 FROM watchlist WHERE market=? AND symbol=?",

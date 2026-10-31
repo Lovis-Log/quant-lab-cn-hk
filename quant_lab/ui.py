@@ -459,12 +459,9 @@ def _research_controls():
         valid_symbol and dates is not None and dates[0] <= dates[1]
     )
     clicked = st.button("加载真实历史日线", disabled=not can_load, width="stretch")
-    if market == "美股":
-        st.session_state["_us_force_refresh"] = st.button("立即更新", key="us_history_refresh",
-            disabled=not can_load, width="stretch", help="绕过查询缓存；相同的进行中请求会合并。")
-        st.caption("当前选择：" + symbol + "（名称暂不可用）" if valid_symbol else "请输入美股代码，例如 AAPL、MSFT、BRK.B。")
-        st.caption("历史日线 · 本地研究")
-        return market, symbol, dates, adjustment, clicked
+    refresh = st.button("立即更新", key="us_history_refresh" if market == "美股" else "history_sidebar_refresh",
+        disabled=not can_load, width="stretch", help="绕过价格与名称查询缓存；相同的进行中请求会合并。")
+    st.session_state["_us_force_refresh" if market == "美股" else "_history_force_refresh"] = refresh
     directory_result = take_result("directory", market)
     if directory_result and directory_result.state == JobState.FAILED:
         st.warning(directory_result.error)
@@ -474,8 +471,8 @@ def _research_controls():
         if name_result and name_result.state == JobState.FAILED:
             st.warning(name_result.error)
         seen_names = st.session_state.setdefault("_name_checks", set())
-        if name_key not in seen_names:
-            submit_task("name", name_key, names.security_name, market, symbol)
+        if (name_key not in seen_names and not names.NAME_CACHE.fresh(market, symbol)) or refresh:
+            submit_task("name", name_key, names.security_name, market, symbol, force=refresh)
             seen_names.add(name_key)
         st.caption("当前选择：" + names.cached_security_label(market, symbol))
         st.session_state["_selected_security"] = (market, symbol)
@@ -491,14 +488,15 @@ def _research_controls():
             chosen = st.session_state.get("sidebar_watch")
             if chosen:
                 st.session_state["market_selection"] = chosen[0]
-                st.session_state[f"symbol_{chosen[0]}"] = chosen[1]
+                st.session_state["us_price_symbol" if chosen[0] == "美股" else f"symbol_{chosen[0]}"] = chosen[1]
                 _select_market_changed()
         st.selectbox("从自选股选择", [None] + watch_items, key="sidebar_watch", on_change=choose_watch,
                      format_func=lambda item: "手动输入" if item is None else names.cached_security_label(*item))
     if st.session_state.get("settings_error"):
         st.warning(st.session_state.pop("settings_error"))
     if not valid_symbol:
-        st.caption("A 股请输入 6 位数字；港股可输入 1–5 位数字，程序会自动补足为 5 位。")
+        st.caption("美股请输入代码，例如 AAPL、MSFT、BRK.B。" if market == "美股" else
+                   "A 股请输入 6 位数字；港股可输入 1–5 位数字，程序会自动补足为 5 位。")
     elif dates is None:
         st.caption("请选择完整的开始和结束日期。")
     st.caption("历史日线 · 本地研究")
@@ -982,8 +980,9 @@ def render_app() -> None:
                     query = sync_us_prices(symbol, dates, clicked, st.session_state.pop("_us_force_refresh", False))
                 elif dates is not None and market != "美股":
                     query = (market, symbol, dates[0], dates[1], adjustment)
-                    if clicked:
-                        _submit_history(query)
+                    force = st.session_state.pop("_history_force_refresh", False)
+                    if clicked or force:
+                        _submit_history(query, force=force)
                     _consume_history(query)
                     if st.session_state.get("loaded_query") == query:
                         bundle = st.session_state.get("loaded_bundle")

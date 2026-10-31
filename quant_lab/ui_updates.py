@@ -36,6 +36,8 @@ def persist_setting(key):
     if key in {"refresh_enabled", "refresh_interval_seconds"}:
         next_attempt = datetime.now(timezone.utc) + timedelta(seconds=st.session_state.get("refresh_interval_seconds", 300))
         st.session_state["history_next_attempt"] = next_attempt
+        if st.session_state.get("_us_next_attempt"):
+            st.session_state["_us_next_attempt"] = (st.session_state["_us_next_attempt"][0], next_attempt)
         st.session_state["watch_next_attempts"] = {item: next_attempt for item in st.session_state.get("watch_next_attempts", {})}
     try:
         save_setting(key, st.session_state[key])

@@ -1,16 +1,16 @@
 """Session-only real US daily references; no execution/archival bypass."""
 
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
+import time
 
-import plotly.graph_objects as go
 import streamlit as st
 
-from quant_lab import us_sources
+from quant_lab import us_sources, names
+from quant_lab.charts import history_candlestick_chart, history_price_chart
 from quant_lab.jobs import JobState
 from quant_lab.paths import user_data_dir
-from quant_lab.ui_helpers import style_figure
 from quant_lab.ui_jobs import loading_placeholder, submit_task, take_result
 from quant_lab.us_market import NY, normalize_us_symbol
 
@@ -31,6 +31,8 @@ def sync_us_prices(ticker, dates, load=False, refresh=False):
     if load or refresh:
         submit_task("us_prices", key, us_sources.fetch_sina_reference, ticker, start, end,
                     force=refresh, cache_namespace=key[0], job_timeout=60)
+        st.session_state["_us_next_attempt"] = (key, datetime.now(timezone.utc) +
+            timedelta(seconds=st.session_state.get("refresh_interval_seconds", 300)))
     completed = take_result("us_prices", key)
     if completed and completed.state == JobState.SUCCEEDED:
         if isinstance(completed.result, us_sources.USPriceReference):
@@ -45,6 +47,14 @@ def sync_us_prices(ticker, dates, load=False, refresh=False):
 
 
 def render_us_prices():
+    interval = st.session_state.get("refresh_interval_seconds", 300)
+    @st.fragment(run_every=interval if st.session_state.get("refresh_enabled", True) else None)
+    def body():
+        _render_us_prices()
+    body()
+
+
+def _render_us_prices():
     st.subheader("市场数据实验室")
     st.session_state["active_us_context"] = {
         "page": "美股数据", "market": "美股", "currency": "USD",
@@ -56,6 +66,23 @@ def render_us_prices():
     reference = saved[1] if saved and saved[0] == key else None
     error = st.session_state.get("us_price_error")
     failure = error[1] if error and error[0] == key else None
+    first, second, _ = st.columns([1.25, 1.25, 4.5])
+    requested = first.button("立即更新历史日线", disabled=key is None, key="history_refresh")
+    from quant_lab.ui_updates import toggle_refresh
+    auto = st.session_state.get("refresh_enabled", True)
+    if second.button("暂停自动刷新" if auto else "恢复自动刷新", on_click=toggle_refresh, key="refresh_pause"):
+        st.rerun(scope="app")
+    wait = st.session_state.get("_us_manual_at", float('-inf')) + 5 - time.monotonic()
+    if requested and wait > 0:
+        st.info(f"请等待 {wait:.0f} 秒后再点击；本次没有重复请求。")
+    scheduled = st.session_state.get("_us_next_attempt")
+    due = bool(auto and reference is not None and scheduled and scheduled[0] == key and
+               datetime.now(timezone.utc) >= scheduled[1])
+    if key and ((requested and wait <= 0) or due):
+        if requested:
+            st.session_state["_us_manual_at"] = time.monotonic()
+        sync_us_prices(key[1], key[2:4], refresh=True)
+        st.rerun(scope="app")
     if failure:
         st.error(failure)
     if "us_prices" in st.session_state.get("_task_tickets", {}):
@@ -78,6 +105,8 @@ def render_us_prices():
             {"来源": "Massive Stocks Basic", "状态": "官方列日线、拆股、分红支付日期，两年免费历史；非显示使用/策略与留存仍待许可核验"},
         ])
         st.caption("来源仅声明未复权，未独立认证为可成交价格；拆股、分红会影响跨日价格。此页不计算策略收益、总回报或风险排名。不自动写磁盘行情或保存实验。")
+    from quant_lab.ui_terminal import render_watchlist
+    render_watchlist("美股", st.session_state.get("us_price_symbol", ""))
 
 
 def _render_reference(reference, key, failure):
@@ -88,28 +117,32 @@ def _render_reference(reference, key, failure):
     columns[0].metric("最近历史收盘（USD）", f"{frame.close.iloc[-1]:,.4f}")
     columns[1].metric("日线条数", str(len(frame)))
     columns[2].metric("最近交易日", info.actual_end)
-    st.write(f"{info.symbol}（名称暂不可用） · 请求 {info.requested_start} 至 {info.requested_end}；实际 {info.actual_start} 至 {info.actual_end}")
+    st.write(f"{names.cached_security_label('美股', info.symbol)} · 请求 {info.requested_start} 至 {info.requested_end}；实际 {info.actual_start} 至 {info.actual_end}")
     received = datetime.fromisoformat(info.received_at).astimezone(NY).isoformat(sep=" ")
     st.caption(f"{info.source} · {reference.price_basis}；成功接收（纽约）：{received}")
     st.caption(("会话缓存 · " if reference.cached else "上游请求 · ") + reference.update_result)
     if failure:
         st.warning("本次更新失败，继续显示上次有效日线；成功接收时间未变。")
-    figure = go.Figure(go.Candlestick(x=frame.date, open=frame.open, high=frame.high,
-                                      low=frame.low, close=frame.close, name="历史日线（USD）"))
-    figure.update_xaxes(rangeslider_visible=False)
-    figure.update_yaxes(title_text="USD／股")
-    figure = style_figure(figure)
-    figure.update_layout(uirevision=repr(key))
-    st.plotly_chart(figure, width="stretch", theme=None, key="us_real_price_chart")
+    price_tab, candle_tab = st.tabs(("收盘价与成交量", "日 K 线"), default="日 K 线", key="market_chart_tabs", on_change="rerun")
+    for tab, builder, chart_key in ((price_tab, history_price_chart, "us_close_price_chart"),
+                                     (candle_tab, history_candlestick_chart, "us_real_price_chart")):
+        with tab:
+            if tab.open:
+                figure = builder(frame, "USD")
+                figure.update_layout(uirevision=repr(key), title_text=names.cached_security_label("美股", info.symbol))
+                st.plotly_chart(figure, width="stretch", theme=None, key=chart_key)
     with st.expander("日线明细与数据质量", expanded=True):
         st.caption(f"OHLCV基础校验通过；参考日历已结束交易日 {reference.expected_sessions}个，缺口 {len(reference.missing_sessions)}个，非参考交易日 {len(reference.non_session_dates)}个，排除未结束日线 {reference.excluded_unfinished_rows}条。")
         if reference.missing_sessions or reference.non_session_dates:
             st.warning("覆盖不完整或与参考日历不同。上市不足、源端截断、停牌与异常缺失尚不能区分；不补价格，不认证完整区间。")
             st.write({"缺口日期": list(reference.missing_sessions), "非参考交易日": list(reference.non_session_dates)})
-        st.dataframe(frame.rename(columns={"date": "交易日", "open": "开盘（USD）", "high": "最高（USD）",
-                     "low": "最低（USD）", "close": "收盘（USD）", "volume": "成交量（股，来源口径）"}),
-                     width="stretch", hide_index=True)
+        table = frame.rename(columns={"date": "交易日", "open": "开盘（USD）", "high": "最高（USD）",
+                     "low": "最低（USD）", "close": "收盘（USD）", "volume": "成交量（股，来源口径）"})
+        table.insert(0, "股票", names.cached_security_label("美股", info.symbol))
+        from quant_lab.ui_history_table import render_history_table
+        render_history_table(table, f"美股_{info.symbol}_{info.actual_start}_{info.actual_end}_raw.csv")
         summary = {**asdict(info), "currency": reference.currency, "price_basis": reference.price_basis,
+                   "company_name": names.cached_security_name("美股", info.symbol),
                    "expected_sessions": reference.expected_sessions, "missing_sessions": reference.missing_sessions,
                    "non_session_dates": reference.non_session_dates,
                    "excluded_unfinished_rows": reference.excluded_unfinished_rows,
@@ -120,6 +153,7 @@ def _render_reference(reference, key, failure):
                            file_name=f"{info.symbol}_us_source_observation.json", mime="application/json")
     st.session_state["active_us_context"].update({
         "symbol": info.symbol, "source": info.source, "received_at": info.received_at,
+        "company_name": names.cached_security_name("美股", info.symbol),
         "data_period": [info.actual_start, info.actual_end], "data_fingerprint": info.content_sha256,
         "adjustment": reference.price_basis,
         "data_status": "真实美股历史日线价格参考；非实时；可进行价格与成本研究，公司行动未模拟" +

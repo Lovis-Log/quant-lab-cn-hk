@@ -123,8 +123,8 @@ def _reference_query(symbol, start, end):
     symbol = normalize_us_symbol(symbol)
     if not isinstance(start, date) or not isinstance(end, date) or start > end:
         raise ValueError("开始日期不能晚于结束日期。")
-    if start.year < 1900 or (end - start).days > 3660:
-        raise ValueError("美股价格参考单次查询最多十年，日期不得早于1900年。")
+    if start.year < 1900:
+        raise ValueError("历史日期不得早于1900年。")
     return symbol, start, end
 
 

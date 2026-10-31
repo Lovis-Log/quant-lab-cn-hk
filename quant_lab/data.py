@@ -289,7 +289,8 @@ class SnapshotCache:
         self._last_request_at = float("-inf")
 
     def get(self, market: str, symbol: str, force: bool = False) -> tuple[MarketSnapshot, bool]:
-        key = (market, normalize_symbol(market, symbol))
+        from quant_lab.security_identity import normalize_security
+        key = (market, normalize_security(market, symbol))
         def load():
             with self._lock:
                 remaining = self.min_request_gap - (time.monotonic()-self._last_request_at)
@@ -299,7 +300,7 @@ class SnapshotCache:
                 quote = self.provider.snapshot(*key)
                 if not isinstance(quote, MarketSnapshot) or (quote.market, quote.symbol) != key:
                     raise DataValidationError("收盘参考的市场或规范代码与查询不匹配。")
-                if quote.currency != {"A 股":"CNY", "港股":"HKD"}.get(market):
+                if quote.currency != {"A 股":"CNY", "港股":"HKD", "美股":"USD"}.get(market):
                     raise DataValidationError("收盘参考币种与市场不匹配。")
                 if isinstance(quote.last_close, bool) or not isinstance(quote.last_close, Real) or not math.isfinite(quote.last_close) or quote.last_close <= 0:
                     raise DataValidationError("收盘参考价格不是正的有限值。")
@@ -319,7 +320,9 @@ class SnapshotCache:
         return quote, quote.cached
 
 
-SNAPSHOT_CACHE = SnapshotCache(DEFAULT_PROVIDER)
+from quant_lab.watchlist_data import WatchlistProvider
+
+SNAPSHOT_CACHE = SnapshotCache(WatchlistProvider(DEFAULT_PROVIDER))
 
 
 def snapshot_batch(items):

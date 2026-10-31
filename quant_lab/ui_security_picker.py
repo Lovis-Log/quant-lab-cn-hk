@@ -29,6 +29,10 @@ JS = r"""
 export default function(component) {
   const {parentElement,data,setStateValue} = component;
   const root = parentElement.querySelector('.ql-security-picker');
+  root.dataset.market = data.market;
+  root.dataset.instance = data.instance;
+  const drafts = window.__quantLabSecurityPickerDrafts ||= new Map();
+  const draftKey = data.instance;
   const previous = root._picker;
   if (previous) { previous.update(data); return; }
   root.innerHTML = '<label class="label"></label><div class="field"><div class="values"></div><button type="button" class="arrow" aria-label="展开股票候选" aria-expanded="false">⌄</button></div><div class="candidates" role="listbox" hidden></div><div class="count" aria-live="polite"></div>';
@@ -36,13 +40,15 @@ export default function(component) {
   const list=root.querySelector('.candidates'), count=root.querySelector('.count');
   const input=document.createElement('input'); input.type='text'; input.autocomplete='off'; input.setAttribute('role','combobox');
   input.setAttribute('aria-autocomplete','list');
-  const saved=root._pickerUi||{};
+  const saved=drafts.get(draftKey)||root._pickerUi||{};
   let config=data, selected=[...data.selected], opened=!!saved.opened, query=saved.query||'', focused=-1, filtered=[];
   let labels=new Map(config.options.map(item=>[item.code,item.name]));
   const text = code => `${code}（${labels.get(code)||'名称暂不可用'}）`;
   const setOpen = value => {
     opened=value; arrow.setAttribute('aria-expanded',String(value)); input.setAttribute('aria-expanded',String(value));
     arrow.setAttribute('aria-label',value?'收起股票候选':'展开股票候选'); list.hidden=!value;
+    drafts.set(draftKey,{opened,query});
+    if(drafts.size>32) drafts.delete(drafts.keys().next().value);
     if(value) renderList();
   };
   const emit = () => { renderValues(); renderList(); setStateValue('selection',[...selected]); };
@@ -100,7 +106,7 @@ export default function(component) {
       if(focused>=0&&filtered[focused]){choose(filtered[focused].code);return;}
       const exact=config.options.find(item=>item.code===raw||item.name===raw);
       if(exact){choose(exact.code);return;}
-      if(raw&&(config.market==='美股'||/[0-9]/.test(raw))){
+      if(raw&&(config.market==='美股'?raw.split(/[,，;；\s]+/).filter(Boolean).every(code=>/^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)?$/.test(code)):/[0-9]/.test(raw))){
         const additions=raw.split(/[,，;；\s]+/).filter(Boolean).map(code=>code.split(/[（(]/)[0]);
         const next=config.multiple?[...new Set([...selected,...additions])]:additions.slice(0,1);
         if(next.length>10){count.textContent='最多选择10只股票，请先移除部分股票';return;}
@@ -114,7 +120,7 @@ export default function(component) {
   root._picker={update(next){config=next;labels=new Map(config.options.map(item=>[item.code,item.name]));selected=[...next.selected];label.textContent=next.label;renderValues();if(opened)renderList();}};
   root._picker.update(data);
   input.value=query;setOpen(opened);
-  return ()=>{root._pickerUi={opened,query};document.removeEventListener('pointerdown',outside);delete root._picker;};
+  return ()=>{drafts.set(draftKey,{opened,query});root._pickerUi={opened,query};document.removeEventListener('pointerdown',outside);delete root._picker;};
 }
 """
 
@@ -149,11 +155,10 @@ def _selection(market, text, additions=()):
 def render_security_picker(market, target, *, multiple=False, label="股票（代码 / 名称）"):
     labels = {}
     try:
-        if market != "美股":
-            directory = security_directory(market)
-            labels = dict(directory.rows)
-            if directory.error:
-                st.warning(directory.error)
+        directory = security_directory(market)
+        labels = dict(directory.rows)
+        if directory.error:
+            st.warning(directory.error)
     except (OSError, ValueError, KeyError, TypeError) as error:
         st.warning(str(error))
     try:
@@ -166,7 +171,7 @@ def render_security_picker(market, target, *, multiple=False, label="股票（�
     except ValueError:
         selected = []
     candidates = list(dict.fromkeys([*watched, *selected, *labels]))
-    options = [{"code": code, "name": labels.get(code) or (names.cached_security_name(market, code) if market != "美股" else "") or "名称暂不可用", "watched": code in watched} for code in candidates]
+    options = [{"code": code, "name": (names.cached_security_name(market, code) if code in selected else "") or labels.get(code) or "名称暂不可用", "watched": code in watched} for code in candidates]
     component_key = target + "_picker_" + market
 
     def changed():
@@ -178,11 +183,11 @@ def render_security_picker(market, target, *, multiple=False, label="股票（�
         except (ValueError, TypeError, KeyError) as error:
             st.session_state["_picker_error_" + target] = str(error)
 
-    _component()(key=component_key, data={"market": market, "label": label, "multiple": multiple,
+    _component()(key=component_key, data={"instance": component_key, "market": market, "label": label, "multiple": multiple,
         "selected": selected, "options": options}, default={"selection": selected}, on_selection_change=changed)
     if st.session_state.get("_picker_error_" + target):
         st.warning(st.session_state["_picker_error_" + target])
-    if market != "美股" and not labels and st.button("更新证券目录", key="picker_directory_" + market):
+    if not labels and st.button("更新证券目录", key="picker_directory_" + market):
         from quant_lab.ui_jobs import submit_task
-        submit_task("directory", market, security_directory, market, force=True)
+        submit_task("directory", market, security_directory, market, force=True, job_timeout=300)
     return st.session_state.get(target, "")
