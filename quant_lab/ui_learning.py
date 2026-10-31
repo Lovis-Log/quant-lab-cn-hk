@@ -14,10 +14,39 @@ def _label(course_id):
     return f"{COURSE_NUMBERS[course_id]:02d} · {COURSE_BY_ID[course_id].title}"
 
 
-def _choose_course(course_id):
+def _clear_return_history():
+    st.session_state.pop("_academy_return_stack", None)
+
+
+def _choose_course(course_id, remember=False):
+    if remember and st.session_state.get("academy_course_id") != course_id:
+        current = st.session_state["academy_course_id"]
+        history = st.session_state.setdefault("_academy_return_stack", [])
+        history.append({
+            "course_id": current,
+            "query": st.session_state.get("academy_search", ""),
+            "group": st.session_state.get("academy_group", "全部课程"),
+            "parameter": st.session_state.get(f"academy_parameter_{current}"),
+        })
+        del history[:-32]
+    elif not remember:
+        _clear_return_history()
     st.session_state["academy_search"] = ""
     st.session_state["academy_group"] = "全部课程"
     st.session_state["academy_course_id"] = course_id
+
+
+def _return_to_course():
+    history = st.session_state.get("_academy_return_stack", [])
+    if not history:
+        return
+    previous = history.pop()
+    course_id = previous["course_id"]
+    st.session_state["academy_course_id"] = course_id
+    st.session_state["academy_search"] = previous["query"]
+    st.session_state["academy_group"] = previous["group"]
+    if previous["parameter"] is not None:
+        st.session_state[f"academy_parameter_{course_id}"] = previous["parameter"]
 
 
 def _clear_context():
@@ -54,8 +83,10 @@ def render_academy() -> None:
         with catalog, st.container(key="academy_catalog"):
             st.subheader("Quant Academy")
             st.caption("28节 · 从金融数据入门到研究报告")
-            query = st.text_input("搜索课程", key="academy_search", placeholder="课程名称、Python或金融关键词")
-            group = st.radio("课程专题", ("全部课程", *GROUPS), key="academy_group", label_visibility="collapsed")
+            query = st.text_input("搜索课程", key="academy_search", placeholder="课程名称、Python或金融关键词",
+                                  on_change=_clear_return_history)
+            group = st.radio("课程专题", ("全部课程", *GROUPS), key="academy_group", label_visibility="collapsed",
+                             on_change=_clear_return_history)
             available = search_courses(query, group)
             if not available:
                 st.info("没有匹配的课程，请换一个关键词。")
@@ -64,19 +95,24 @@ def render_academy() -> None:
             ids = [course.course_id for course in available]
             if st.session_state["academy_course_id"] not in ids:
                 st.session_state["academy_course_id"] = ids[0]
-            course_id = st.selectbox("选择课程", ids, key="academy_course_id", format_func=_label)
+            course_id = st.selectbox("选择课程", ids, key="academy_course_id", format_func=_label,
+                                     on_change=_clear_return_history)
             st.caption(f"{len(available)} / {len(COURSES)} 节可用课程 · 固定教学样本")
         with reading, st.container(key="academy_reading"):
             course = get_course(course_id)
             st.caption(course.group)
             st.title(_label(course_id))
+            history = st.session_state.get("_academy_return_stack", [])
+            if history:
+                st.button(f"← 返回 {_label(history[-1]['course_id'])}", key="academy_return",
+                          on_click=_return_to_course)
             st.caption("固定教学样本 · 可离线运行 · 不记录学习进度")
             st.markdown(f"**学习目标**：{course.objective}")
             if course.prerequisites:
                 st.caption("建议先修（可直接跳转，不限制学习顺序）")
                 for prerequisite in course.prerequisites:
                     st.button(_label(prerequisite), key=f"academy_prerequisite_{prerequisite}",
-                              on_click=_choose_course, args=(prerequisite,))
+                              on_click=_choose_course, args=(prerequisite, True))
             else:
                 st.caption("先修知识：高中四则运算与百分比，无需Python基础。")
             st.write(course.intuition)

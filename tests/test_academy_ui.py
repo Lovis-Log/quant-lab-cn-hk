@@ -83,3 +83,31 @@ def test_original_numeric_selection_and_parameter_migrate_by_identity():
     assert app.session_state["academy_course_id"] == "correlation"
     assert app.slider(key="academy_parameter_correlation").value == 7
     assert app.session_state["academy_lesson"] == 6  # Old index is never rewritten.
+
+
+def test_prerequisite_return_restores_chained_course_filters_and_parameter():
+    app = AppTest.from_string("from quant_lab.ui_learning import render_academy\nrender_academy()")
+    app.session_state["academy_group"] = "风险与统计"
+    app.session_state["academy_search"] = "方差"
+    app.session_state["academy_course_id"] = "variance"
+    app.run()
+    app.slider(key="academy_parameter_variance").set_value(5).run()
+    app.button(key="academy_prerequisite_simple_return").click().run()
+    assert app.session_state["academy_course_id"] == "simple_return"
+    assert "09 · 方差与标准差" in app.button(key="academy_return").label
+    app.button(key="academy_prerequisite_financial_variables").click().run()
+    assert app.session_state["academy_course_id"] == "financial_variables"
+    assert "05 · 简单收益率与复利" in app.button(key="academy_return").label
+    app.button(key="academy_return").click().run()
+    assert app.session_state["academy_course_id"] == "simple_return"
+    app.button(key="academy_return").click().run()
+    assert not app.exception
+    assert app.session_state["academy_course_id"] == "variance"
+    assert app.text_input(key="academy_search").value == "方差"
+    assert app.radio(key="academy_group").value == "风险与统计"
+    assert app.slider(key="academy_parameter_variance").value == 5
+    assert app.session_state["active_learning_context"]["parameter"] == 5
+    assert not any(button.key == "academy_return" for button in app.button)
+    app.button(key="academy_prerequisite_simple_return").click().run()
+    app.selectbox(key="academy_course_id").set_value("drawdown").run()
+    assert not app.session_state.get("_academy_return_stack")

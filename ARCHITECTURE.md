@@ -1,5 +1,7 @@
 # 架构与数据流
 
+2026-11-01 Academy先修返回：ui_learning使用最多32层的会话返回栈，保存来源课程ID、专题、搜索与参数；先修跳转入栈，返回恢复，不写盘。手动目录/专题/搜索及前后课导航清空旧链；课程AI摘要仍由恢复后的实验更新。
+
 2026-10-31 Academy 28课：`quant_lab.courses`注册稳定ID、专题、先修、文章和实验入口。`run_experiment(course_id, {"value": number})`返回TeachingResult（表格、ChartSpec、数值指标、百分比列和解释/可选教学报告）；模型与计算不导入Streamlit、无网络或存储副作用。内容/引用/先修环在启动与首次进入学院时校验，错误显式显示。`ui_learning`按元数据呈现，`course_chart`不依赖课程排序。原`learning.LESSONS`、`lesson_experiment`与`teaching_chart`保持8课兼容；旧数字选择映射到稳定ID而非新课程位置。SQLite/生产算法/指纹均不变。详情见docs/ACADEMY_STAGE4.md。
 
 启动视图（2026-10-31）：`initialize_workspaces`只在新会话执行一次，读取已有工作区研究参数后将启动导航设为市场数据、关闭手册并清除手册最大化。`_global_topbar`的手册默认值同步为关闭；显式应用工作区仍恢复其导航/面板，普通重绘不覆盖用户操作。原预设文件不改写，无数据迁移或依赖变更。
