@@ -16,6 +16,11 @@ def initialize_workspaces():
             st.session_state["workspace_name"]=name
     except (OSError,ValueError,TypeError,KeyError):
         st.session_state["workspace_message"]="工作区设置读取失败，原文件保留；当前使用会话设置。"
+    # Restore research parameters, but always start in the requested landing view.
+    # Explicitly applying a workspace later still restores its page and panels.
+    st.session_state.update(nav_page="市场数据", nav_section="市场数据", manual_panel_open=False)
+    if st.session_state.get("maximized_panel") == "manual":
+        st.session_state["maximized_panel"] = None
     st.session_state["_workspaces_initialized"]=True
 
 

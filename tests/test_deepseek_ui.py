@@ -39,6 +39,7 @@ def test_topbar_panels_open_together_without_swap_button(tmp_path, monkeypatch):
     assert "新手使用指引" not in navigation.options
     assert "研究笔记" not in navigation.options
     assert not [button for button in app.button if button.label == "新手使用指引"]
+    app.button(key="manual_panel_toggle").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究笔记").click().run()
     assert app.session_state["manual_panel_open"] is True
@@ -83,6 +84,7 @@ def test_deepseek_opens_chat_first_and_research_returns_without_model_call(tmp_p
 def test_left_sidebar_launcher_does_not_change_open_panels(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANT_LAB_DATA_DIR", str(tmp_path))
     app = AppTest.from_file(Path(__file__).parents[1] / "app.py", default_timeout=30).run()
+    app.button(key="manual_panel_toggle").click().run()
     widget(app, "button", "DeepSeek 助手").click().run()
     widget(app, "button", "研究笔记").click().run()
     assert app.session_state["left_sidebar_visible"] is True

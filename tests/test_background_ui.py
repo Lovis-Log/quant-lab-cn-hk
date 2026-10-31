@@ -94,6 +94,7 @@ def test_completed_research_on_another_page_stops_polling_and_can_be_opened(monk
 
 def test_opening_another_dock_exits_maximize_and_keeps_panels():
     app = AppTest.from_file(Path(__file__).resolve().parents[1]/"app.py", default_timeout=8).run()
+    app.button(key="manual_panel_toggle").click().run()
     app.button(key="manual_panel_maximize").click().run()
     assert app.session_state["maximized_panel"] == "manual"
     app.button(key="deepseek_panel_toggle").click().run()

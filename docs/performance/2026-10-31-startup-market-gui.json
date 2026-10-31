@@ -1,0 +1,19 @@
+{
+  "real_us_prices": false,
+  "ah_fixture_only": true,
+  "checks": {
+    "saved_learning_starts_on_market": true,
+    "manual_closed_even_if_saved_maximized": true,
+    "manual_open_and_page_switch_still_work": true,
+    "desktop_exit": true
+  },
+  "page_errors": [],
+  "title": "Quant Lab",
+  "date": "2026-10-31",
+  "base_commit": "7a4d02e",
+  "source_dirty": true,
+  "test_app_id": "QuantLab.Validation.StartupMarket",
+  "isolated_user_data": true,
+  "saved_profile": "学习: Quant Academy, manual open and maximized",
+  "scope": "actual WebView2 startup and manual/page controls; offline AH fixture; no performance or installed-build claim"
+}

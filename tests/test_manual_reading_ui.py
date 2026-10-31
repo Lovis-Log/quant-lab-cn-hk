@@ -42,7 +42,7 @@ def test_manual_replaces_beginner_guidance_and_is_offline(monkeypatch):
     monkeypatch.setattr("quant_lab.ui_deepseek.DeepSeekClient", no_network)
     app = _start_app()
 
-    assert app.session_state["manual_panel_open"] is True
+    assert app.session_state["manual_panel_open"] is False
     assert not [button for button in app.button if button.label == "新手使用指引"]
     assert not [button for button in app.button if button.label == "查看本页使用指南"]
     assert not [button for button in app.button if button.label in {"开始入门任务", "跳过首次引导"}]

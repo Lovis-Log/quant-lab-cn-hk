@@ -1,5 +1,7 @@
 # 架构与数据流
 
+启动视图（2026-10-31）：`initialize_workspaces`只在新会话执行一次，读取已有工作区研究参数后将启动导航设为市场数据、关闭手册并清除手册最大化。`_global_topbar`的手册默认值同步为关闭；显式应用工作区仍恢复其导航/面板，普通重绘不覆盖用户操作。原预设文件不改写，无数据迁移或依赖变更。
+
 2026-10-31 补齐三市场价格研究操作：`security_identity.normalize_security`只服务名称、目录及自选股，A/H仍调用原`normalize_symbol`，不扩展原历史Provider、BacktestConfig或严格US模型。`us_profiles.py`复用AKShare美股财务查询使用的东方财富公司资料端点，只请求来源代码和中英文名称，校验.N/.O后将来源类别股下划线规范为点号；名称/目录按原市场+代码缓存及原获取时间管理，失败保留旧值。发行基础名称快照`resources/us_shares.json`非行情，目录刷新显式进行。`WatchlistProvider`按市场分派A/H或US历史收盘参考，SnapshotCache保持并发合并、节流、币种/时间/价格校验和失败保留。SQLite仍v6，名称与自选使用既有表，不重写行情或旧实验。US去掉独立十年限制，市场页复用图表、表格全屏/CSV与自选股控件，定时刷新只在市场页运行。US摘要增加可选company_name，旧空值可读，金融版本和审计算法不变。
 
 2026-10-31 三市场操作共用`ui._research_controls`、`ui_security_picker`与`research_page`导航；A/H继续走原Provider，美股由`ui_us_prices.sync_us_prices`处理同侧栏输入，在市场/研究页共同提交和消费后台任务。当前查询含资料目录、规范ticker及起止日期；`ui_us_price_research`只使用与当前查询一致的引用，避免更改输入后沿用上一份数据/AI摘要。US代码由`normalize_us_symbol`校验，A/H继续`normalize_symbol`，不扩展原A/H交易/存储市场集合。美股比较复用选股组件及加载布局，保留独立USD服务。工作区v1/v2读取时把旧US日期/区间/子页映射到共享控件，共享新值优先；SQLite和金融算法不变。

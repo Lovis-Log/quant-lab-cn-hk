@@ -574,7 +574,7 @@ def _toggle_settings() -> None:
 
 def _global_topbar() -> None:
     st.session_state.setdefault("deepseek_panel_open", False)
-    st.session_state.setdefault("manual_panel_open", True)
+    st.session_state.setdefault("manual_panel_open", False)
     st.session_state.setdefault("notes_panel_open", False)
     st.session_state.setdefault("left_sidebar_visible", True)
     st.session_state.setdefault("settings_open", False)

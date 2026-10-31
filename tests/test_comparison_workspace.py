@@ -52,7 +52,8 @@ def test_preset_apply_save_restore_in_new_session_without_network(monkeypatch):
     app.button(key="workspace_save").click().run()
     assert WorkspaceStore().load()["active"]=="多股票比较"
     restarted=AppTest.from_file(APP,default_timeout=30).run()
-    assert restarted.session_state["nav_page"]=="多股票比较"
+    assert restarted.session_state["nav_page"]=="市场数据"
+    assert restarted.session_state["manual_panel_open"] is False
     assert not restarted.exception and not calls
 
 
