@@ -21,6 +21,7 @@ from dataclasses import asdict
 from quant_lab.research_inputs import prepare_inputs
 from quant_lab.research_versions import LEGACY_VERSIONS
 from quant_lab.research_diagnostics import backtest_diagnostics
+from quant_lab.ui_trade_replay import render_trade_replay
 
 
 def _strategy_controls(prefix: str) -> StrategySpec | None:
@@ -247,6 +248,12 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
             "夏普比率": [result.train_stats.sharpe, result.test_stats.sharpe],
         }
     ), width="stretch", hide_index=True)
+    render_trade_replay(
+        st.session_state["backtest_raw"], result, spec, config,
+        market=bundle.market, symbol=bundle.symbol, currency=bundle.currency,
+        adjustment=bundle.adjustment, query=key, slot="ah",
+        stale=bool(st.session_state.get("backtest_error")),
+    )
     st.markdown("#### 交易与未成交记录")
     if result.strategy.orders.empty:
         st.info("此区间没有订单；均线可能尚未形成，或信号没有变化。")
