@@ -295,3 +295,17 @@ html[data-ql-maximized=true] .st-key-main_workspace { display:none; }
 .ql-header h1,.ql-ai-panel-title strong { text-wrap:balance; }
 .st-key-main_workspace { scrollbar-gutter:stable; }
 @media(prefers-reduced-motion:reduce) { .ql-resize-handle::after { transition:none; } }
+
+/* Animate the surface, keeping layout and chart measurements at their real size. */
+@keyframes ql-dock-enter {
+  from { opacity:0; transform:translateX(24px); }
+  to { opacity:1; transform:translateX(0); }
+}
+.st-key-manual_side_panel,.st-key-deepseek_side_panel,.st-key-notes_side_panel {
+  animation:ql-dock-enter 240ms cubic-bezier(.16,1,.3,1);
+}
+.st-key-settings_panel { animation:ql-panel-in 200ms cubic-bezier(.16,1,.3,1); }
+@media(prefers-reduced-motion:reduce) {
+  .st-key-manual_side_panel,.st-key-deepseek_side_panel,.st-key-notes_side_panel,.st-key-settings_panel { animation:none; }
+}
+html[data-reduce-motion=true] :is(.st-key-manual_side_panel,.st-key-deepseek_side_panel,.st-key-notes_side_panel,.st-key-settings_panel) { animation:none; }

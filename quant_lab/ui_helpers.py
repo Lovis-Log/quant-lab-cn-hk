@@ -9,6 +9,12 @@ from quant_lab.data import HistoryBundle
 from quant_lab import theme
 
 
+def plotly_chart(figure, **kwargs):
+    """Shared native zoom configuration, paired with the Ctrl-wheel gate."""
+    config = {"displaylogo": False, **kwargs.pop("config", {}), "scrollZoom": True}
+    return st.plotly_chart(figure, config=config, **kwargs)
+
+
 def reset_main_scroll(view, *, key):
     """New pages/lessons begin at their heading; parameter edits keep position."""
     state_key = "_scroll_view_" + key

@@ -6,7 +6,7 @@ from quant_lab.courses import (COURSES, COURSE_BY_ID, COURSE_NUMBERS, GROUPS,
                                LEGACY_COURSE_IDS, get_course, run_experiment,
                                search_courses, validated_courses)
 from quant_lab.charts import course_chart
-from quant_lab.ui_helpers import reset_main_scroll
+from quant_lab.ui_helpers import plotly_chart, reset_main_scroll
 from quant_lab.ui_knowledge import render_knowledge
 
 
@@ -156,9 +156,9 @@ def _render_experiment(course):
                          column_config={name: st.column_config.NumberColumn(name, format="percent")
                                         for name in result.percent_columns})
     with chart_area.container():
-        st.plotly_chart(course_chart(result, course.course_id), width="stretch", theme=None,
+        plotly_chart(course_chart(result, course.course_id), width="stretch", theme=None,
                         key=f"academy_chart_{course.course_id}",
-                        config={"displaylogo": False, "scrollZoom": False})
+                        config={"displaylogo": False})
     st.markdown(f"**结果解释**：{course.interpretation}")
     st.markdown(f"**常见错误**：{course.mistakes}")
     context = {"course_id": course.course_id, "topic": course.title, "parameter": value,

@@ -7,6 +7,8 @@ import time
 
 import streamlit as st
 
+from quant_lab.ui_helpers import plotly_chart
+
 from quant_lab import us_sources, names
 from quant_lab.charts import history_candlestick_chart, history_price_chart
 from quant_lab.jobs import JobState
@@ -130,7 +132,7 @@ def _render_reference(reference, key, failure):
             if tab.open:
                 figure = builder(frame, "USD")
                 figure.update_layout(uirevision=repr(key), title_text=names.cached_security_label("美股", info.symbol))
-                st.plotly_chart(figure, width="stretch", theme=None, key=chart_key)
+                plotly_chart(figure, width="stretch", theme=None, key=chart_key)
     with st.expander("日线明细与数据质量", expanded=True):
         st.caption(f"OHLCV基础校验通过；参考日历已结束交易日 {reference.expected_sessions}个，缺口 {len(reference.missing_sessions)}个，非参考交易日 {len(reference.non_session_dates)}个，排除未结束日线 {reference.excluded_unfinished_rows}条。")
         if reference.missing_sessions or reference.non_session_dates:

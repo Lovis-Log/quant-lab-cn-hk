@@ -6,6 +6,7 @@ import json
 import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
+
 from quant_lab import names
 
 from quant_lab.jobs import JobState
@@ -14,7 +15,7 @@ from quant_lab.research_diagnostics import backtest_diagnostics
 from quant_lab.research_validation import ValidationRecipe
 from quant_lab.statistics import one_sample_return_test, evaluate_linear_model
 from quant_lab.strategy import StrategySpec, STRATEGY_NAMES, build_signals
-from quant_lab.ui_helpers import style_figure
+from quant_lab.ui_helpers import plotly_chart, style_figure
 from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
 from quant_lab.us_price_research import (
     ASSUMPTIONS, PRICE_VERSION, USPriceConfig, validate_price_input,
@@ -80,7 +81,7 @@ def line_chart(series, key, *, height=340):
         figure.add_trace(go.Scatter(x=dates, y=values, name=label))
     figure = style_figure(figure, height)
     figure.update_layout(uirevision=repr(key))
-    st.plotly_chart(figure, width="stretch", theme=None)
+    plotly_chart(figure, width="stretch", theme=None)
 
 
 def render_us_price_research(section=None):

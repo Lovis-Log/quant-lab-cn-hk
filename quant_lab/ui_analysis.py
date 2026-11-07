@@ -13,7 +13,7 @@ from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
 from quant_lab.jobs import JobState
 from quant_lab.processing import DataValidationError
 from quant_lab.statistics import evaluate_linear_model, one_sample_return_test
-from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
+from quant_lab.ui_helpers import plotly_chart, bundle_key, percent, require_history, style_figure
 from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
 from quant_lab import names
 
@@ -119,7 +119,7 @@ def render_risk(bundle: HistoryBundle | None) -> None:
             x=result.test_equity.index, y=result.test_equity[name],
             name=name, line={"color": color, "width": 2},
         ))
-    st.plotly_chart(style_figure(figure), width="stretch", theme=None)
+    plotly_chart(style_figure(figure), width="stretch", theme=None)
     stats_rows = []
     for name in ("等权", "逆波动率"):
         stats = performance_stats(result.test_equity[name])
@@ -216,6 +216,6 @@ def render_statistics(bundle: HistoryBundle | None) -> None:
         x=result.predictions["target_date"], y=result.predictions["predicted"],
         name="模型预测", line={"color": "#C6A56D"},
     ))
-    st.plotly_chart(style_figure(figure), width="stretch", theme=None)
+    plotly_chart(style_figure(figure), width="stretch", theme=None)
     st.dataframe(result.coefficients.to_frame(), width="stretch")
     st.caption("特征仅使用当日收盘后可知的价格和成交量；目标是下一日收盘相对当日收盘的收益率。这个目标不能按当日收盘价成交。标准化只在训练集拟合，并在训练/测试边界留出一日间隔。")

@@ -9,7 +9,7 @@ import streamlit as st
 
 from quant_lab.jobs import JobState
 from quant_lab.strategy import StrategySpec,STRATEGY_NAMES
-from quant_lab.ui_helpers import style_figure
+from quant_lab.ui_helpers import plotly_chart, style_figure
 from quant_lab.ui_jobs import submit_task,take_result,loading_placeholder
 from quant_lab.us_market import NY,session_information
 from quant_lab.us_teaching import teaching_us_inputs
@@ -110,7 +110,7 @@ def _render_us_teaching(source_only=False):
     figure=go.Figure()
     for result,label in ((experiment.strategy,"教学策略"),(experiment.benchmark,"含分红基准"),(portfolio,"两证券美元组合")):
         figure.add_trace(go.Scatter(x=result.equity.date,y=result.equity.equity/float(config.initial_cash),name=label))
-    st.plotly_chart(style_figure(figure),width="stretch",theme=None)
+    plotly_chart(style_figure(figure),width="stretch",theme=None)
     with st.expander("核对美元现金、持仓与公司行动",expanded=True):
         names={"date":"交易日","equity":"总权益（USD）","settled_cash":"已结算现金（USD）",
             "unsettled_sale_cash":"待结算卖出款（USD）","dividend_receivable":"应收股息（USD）","holdings_value":"持仓市值（USD）",

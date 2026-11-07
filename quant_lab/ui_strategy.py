@@ -13,7 +13,7 @@ from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
 from quant_lab.jobs import JobState
 from quant_lab.data_quality import require_completed_close
 from quant_lab.strategy import STRATEGY_NAMES, StrategySpec, build_signals
-from quant_lab.ui_helpers import bundle_key, percent, require_history, style_figure
+from quant_lab.ui_helpers import plotly_chart, bundle_key, percent, require_history, style_figure
 from quant_lab.storage import save_experiment
 from quant_lab import names
 from quant_lab.ui_knowledge import KnowledgePoint, render_knowledge, render_knowledge_group
@@ -85,7 +85,7 @@ def render_strategy(bundle: HistoryBundle | None) -> None:
             marker={"color": color, "symbol": marker, "size": 10},
         ))
     chart.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
-    st.plotly_chart(style_figure(chart, 480), width="stretch", theme=None)
+    plotly_chart(style_figure(chart, 480), width="stretch", theme=None)
     if st.session_state.get("learning_mode", True):
         render_knowledge("moving_average", float(signals.ma_long.iloc[-1]) if signals.ma_long.notna().any() else None,
                          key="strategy", observations=len(signals))
@@ -237,7 +237,7 @@ def render_backtest(bundle: HistoryBundle | None) -> None:
     ))
     figure.add_vline(x=result.split_date, line_color="#C6A56D", line_dash="dot")
     figure.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name))
-    st.plotly_chart(style_figure(figure, 430), width="stretch", theme=None)
+    plotly_chart(style_figure(figure, 430), width="stretch", theme=None)
     st.caption(f"黄色虚线起为样本外区间（{result.split_date:%Y-%m-%d}）。前复权/后复权只用于生成信号；开盘成交与净值始终使用不复权价格。")
     st.dataframe(pd.DataFrame(
         {

@@ -32,7 +32,8 @@ from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
 from quant_lab.ui_jobs import submit_task, take_result, cancel_task, render_background_tasks, loading_placeholder
 from quant_lab.jobs import JobState
-from quant_lab.ui_helpers import reset_main_scroll
+from quant_lab.ui_helpers import plotly_chart, reset_main_scroll
+from quant_lab.ui_chart_interactions import CHART_INTERACTIONS_JS
 from quant_lab.history_ranges import HISTORY_PRESETS, history_window
 from quant_lab.ui_data_quality import render_history_quality, render_quality_summary
 from quant_lab.ui_manual import render_manual_panel
@@ -78,6 +79,7 @@ SIDEBAR_LAYOUT_JS = """
     const width = sidebar.getBoundingClientRect().width;
     if (width > 0 && root.style.getPropertyValue('--ql-sidebar-width') !== `${width}px`) {
       root.style.setProperty('--ql-sidebar-width', `${width}px`);
+      window.__quantLabApplyPanelOrder?.();
     }
   };
   window.__quantLabSidebarResizeObserver = observer;
@@ -643,6 +645,7 @@ def _global_topbar() -> None:
         st.html(f'<span class="ql-dock-reveal" data-panel="{reveal}" data-token="{time.monotonic_ns() if reveal else 0}"></span>')
         st.html(SIDEBAR_LAYOUT_JS, unsafe_allow_javascript=True)
         st.html(TOPBAR_REORDER_JS, unsafe_allow_javascript=True)
+        st.html(CHART_INTERACTIONS_JS, unsafe_allow_javascript=True)
 
 
 def _render_right_dock(context: dict, bundle) -> None:
@@ -712,9 +715,9 @@ def _render_history_chart(bundle, *, candlestick=False):
     figure = builder(bundle.frame, bundle.currency)
     figure.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name),
                          uirevision=repr(st.session_state.get("_current_query")))
-    st.plotly_chart(figure, width="stretch", theme=None,
+    plotly_chart(figure, width="stretch", theme=None,
         key="market_candle" if candlestick else "market_price",
-        config={"displaylogo": False, "scrollZoom": False},
+        config={"displaylogo": False},
         alt="当前选中区间的历史日线 K 线与成交量。" if candlestick else "当前选中区间的历史收盘价与成交量。")
 
 
@@ -818,14 +821,14 @@ def _main_page(
             else:
                 preview_tab, candle_tab = st.tabs(("走势与活动量 · 演示", "K 线 · 等待数据"))
                 with preview_tab:
-                    st.plotly_chart(
+                    plotly_chart(
                         demo_chart(), width="stretch", theme=None,
-                        config={"displaylogo": False, "scrollZoom": False},
+                        config={"displaylogo": False},
                         alt="由随机数生成的无单位模拟走势及活动量，仅用于页面版式演示。",
                     )
                     st.caption("⚠ 图中数值由固定随机种子生成，非股票价格、成交量或回测结果。")
                 with candle_tab:
-                    st.plotly_chart(
+                    plotly_chart(
                         _empty_candlestick(), width="stretch", theme=None,
                         config={"displayModeBar": False},
                         alt="空白的 K 线图区域，等待真实日线行情加载。",
