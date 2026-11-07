@@ -43,7 +43,7 @@ def current_experiment_context(bundle: HistoryBundle | None) -> dict:
 
 def render_ai(bundle: HistoryBundle | None) -> None:
     st.subheader("DeepSeek 量化研究助手")
-    st.caption("模型只草拟可检验假设与文字报告；所有计算在本地内置函数中执行，模型生成的代码永不自动运行。")
+    st.caption("AI 草拟假设与报告；内置策略在本地计算，示例代码只展示。")
     if not require_history(bundle):
         return
     try:
@@ -57,7 +57,7 @@ def render_ai(bundle: HistoryBundle | None) -> None:
     model = st.session_state.get("ds_model_select") if st.session_state.get("deepseek_models") else st.session_state.get("ds_model_manual", st.session_state.get("deepseek_model", ""))
     metadata = next((m for m in st.session_state.get("deepseek_models", []) if m["id"] == model), {})
     configured = bool(api_key and model)
-    st.caption(f"使用 `⚙ → DeepSeek` 中的连接 · 当前模型：{model or '尚未选择'}。生成假设和审阅按钮会发送付费请求；本地实验免费。")
+    st.caption(f"当前模型：{model or '尚未选择'}。生成假设和审阅会调用你的 API 账户；本地实验免费。")
     if not configured:
         st.info("请在左上角 `⚙ → DeepSeek` 配置密钥并选择模型；也可先运行不调用模型的本地受控实验。")
     question = st.text_area(

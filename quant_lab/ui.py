@@ -108,6 +108,9 @@ DOCK_RESIZE_JS = """
     const handle = panel?.querySelector(`.ql-resize-handle[data-panel="${kind}"]`);
     if (!panel || !handle || handle.dataset.bound === "1") return;
     handle.dataset.bound = "1";
+    handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-description', '拖动调整宽度；左右方向键微调；Esc 撤销拖动');
+    handle.title = '拖动调整宽度；左右方向键微调；Esc 撤销';
     const property = `--ql-${kind}-width`;
     const storageKey = `quantlab.${kind}.panelWidth`;
     const stored = Number.parseFloat(localStorage.getItem(storageKey));
@@ -127,6 +130,7 @@ DOCK_RESIZE_JS = """
     if (Number.isFinite(stored)) applyWidth(stored);
 
     handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
       event.preventDefault();
       const startX = event.clientX;
       const startWidth = panel.getBoundingClientRect().width;
@@ -137,17 +141,11 @@ DOCK_RESIZE_JS = """
         pendingWidth = startWidth - (next.clientX - startX);
         if (!frame) frame = requestAnimationFrame(() => { frame = 0; applyWidth(pendingWidth); });
       };
-      const stop = () => {
+      window.__quantLabStartDrag(handle, move, committed => {
         if (frame) cancelAnimationFrame(frame);
-        applyWidth(pendingWidth, true);
+        applyWidth(committed ? pendingWidth : startWidth, committed);
         handle.classList.remove("is-dragging");
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", stop);
-        window.removeEventListener("pointercancel", stop);
-      };
-      window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", stop);
-      window.addEventListener("pointercancel", stop);
+      });
     });
     handle.addEventListener("keydown", (event) => {
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -168,6 +166,39 @@ DOCK_RESIZE_JS = """
 TOPBAR_REORDER_JS = """
 <script>
 (() => {
+  if (!window.__quantLabStartDrag) {
+    window.__quantLabStartDrag = (element, move, finish) => {
+      window.__quantLabCancelDrag?.();
+      let done = false;
+      const stop = committed => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', commit);
+        window.removeEventListener('pointercancel', cancel);
+        window.removeEventListener('blur', cancel);
+        window.removeEventListener('keydown', key, true);
+        observer.disconnect();
+        window.__quantLabCancelDrag = null;
+        finish(committed);
+      };
+      const commit = () => stop(true);
+      const cancel = () => stop(false);
+      const key = event => {
+        if (event.key === 'Escape') {
+          event.preventDefault(); event.stopImmediatePropagation(); cancel();
+        }
+      };
+      const observer = new MutationObserver(() => { if (!element.isConnected) cancel(); });
+      observer.observe(document.body, {childList:true, subtree:true});
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', commit);
+      window.addEventListener('pointercancel', cancel);
+      window.addEventListener('blur', cancel);
+      window.addEventListener('keydown', key, true);
+      window.__quantLabCancelDrag = cancel;
+    };
+  }
   const root = document.documentElement;
   const newest = selector => [...document.querySelectorAll(selector)].at(-1);
   const storageKey = "quantlab.dock.panelOrder";
@@ -194,6 +225,7 @@ TOPBAR_REORDER_JS = """
   };
   let order = readOrder();
   let savedOrder = JSON.stringify(order);
+  let reordering = false;
 
   const applyOrder = (animate=true) => {
     describeControls();
@@ -244,7 +276,7 @@ TOPBAR_REORDER_JS = """
       if(target){root.dataset.qlRevealToken=reveal.dataset.token;requestAnimationFrame(()=>target.scrollIntoView({inline:'nearest',block:'nearest',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}
     }
     const serializedOrder = JSON.stringify(order);
-    if (savedOrder !== serializedOrder) {
+    if (!reordering && savedOrder !== serializedOrder) {
       localStorage.setItem(storageKey, serializedOrder);
       savedOrder = serializedOrder;
     }
@@ -289,7 +321,9 @@ TOPBAR_REORDER_JS = """
     button.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       const startX = event.clientX;
+      const previousOrder = [...order];
       let dragged = false;
+      reordering = true;
       const move = (next) => {
         if (Math.abs(next.clientX - startX) < 8 && !dragged) return;
         dragged = true;
@@ -306,19 +340,16 @@ TOPBAR_REORDER_JS = """
         updated.splice(target, 0, kind);
         if (updated.join('|') !== order.join('|')) { order = updated; applyOrder(true); }
       };
-      const stop = () => {
+      window.__quantLabStartDrag(button, move, committed => {
+        reordering = false;
+        if (!committed) order = previousOrder;
         button.classList.remove('is-reordering');
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', stop);
-        window.removeEventListener('pointercancel', stop);
+        applyOrder(false);
         if (dragged) {
           button.dataset.suppressClick = '1';
           window.setTimeout(() => { button.dataset.suppressClick = ''; }, 250);
         }
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', stop);
-      window.addEventListener('pointercancel', stop);
+      });
     });
   };
   const initialize = () => {

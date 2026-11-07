@@ -1,5 +1,8 @@
 # 架构与数据流
 
+2026-11-07 桌面体验：`ui_chat_interactions`提供输入组合事件、控件重建后的重绑定、自适应高度及会话内阅读位置管理；JavaScript仅调用既有发送按钮，付费请求仍由Python显式动作、单一待处理槽、busy与已消费请求ID防重。首次创建会话保留原阅读键别名，避免落库后滚回底部。`ui`共享拖动生命周期在Esc、取消、失焦和节点移除时回滚，不保存预览；保持四栏横向轨道。`ui_jobs`明确I/O取消仅丢弃结果，不撤回已发HTTP请求。无计算API/schema/工作区格式/依赖变化。
+
+
 2026-11-01 Academy先修返回：ui_learning使用最多32层的会话返回栈，保存来源课程ID、专题、搜索与参数；先修跳转入栈，返回恢复，不写盘。手动目录/专题/搜索及前后课导航清空旧链；课程AI摘要仍由恢复后的实验更新。
 
 2026-10-31 Academy 28课：`quant_lab.courses`注册稳定ID、专题、先修、文章和实验入口。`run_experiment(course_id, {"value": number})`返回TeachingResult（表格、ChartSpec、数值指标、百分比列和解释/可选教学报告）；模型与计算不导入Streamlit、无网络或存储副作用。内容/引用/先修环在启动与首次进入学院时校验，错误显式显示。`ui_learning`按元数据呈现，`course_chart`不依赖课程排序。原`learning.LESSONS`、`lesson_experiment`与`teaching_chart`保持8课兼容；旧数字选择映射到稳定ID而非新课程位置。SQLite/生产算法/指纹均不变。详情见docs/ACADEMY_STAGE4.md。

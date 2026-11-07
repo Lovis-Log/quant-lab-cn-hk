@@ -5,6 +5,9 @@ import re
 import sqlite3
 import time
 from uuid import uuid4
+from html import escape
+
+from quant_lab.ui_chat_interactions import COMPOSER_JS, MESSAGES_JS
 
 import streamlit as st
 
@@ -78,6 +81,7 @@ def _new_chat() -> None:
     st.session_state["deepseek_view"] = "chat"
     st.session_state["deepseek_history_locked"] = False
     st.session_state["deepseek_new_chat_pending"] = True
+    st.session_state["_deepseek_draft_scroll_id"] = uuid4().hex
     st.session_state["ai_workspace"] = "对话与辅导"
 
 
@@ -430,6 +434,14 @@ def _render_chat_history() -> None:
                 st.error(str(exc))
 
 
+def _queue_request(request: dict) -> bool:
+    """Keep one explicit pending request; redraws and duplicate clicks cannot queue another."""
+    if st.session_state.get("deepseek_busy") or st.session_state.get("deepseek_pending_request"):
+        return False
+    st.session_state["deepseek_pending_request"] = request
+    return True
+
+
 def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                     connection_expanded: bool = True, compact: bool = False):
     from quant_lab.ui_ai import render_ai, current_experiment_context
@@ -534,7 +546,7 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                 placeholder="输入你的研究问题…", height=92,
             )
             submitted = st.button(
-                "发送到 DeepSeek", key="deepseek_send", disabled=not key or not model_id,
+                "发送到 DeepSeek", key="deepseek_send", disabled=not key or not model_id or st.session_state.get("deepseek_busy", False),
                 help="此操作使用你的 API 账户；其他页面重绘不会自动发送。",
                 width="stretch",
             )
@@ -542,7 +554,7 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
             if len(active_answers) >= 2:
                 summarize = st.button(
                     "总结并保存本次对话", key="deepseek_summarize_save", width="stretch",
-                    disabled=not key or not model_id,
+                    disabled=not key or not model_id or st.session_state.get("deepseek_busy", False),
                     help="会额外调用一次 DeepSeek，并在完整生成后保存到研究笔记。",
                 )
                 st.caption("总结只使用当前研究作用域内最近保留的对话；此操作会产生一次额外请求。")
@@ -550,40 +562,17 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                 st.success(st.session_state.pop("deepseek_chat_notice"))
             if st.session_state.get("deepseek_chat_error"):
                 st.error(st.session_state.pop("deepseek_chat_error"))
-            st.html(
-                """
-                <script>(() => {
-                  const bind = () => {
-                    const area = document.querySelector('textarea[aria-label="问题（确认后发送）"]');
-                    const send = document.querySelector('.st-key-deepseek_send button');
-                    if (!area || !send || area.dataset.enterSendBound === '1') return;
-                    area.dataset.enterSendBound = '1';
-                    area.addEventListener('keydown', event => {
-                      if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
-                      event.preventDefault();
-                      if (!send.disabled && area.value.trim()) {
-                        area.blur();
-                        window.setTimeout(() => {
-                          const current = document.querySelector('.st-key-deepseek_send button');
-                          if (current && !current.disabled) current.click();
-                        }, 250);
-                      }
-                    });
-                  };
-                  bind();
-                  requestAnimationFrame(bind);
-                })();</script>
-                """,
-                unsafe_allow_javascript=True,
-            )
+            st.caption("Enter 发送，Shift＋Enter 换行；发送使用你的 API 账户。")
+            st.html(COMPOSER_JS, unsafe_allow_javascript=True)
         if submitted:
             if prompt.strip():
-                st.session_state["deepseek_pending_request"] = {
+                queued = _queue_request({
                     "id": uuid4().hex, "kind": "chat", "prompt": redact(prompt, (key,)),
                     "scope": outgoing_scope, "context": selected_context,
                     "security": selected_context.get("security", "教学问答") if selected_context else "教学问答（未附带行情）",
-                }
-                st.session_state["deepseek_clear_prompt_pending"] = True
+                })
+                if queued:
+                    st.session_state["deepseek_clear_prompt_pending"] = True
             else:
                 st.warning("请先输入问题。")
         if summarize:
@@ -598,42 +587,34 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                 (message.get("content", "") for message in summary_history if message.get("role") == "user"),
                 "当前对话",
             )
-            st.session_state["deepseek_pending_request"] = {
+            _queue_request({
                 "id": uuid4().hex, "kind": "conversation_summary", "prompt": SUMMARY_PROMPT,
                 "scope": outgoing_scope, "context": selected_context,
                 "security": selected_context.get("security", "教学问答") if selected_context else "教学问答（未附带行情）",
                 "question": first_question,
-            }
+            })
         retry_message_id = st.session_state.pop("deepseek_retry_message_id", None)
         if retry_message_id:
             target = next((message for message in records if message.get("id") == retry_message_id), None)
             if target:
-                st.session_state["deepseek_pending_request"] = {
+                _queue_request({
                     "id": uuid4().hex, "kind": "manual_continuation",
                     "prompt": CONTINUATION_PROMPT, "target_message_id": retry_message_id,
                     "scope": target.get("scope", outgoing_scope),
                     "context": target.get("context", selected_context),
                     "security": target.get("security", "教学问答"),
                     "question": _paired_question(records, records.index(target), target),
-                }
+                })
         with st.container(key="deepseek_messages"):
+            conversation_id = st.session_state.get("deepseek_conversation_id")
+            draft_scroll_id = st.session_state.setdefault("_deepseek_draft_scroll_id", uuid4().hex)
+            scroll_scope = conversation_id or f"{outgoing_scope}:{draft_scroll_id}"
+            reading = st.session_state.get("_deepseek_reading_alias", {})
+            if conversation_id and reading.get("conversation_id") == conversation_id:
+                scroll_scope = reading["scope"]
             st.html(
-                """
-                <script>(() => {
-                  const panel = document.querySelector('.st-key-deepseek_messages');
-                  if (!panel || panel.dataset.autoScrollBound === '1') return;
-                  panel.dataset.autoScrollBound = '1';
-                  let follow = true;
-                  const nearBottom = () => panel.scrollHeight - panel.scrollTop - panel.clientHeight < 80;
-                  panel.addEventListener('scroll', () => { follow = nearBottom(); }, {passive:true});
-                  const observer = new MutationObserver(() => {
-                    if (follow) requestAnimationFrame(() => { panel.scrollTop = panel.scrollHeight; });
-                  });
-                  observer.observe(panel, {childList:true, subtree:true, characterData:true});
-                  requestAnimationFrame(() => { panel.scrollTop = panel.scrollHeight; });
-                })();</script>
-                """,
-                unsafe_allow_javascript=True,
+                '<span class="ql-chat-scroll-scope" data-scope="' + escape(scroll_scope, quote=True) + '"></span>'
+                + MESSAGES_JS, unsafe_allow_javascript=True,
             )
             if not records and "deepseek_pending_request" not in st.session_state:
                 st.caption("开始新的对话。没有 Key 时仍可使用离线手册和 Academy。")
@@ -666,7 +647,15 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                                 )
             pending = st.session_state.pop("deepseek_pending_request", None)
             if pending:
-                if st.session_state.get("deepseek_busy"):
+                consumed = st.session_state.setdefault("_deepseek_consumed_requests", [])
+                if pending["id"] in consumed:
+                    pending = None
+            if pending:
+                consumed.append(pending["id"])
+                del consumed[:-64]
+                if not key or not model_id:
+                    st.warning("请先配置 DeepSeek 连接；本次请求未发送。")
+                elif st.session_state.get("deepseek_busy"):
                     st.info("上一条回答仍在生成；本次请求未发送，请稍后重新点击。")
                 else:
                     st.session_state["deepseek_busy"] = True
@@ -693,6 +682,9 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                             )
                             conversation_id = created["id"]
                             st.session_state["deepseek_conversation_id"] = conversation_id
+                            st.session_state["_deepseek_reading_alias"] = {
+                                "conversation_id": conversation_id, "scope": scroll_scope,
+                            }
                             st.session_state["deepseek_new_chat_pending"] = False
                         if kind == "chat":
                             user_message = ai_chat.add_message(
@@ -754,6 +746,8 @@ def render_deepseek(context: dict, bundle=None, *, chat_only: bool = False,
                                 st.caption("DeepSeek 正在思考并生成最终回答…")
                             st.write_stream(persisted_chunks())
                             st.caption(f"实际模型：{answer.model_used}")
+                            if answer.error:
+                                st.session_state["deepseek_chat_error"] = answer.error
                     except (AIRequestError, KeyError, ValueError, OSError, sqlite3.Error) as exc:
                         st.session_state["deepseek_chat_error"] = str(exc)
                     finally:

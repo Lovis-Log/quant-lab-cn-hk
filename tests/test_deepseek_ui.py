@@ -146,6 +146,9 @@ def test_models_sending_redraw_context_and_saved_answer(tmp_path, monkeypatch):
     widget(app,"button","发送到 DeepSeek").click().run()
     assert not app.exception and len(calls) == 1 and calls[0]["model"] == "alpha"
     assert widget(app,"text_area","问题（确认后发送）").value == ""
+    # A replayed event ticket cannot repeat a completed paid request.
+    consumed_id = app.session_state["_deepseek_consumed_requests"][-1]
+    app.session_state["deepseek_pending_request"] = {"id": consumed_id}
     app.run()
     assert len(calls) == 1
     app.run()

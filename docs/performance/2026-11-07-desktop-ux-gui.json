@@ -1,0 +1,180 @@
+{
+  "date": "2026-11-07",
+  "baseline": "40b7772",
+  "environment": "Windows-11-10.0.26200-SP0",
+  "skill": {
+    "repository": "https://github.com/Ludi-Herry/desktop-agent-ui",
+    "commit": "5ee4fea59c279965e1a6b4b967d23d302a583dcc",
+    "installed": "user skills/desktop-agent-ui",
+    "runtime_dependency": false
+  },
+  "validation": {
+    "full_pytest": {
+      "passed": 335,
+      "warnings": 107,
+      "seconds": 115.24,
+      "log": ".tools/pytest-desktop-ux-full.log"
+    },
+    "targeted_after_fixes": {
+      "passed": 16,
+      "seconds": 15.12,
+      "log": ".tools/pytest-desktop-ux-final-targeted.log"
+    }
+  },
+  "runs": [
+    {
+      "artifact_directory": ".tools/desktop-ux-gui-1be99fc576ce4030bbcd3681c781f805",
+      "note": "两尺寸/输入/拖动/流式阅读通过；随后失败反馈断言停止，非整段通过",
+      "checks": {
+        "redraw_without_request": true,
+        "1366_resize_escape_and_keyboard": true,
+        "1366_cancel_blur": true,
+        "1366_reorder_escape": true,
+        "1366_composition_events_and_shift_enter": true,
+        "1920_resize_escape_and_keyboard": true,
+        "1920_cancel_blur": true,
+        "1920_reorder_escape": true,
+        "1920_composition_events_and_shift_enter": true,
+        "stream_reading_and_single_request": true,
+        "reading_position_after_redraw": true
+      },
+      "audits": {
+        "1366_static": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        },
+        "1366_hover": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        },
+        "1920_static": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        },
+        "1920_hover": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        }
+      },
+      "page_errors": [],
+      "post_count": null,
+      "physical_ime_verified": false
+    },
+    {
+      "artifact_directory": ".tools/desktop-ux-gui-185ecc8a4c854798988c4ab04253a288",
+      "note": "失败反馈与展开/最终审计通过",
+      "checks": {
+        "redraw_without_request": true,
+        "failed_request_visible": true,
+        "clip_audit_all_states": true,
+        "desktop_exit": true
+      },
+      "audits": {
+        "expanded": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        },
+        "final": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        }
+      },
+      "page_errors": [],
+      "post_count": 3,
+      "physical_ime_verified": false
+    },
+    {
+      "artifact_directory": ".tools/desktop-ux-gui-93de50f26d624a889526483f10d7fc2e",
+      "note": "首次流式回复落库/普通重绘的阅读位置修正补验通过",
+      "checks": {
+        "redraw_without_request": true,
+        "stream_reading_and_single_request": true,
+        "reading_position_after_redraw": true,
+        "clip_audit_all_states": true,
+        "desktop_exit": true
+      },
+      "audits": {
+        "expanded": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        },
+        "final": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        }
+      },
+      "page_errors": [],
+      "post_count": 1,
+      "physical_ime_verified": false
+    },
+    {
+      "artifact_directory": ".tools/desktop-ux-gui-92cf584179c84b59a48939bc14729b37",
+      "note": "节点移除/重开/四栏与草稿补验通过",
+      "checks": {
+        "redraw_without_request": true,
+        "drag_node_removal_reopen_draft_and_four_columns": true,
+        "clip_audit_all_states": true,
+        "desktop_exit": true
+      },
+      "audits": {
+        "expanded": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        },
+        "final": {
+          "ok": true,
+          "cut": 0,
+          "hidden": 0,
+          "issues": []
+        }
+      },
+      "page_errors": [],
+      "post_count": 0,
+      "physical_ime_verified": false
+    }
+  ],
+  "uncovered": [
+    "真实Windows输入法候选窗；只验证WebView组合输入事件、keyCode229与正常键盘发送",
+    "未重新验证完整真实行情/付费DeepSeek/性能专项；未打包安装版"
+  ],
+  "prior_failures": [
+    {
+      "run": "1396ff63356945899bb8e9c6813f9700",
+      "reason": "脚本未切换设置DeepSeek页签，未执行后续检查"
+    },
+    {
+      "run": "3195a8c6604b430e937a3da5d845d93e",
+      "reason": "实际发现自适应输入绑定失效；补生命周期绑定后通过"
+    },
+    {
+      "run": "1be99fc576ce4030bbcd3681c781f805",
+      "reason": "失败模拟先按完整相等匹配，实际请求附有上下文；保留之前通过的两尺寸证据"
+    },
+    {
+      "run": "f97c75ee28d0466c892d6be847e3a8ca",
+      "reason": "实际发现空回复error未显示；修正UI并新增定向回归"
+    },
+    {
+      "run": "88fd4efd9f6a4748a22acacc16cdbd46",
+      "reason": "失败UI已显示，脚本错误假定失败只有1个POST；既有有界恢复实际3个，修正计数后通过"
+    }
+  ]
+}

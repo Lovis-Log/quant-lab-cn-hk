@@ -29,7 +29,7 @@ def submit_task(slot, fingerprint, function, *args, cpu=False, job_timeout=120, 
     if ticket and ticket["fingerprint"] != fingerprint:
         cancel_task(slot)
     identifier = job_manager().submit(task_scope(), slot, fingerprint, function, *args, cpu=cpu, timeout=job_timeout, **kwargs)
-    tickets[slot] = {"id": identifier, "fingerprint": fingerprint}
+    tickets[slot] = {"id": identifier, "fingerprint": fingerprint, "cpu": cpu}
     return identifier
 
 
@@ -64,6 +64,9 @@ TASK_LABELS["lab_archive_replay"]="验证配方离线复算"
 
 
 def render_background_tasks():
+    notice = st.session_state.pop("_task_cancel_notice", None)
+    if notice:
+        st.info(notice)
     tickets = st.session_state.get("_task_tickets", {})
     if not tickets:
         return
@@ -81,6 +84,11 @@ def render_background_tasks():
             text.caption(f"{TASK_LABELS.get(slot, slot)} · {state}")
             if action.button("取消", key=f"cancel_job_{slot}"):
                 cancel_task(slot)
+                label = TASK_LABELS.get(slot, slot)
+                st.session_state["_task_cancel_notice"] = (
+                    f"{label}：已取消任务并丢弃本次结果。" if ticket.get("cpu") else
+                    f"{label}：已取消本次结果接收；已发出的上游请求可能仍在执行。"
+                )
                 st.rerun(scope="app")
     monitor()
 
