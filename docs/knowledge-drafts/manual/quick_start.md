@@ -12,10 +12,10 @@
 
 | 下载方式 | 需要准备 |
 | --- | --- |
-| Windows安装器 | 当前构建为x64 Windows桌面程序，已捆绑Python解释器及应用依赖，无需另装Python、Git、VS Code或运行pip。需要可用的Microsoft Edge WebView2 Runtime；本安装器未内置或自动安装它。Windows桌面后端还依赖系统.NET Framework运行环境（pywebview要求高于4.0），正常更新的Windows通常已有。 |
+| Windows安装器 | 当前构建为x64 Windows桌面程序，已捆绑Python解释器及应用依赖，无需另装Python、Git、VS Code或运行pip。2.4.0-rc.1内置固定版本WebView2，无需另装；旧2.3.0-rc.1未内置，仍需系统Runtime。Windows桌面后端还依赖系统.NET Framework运行环境（pywebview要求高于4.0），正常更新的Windows通常已有。 |
 | 源码ZIP或克隆仓库 | 自行安装Python（本项目使用Python 3.12构建/验证），创建虚拟环境，安装`requirements-desktop.txt`，运行`desktop_launcher.py`；桌面方式同样需要WebView2。源码ZIP无需Git；Git只用于克隆/更新代码。 |
 
-下载WebView2应使用微软官网的Evergreen Runtime安装器，已有可用Runtime通常无需重装；安装了Edge浏览器本身不等同于满足WebView2运行时要求。当前安装器默认请求管理员权限，首次启动还需选择可写的本地资料库。学校或公司电脑受安装/网络策略限制时，应按其管理员规定处理。
+旧安装版或源码桌面运行缺少WebView2时，使用微软官网的Evergreen Runtime安装器；2.4.0-rc.1安装版直接使用包内运行时，不依赖该系统安装。安装了Edge浏览器本身不等同于满足WebView2运行时要求。当前安装器默认请求管理员权限，首次启动还需选择可写的本地资料库。学校或公司电脑受安装/网络策略限制时，应按其管理员规定处理。
 
 真实行情需要联网访问数据来源；课程和手册可离线使用。DeepSeek是可选项，只在使用AI时配置自己的API Key并承担相应API费用，本地回测/筛选不要求Key或本地大模型/GPU。历史日线来源失败会明确报错，不用教学数据补齐。
 
@@ -27,7 +27,7 @@ Windows安装器仅用于Windows，不是macOS或Linux安装包；本项目未�
 - 批量条件选股：“市场数据 → 批量选股”，最多20只同市场候选；应用条件后运行，可保存方案，命中股票可显式进入研究并返回。
 - 课程直达：第13–24课展开“用真实数据研究”，预览参数后进入，目标页用“返回来源课程”恢复原课。
 
-上述是2026-11-08源码新增功能。本轮未重新打包或发布，GitHub上既有安装版不会因源码提交自动更新，也不会因本手册更新而获得新功能。读操作详情请查本手册“市场数据”“历史回测”和“Quant Academy”。
+上述是2026-11-08源码新增功能。2.4.0-rc.1发行包包含上述功能及更新手册；GitHub上旧2.3.0-rc.1安装版不会因源码提交自动更新，需要下载新版本安装器。读操作详情请查本手册“市场数据”“历史回测”和“Quant Academy”。
 
 运行环境依据：Microsoft WebView2分发文档（https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution）、pywebview安装文档（https://pywebview.flowrl.com/guide/installation.html），以及本项目安装器与PyInstaller配置。源码运行的完整命令见README“从源码运行”。
 

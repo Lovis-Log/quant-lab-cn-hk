@@ -42,6 +42,7 @@ try {
     }
     $sourceCommit = (& git rev-parse HEAD).Trim()
     $sourceDirty = [bool](& git status --porcelain)
+    if ($sourceDirty) { throw 'Release builds require clean committed source.' }
     "$buildStarted version=$version source_commit=$sourceCommit source_dirty=$sourceDirty" | Set-Content -LiteralPath $logFile -Encoding UTF8
     $testStatus = 'skipped'
     if (-not $SkipTests) {
@@ -92,6 +93,7 @@ try {
            sha256 = (Get-FileHash -LiteralPath $assetFile -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
     $manifest = @{ version = $version; source_commit = $sourceCommit;
+        webview2 = (Get-Content -LiteralPath (Join-Path $projectRoot 'installer\webview2-runtime.json') -Raw | ConvertFrom-Json);
         payload_dir = $payloadDir;
         source_dirty = $sourceDirty; tests = $testStatus;
         started_at_utc = $buildStarted; completed_at_utc = [DateTime]::UtcNow.ToString('o');

@@ -54,6 +54,29 @@ def user_data_dir() -> Path:
     return shared_user_data_dir()
 
 
+def configure_webview_runtime(webview) -> Path | None:
+    """Frozen releases always use their private runtime, never registry discovery."""
+    runtime = resource_root() / "webview2"
+    if not runtime.exists() and not getattr(sys, "frozen", False):
+        return None  # Source development may use the system runtime.
+    try:
+        manifest = json.loads((resource_root() / "webview2-runtime.json").read_text(encoding="utf-8"))
+        executable = runtime / "msedgewebview2.exe"
+        with executable.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if digest != manifest["exe_sha256"]:
+            raise ValueError("runtime checksum")
+        for filename in ("msedge.dll", "icudtl.dat", "resources.pak", "v8_context_snapshot.bin"):
+            if not (runtime / filename).is_file():
+                raise ValueError("runtime incomplete")
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        raise LaunchError("内置WebView2运行时缺失或损坏，请重新安装完整Quant Lab安装包。") from exc
+    webview.settings["WEBVIEW2_RUNTIME_PATH"] = str(runtime)
+    os.environ["WEBVIEW2_BROWSER_EXECUTABLE_FOLDER"] = str(runtime)
+    LOGGER.info("Using bundled WebView2 version=%s path=%s", manifest["version"], runtime)
+    return runtime
+
+
 def prepare_user_data(root: Path) -> None:
     """All mutable files live outside the read-only installation directory."""
     try:
@@ -367,6 +390,7 @@ def run_desktop(smoke_test: bool = False) -> int:
                 LOGGER.info("Headless service smoke test passed")
                 return 0
             import webview
+            configure_webview_runtime(webview)
             # WebView2 otherwise cancels Streamlit CSV/report downloads silently.
             webview.settings["ALLOW_DOWNLOADS"] = True
 

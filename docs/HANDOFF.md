@@ -1,5 +1,9 @@
 # 当前开发交接
 
+## 2026-11-08 内置WebView2并打包发布
+
+用户明确授权内置WebView2、打包及发布。干净基线47ec77f，恢复分支codex/recovery-bundled-webview-release-20261108-47ec77f，发行分支codex/bundled-webview-release-20261108。目标2.4.0-rc.1（文件2.4.0.0），固定运行时157.0.4341.42 x64；微软签名Valid，官方CAB与257个解压文件SHA已记录。冻结版选包内目录，缺失不回退系统；开发源码保留系统模式。只做适用发行检查，一次全量、修正后定向；隔离安装实际WebView2、草稿附件核对后公开预发布，不移动旧标签、不覆盖旧附件。工作单45及docs/releases/v2.4.0-rc.1.md，实际结果待构建验收，不提前标通过。
+
 ## 2026-11-08 内置使用手册同步
 
 用户要求把三项新功能写入软件手册并询问下载环境。干净基线ef05a24，恢复分支codex/recovery-manual-features-20261108-ef05a24，开发分支codex/manual-features-20261108。更新原10篇内的市场数据、回测、学院、快速开始四页，不新增手册ID；同步README及发行/源码环境说明。仅内容变化，35 passed/1 warning/16.49秒（manual_content、manual_reading_ui、offline_manual_startup）；交易回放/批量条件选股/课程直达/WebView2关键词在运行时索引均命中。未改程序、依赖、安装器或数据库，未重复全量/真实行情/GUI/P95，不打包或发布。工作单44。

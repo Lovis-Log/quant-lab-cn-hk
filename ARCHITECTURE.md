@@ -1,5 +1,7 @@
 # 架构与数据流
 
+2026-11-08 内置浏览器发行：QuantLab.spec校验并携带固定WebView2 x64 157.0.4341.42及来源/逐文件哈希清单。desktop_launcher.configure_webview_runtime在创建窗口前选择resource_root/webview2，并覆盖继承的浏览器目录环境变量；冻结版缺失/损坏拒绝启动，不静默使用系统Runtime。源码未带运行时则沿用系统模式。安装器仅向包内浏览器目录添加AppContainer只读执行权限，资料仍在user_data_dir。固定版本须随软件更新维护。
+
 2026-11-08 批量选股：screening提供ScreenRecipe、price_metrics、collect_screen与evaluate_screen，按统一已收市截止日校验独立证券输入，最多2请求并发且全局启动间隔1秒。JobManager新增可选cooperative_io，给I/O工作者注入cancelled回调；CPU拒绝该选项，原调用默认不变。screen_presets只在user_data_dir原子保存版本1白名单配置并备份旧文件，无行情留存或SQLite变更。ui_screening以现有市场页内视图接入、查询指纹绑定后台任务，保留逐股失败；跳转和返回经一次性导航请求在控件创建前应用。
 
 2026-11-08 课程直达：course_research提供ResearchLaunch及12课纯映射，校验教学参数与证券；ui_course_research以一次性待处理请求在控件创建前应用研究草稿，仅覆盖列明字段。来源快照恢复课程ID、专题、搜索、滑块和先修链；不传教学行情，不自动提交行情、计算或AI请求。无数据库/报告协议变更。

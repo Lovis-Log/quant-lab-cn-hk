@@ -7,7 +7,13 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules, copy_metada
 
 
 ROOT = Path(SPECPATH).resolve()
+import sys
+sys.path.insert(0, str(ROOT / "tools"))
+from prepare_webview2 import prepare
+webview_runtime, webview_manifest = prepare()
 datas = [
+    (str(webview_runtime), "webview2"),
+    (str(ROOT / "installer/webview2-runtime.json"), "."),
     (str(ROOT / "VERSION"), "."),
     (str(ROOT / "app.py"), "."),
     (str(ROOT / ".streamlit" / "config.toml"), ".streamlit"),

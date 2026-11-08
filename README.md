@@ -35,12 +35,12 @@
 ### Windows安装版
 
 1. 下载 [QuantLab-CN-HK-2.3.0-rc.1-Setup.exe](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.3.0-rc.1/QuantLab-CN-HK-2.3.0-rc.1-Setup.exe)，运行安装器。
-2. 电脑需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。安装包未内置该运行时，也未作商业代码签名。
+2. 2.3.0-rc.1旧安装包需另装 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。本次2.4.0-rc.1构建将内置运行时；安装包未作商业代码签名。
 3. 从开始菜单的 **Quant Lab** 启动。首次使用按界面选择资料存放位置；随后默认进入“市场数据”，使用手册默认关闭。
 
 本版为预发布。已完成332项核心测试，以及隔离安装版的实际WebView2关键课程操作、正常关闭和卸载检查。完整真实行情、付费AI及正式性能专项未在本次发行中重新验证，具体范围见[版本验证记录](docs/releases/v2.3.0-rc.1-validation.json)。
 
-安装器已包含Python解释器和应用依赖，使用者无需另装Python、Git或开发工具；系统须有WebView2 Runtime和可用的.NET Framework（pywebview要求高于4.0）。本安装器没有内置或自动安装WebView2，需使用微软官方Evergreen Runtime安装器补齐。源码ZIP则需要自行准备Python及依赖；AI Key仅在使用DeepSeek时需要。
+安装器已包含Python解释器和应用依赖，使用者无需另装Python、Git或开发工具；系统须有WebView2 Runtime和可用的.NET Framework（pywebview要求高于4.0）。2.4.0-rc.1发行包内置固定版本WebView2，无需另装；旧2.3.0-rc.1安装包及源码桌面运行仍需系统Runtime。源码ZIP则需要自行准备Python及依赖；AI Key仅在使用DeepSeek时需要。
 
 ### 从源码运行
 
