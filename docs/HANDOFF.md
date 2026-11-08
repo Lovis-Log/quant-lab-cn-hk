@@ -1,5 +1,11 @@
 # 当前开发交接
 
+## 2026-11-08 内置使用手册同步
+
+用户要求把三项新功能写入软件手册并询问下载环境。干净基线ef05a24，恢复分支codex/recovery-manual-features-20261108-ef05a24，开发分支codex/manual-features-20261108。更新原10篇内的市场数据、回测、学院、快速开始四页，不新增手册ID；同步README及发行/源码环境说明。仅内容变化，35 passed/1 warning/16.49秒（manual_content、manual_reading_ui、offline_manual_startup）；交易回放/批量条件选股/课程直达/WebView2关键词在运行时索引均命中。未改程序、依赖、安装器或数据库，未重复全量/真实行情/GUI/P95，不打包或发布。工作单44。
+
+环境核对：installer/QuantLab.iss当前打包Windows、复制PyInstaller完整payload，未下载/捆绑WebView2；QuantLab.spec打包解释器及依赖。官方WebView2分发、pywebview安装和PyInstaller机制文档已查证；使用者不需Python/Git，源码使用者需自行配置Python及依赖。
+
 ## 2026-11-08 批量条件选股
 
 用户明确实施另一部分，基线d8f3a19且起步干净，恢复分支codex/recovery-screening-20261108-d8f3a19、开发分支codex/batch-screening-20261108。已实现三市场20只候选、7项条件、排序、方案JSON、CSV和显式研究往返；新增可选I/O协作取消，原任务/金融模型/SQLite不变。定向20项通过，一次完整425 passed/159 warnings/113.25秒；随后名称失败保护及口径隔离分别定向1与5项通过。实际WebView2三市场两尺寸、部分失败/方案保存/比较往返与强制更新9项通过，未新增隐式取数。工作单43，验证与已知限制见[验收](SCREENING_ACCEPTANCE.md)。不打包/标签/Release，无Claude或子代理调用，源码同步以最终交付链接为准。
