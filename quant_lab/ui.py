@@ -991,6 +991,8 @@ def render_app() -> None:
     rerun_pending_settings()
     from quant_lab.ui_course_research import apply_pending_course_navigation
     apply_pending_course_navigation()
+    from quant_lab.ui_screening import apply_screen_navigation
+    apply_screen_navigation()
     initialize_credentials()
     _protect_session_widgets()
     _global_topbar()
@@ -999,6 +1001,8 @@ def render_app() -> None:
     with st.container(key="workbench_scroller"):
         with st.container(key="workbench_track"):
             with st.container(key="main_workspace"):
+                from quant_lab.ui_screening import render_screen_return
+                render_screen_return()
                 from quant_lab.ui_course_research import render_course_origin
                 render_course_origin()
                 if st.session_state["nav_section"] == "研究工作台":
@@ -1006,6 +1010,10 @@ def render_app() -> None:
                                     format_func=RESEARCH.get, label_visibility="collapsed")
                     page = active_route("研究工作台", market, research_page)
                     st.session_state["nav_page"] = page
+                screening = False
+                if page in ("市场数据", "美股数据"):
+                    view = st.radio("市场视图", ("单股行情", "批量选股"), horizontal=True, key="market_view")
+                    screening = view == "批量选股"
                 bundle: HistoryBundle | None = None
                 error: str | None = None
                 query = None
@@ -1013,10 +1021,10 @@ def render_app() -> None:
                 st.session_state["active_analysis_context"] = None
                 st.session_state["active_learning_context"] = None
                 record = None
-                if market == "美股" and page != "多股票比较":
+                if not screening and market == "美股" and page != "多股票比较":
                     from quant_lab.ui_us_prices import sync_us_prices
                     query = sync_us_prices(symbol, dates, clicked, st.session_state.pop("_us_force_refresh", False))
-                elif dates is not None and market != "美股":
+                elif not screening and dates is not None and market != "美股":
                     query = (market, symbol, dates[0], dates[1], adjustment)
                     force = st.session_state.pop("_history_force_refresh", False)
                     if clicked or force:
@@ -1042,7 +1050,10 @@ def render_app() -> None:
                 base_context = bundle_context(page, bundle)
                 context_bundle = bundle
                 st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else base_context.get("data_fingerprint")
-                if page == "市场数据":
+                if screening:
+                    from quant_lab.ui_screening import render_screening
+                    render_screening(market, dates, adjustment)
+                elif page == "市场数据":
                     _market_workspace(query, market, symbol, adjustment)
                     bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
                 elif page == "Quant Academy":

@@ -1,5 +1,7 @@
 # 架构与数据流
 
+2026-11-08 批量选股：screening提供ScreenRecipe、price_metrics、collect_screen与evaluate_screen，按统一已收市截止日校验独立证券输入，最多2请求并发且全局启动间隔1秒。JobManager新增可选cooperative_io，给I/O工作者注入cancelled回调；CPU拒绝该选项，原调用默认不变。screen_presets只在user_data_dir原子保存版本1白名单配置并备份旧文件，无行情留存或SQLite变更。ui_screening以现有市场页内视图接入、查询指纹绑定后台任务，保留逐股失败；跳转和返回经一次性导航请求在控件创建前应用。
+
 2026-11-08 课程直达：course_research提供ResearchLaunch及12课纯映射，校验教学参数与证券；ui_course_research以一次性待处理请求在控件创建前应用研究草稿，仅覆盖列明字段。来源快照恢复课程ID、专题、搜索、滑块和先修链；不传教学行情，不自动提交行情、计算或AI请求。无数据库/报告协议变更。
 
 2026-11-08 单股交易回放：`trade_replay.py`提供纯计算`build_trade_replay(raw, signals, result, spec, config) -> TradeReplay`，返回逐日账户/隔夜与日内盈亏、实际费用/滑点、订单事件及确定性最大回撤区间；结构化费用接口同时接收原A/H和US价格模型。校验保存信号、订单、现金/股数变化及权益勾稽，不取数或重新回测。`ui_trade_replay.py`由A/H和US历史回测共用，以会话缓存和fragment局部更新展示；选择状态独立于控件生命周期，绑定市场、代码、查询及实验指纹。切页保留位置、换实验重置，失败保留结果时显示旧结果提示。原始价K线与信号价均线分图，不更改执行算法、审计指纹、持久化、报告格式或SQLite。

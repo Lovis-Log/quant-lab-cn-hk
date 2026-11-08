@@ -61,6 +61,7 @@ TASK_LABELS.update({"us_price_backtest":"美股价格回测","us_price_statistic
 TASK_LABELS.update({"comparison_data":"多股票行情","comparison_calc":"多股票比较","cash_inputs":"组合成交价格","cash_portfolio":"现金持仓组合"})
 TASK_LABELS.update({"lab_inputs":"研究验证输入","lab_validation":"研究验证","lab_saved_compare":"存档复算与比较"})
 TASK_LABELS["lab_archive_replay"]="验证配方离线复算"
+TASK_LABELS["screening"] = "批量条件选股"
 
 
 def render_background_tasks():
@@ -86,6 +87,7 @@ def render_background_tasks():
                 cancel_task(slot)
                 label = TASK_LABELS.get(slot, slot)
                 st.session_state["_task_cancel_notice"] = (
+                    "批量筛选：已取消结果接收并停止安排后续股票；已发送请求仍可能结束。" if slot == "screening" else
                     f"{label}：已取消任务并丢弃本次结果。" if ticket.get("cpu") else
                     f"{label}：已取消本次结果接收；已发出的上游请求可能仍在执行。"
                 )
