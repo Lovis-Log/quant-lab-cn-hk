@@ -1,5 +1,7 @@
 # Quant Lab
 
+源码新增课程直达（2026-11-08）：第13–24课展开“用真实数据研究”，选择市场和股票、查看参数映射后进入对应研究页。跳转不自动取数或计算；“返回来源课程”恢复课程设置。批量选股未实施，安装版未更新。见[验收记录](docs/COURSE_RESEARCH_ACCEPTANCE.md)。
+
 面向 **A股、港股与美股** 的个人量化研究与学习平台。使用 Python、Streamlit 和 WebView2 构建，主要面向 Windows 桌面，也可从源码在本地浏览器运行。
 
 本仓库为 **public**：[源码](https://github.com/Lovis-Log/quant-lab-cn-hk) · [Release](https://github.com/Lovis-Log/quant-lab-cn-hk/releases) · [问题反馈](https://github.com/Lovis-Log/quant-lab-cn-hk/issues)

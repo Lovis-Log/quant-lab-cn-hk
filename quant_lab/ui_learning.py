@@ -161,6 +161,8 @@ def _render_experiment(course):
                         config={"displaylogo": False})
     st.markdown(f"**结果解释**：{course.interpretation}")
     st.markdown(f"**常见错误**：{course.mistakes}")
+    from quant_lab.ui_course_research import render_course_launch
+    render_course_launch(course, value)
     context = {"course_id": course.course_id, "topic": course.title, "parameter": value,
                "experiment_conclusion": result.conclusion, "status": "固定教学样本，不是股票行情"}
     followup = st.session_state.get("ai_followup_context")

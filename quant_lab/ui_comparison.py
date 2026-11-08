@@ -256,7 +256,7 @@ def render_comparison():
         code=st.selectbox("查看单股完整请求数据",codes,format_func=lambda s:labels[s],key="comparison_detail_symbol")
         st.dataframe(inputs.bundles[code].frame,width="stretch",height=220,hide_index=True)
         render_history_quality(inputs.bundles[code])
-    with st.expander("进入现金持仓组合研究"):
+    with st.expander("进入现金持仓组合研究", expanded=st.session_state.get("_course_comparison_focus") in {"portfolio_weights", "rebalance_cash"}):
         _cash_workspace(inputs,labels)
     st.session_state["active_comparison_context"]={"page":"多股票比较","data_fingerprint":inputs.fingerprint,
         "market":market,"currency":currency,"symbols":list(codes),"benchmark":benchmark,"common_rows":len(result.closes),

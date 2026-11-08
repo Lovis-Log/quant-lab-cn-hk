@@ -989,6 +989,8 @@ def render_app() -> None:
         st.session_state["_comparison_draft_market"] = st.session_state["market_selection"]
         st.session_state["_navigation_initialized"] = True
     rerun_pending_settings()
+    from quant_lab.ui_course_research import apply_pending_course_navigation
+    apply_pending_course_navigation()
     initialize_credentials()
     _protect_session_widgets()
     _global_topbar()
@@ -997,6 +999,8 @@ def render_app() -> None:
     with st.container(key="workbench_scroller"):
         with st.container(key="workbench_track"):
             with st.container(key="main_workspace"):
+                from quant_lab.ui_course_research import render_course_origin
+                render_course_origin()
                 if st.session_state["nav_section"] == "研究工作台":
                     research_page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
                                     format_func=RESEARCH.get, label_visibility="collapsed")

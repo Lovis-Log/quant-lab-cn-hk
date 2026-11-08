@@ -71,7 +71,7 @@ def render_us_price_comparison():
         def watch():
             render_watchlist("美股", codes[0])
         watch()
-    with st.expander("美元现金持仓组合", expanded=False):
+    with st.expander("美元现金持仓组合", expanded=st.session_state.get("_course_comparison_focus") in {"portfolio_weights", "rebalance_cash"}):
         with st.form("us_price_portfolio"):
             config = config_controls("us_price_port")
             fraction = st.slider("组合权重训练比例", .5, .85, .7, .05, key="us_price_port_fraction")
