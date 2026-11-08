@@ -1,14 +1,14 @@
 # Quant Lab
 
-源码新增批量条件选股（2026-11-08）：在“市场数据 → 批量选股”从自选股与手动候选选择最多20只同市场股票，组合收益、波动、回撤、量能比和均线条件，保存筛选方案或导出CSV；命中股票可进入行情、回测或2–10只比较。跳转只预填，仍须手动加载/运行。见[操作与验收](docs/SCREENING_ACCEPTANCE.md)，安装版未更新。
+源码新增批量条件选股（2026-11-08）：在“市场数据 → 批量选股”从自选股与手动候选选择最多20只同市场股票，组合收益、波动、回撤、量能比和均线条件，保存筛选方案或导出CSV；命中股票可进入行情、回测或2–10只比较。跳转只预填，仍须手动加载/运行。见[操作与验收](docs/SCREENING_ACCEPTANCE.md)，已纳入2.4.0-rc.1安装版。
 
-源码新增课程直达（2026-11-08）：第13–24课展开“用真实数据研究”，选择市场和股票、查看参数映射后进入对应研究页。跳转不自动取数或计算；“返回来源课程”恢复课程设置。批量选股现已提供，安装版未更新。见[验收记录](docs/COURSE_RESEARCH_ACCEPTANCE.md)。
+源码新增课程直达（2026-11-08）：第13–24课展开“用真实数据研究”，选择市场和股票、查看参数映射后进入对应研究页。跳转不自动取数或计算；“返回来源课程”恢复课程设置。批量选股现已提供，已纳入2.4.0-rc.1安装版。见[验收记录](docs/COURSE_RESEARCH_ACCEPTANCE.md)。
 
 面向 **A股、港股与美股** 的个人量化研究与学习平台。使用 Python、Streamlit 和 WebView2 构建，主要面向 Windows 桌面，也可从源码在本地浏览器运行。
 
 本仓库为 **public**：[源码](https://github.com/Lovis-Log/quant-lab-cn-hk) · [Release](https://github.com/Lovis-Log/quant-lab-cn-hk/releases) · [问题反馈](https://github.com/Lovis-Log/quant-lab-cn-hk/issues)
 
-**当前安装版：v2.3.0-rc.1（预发布）** — [下载Windows安装包](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.3.0-rc.1/QuantLab-CN-HK-2.3.0-rc.1-Setup.exe) · [发布说明与校验文件](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.3.0-rc.1) · [构建与验证记录](docs/releases/v2.3.0-rc.1.md)
+**当前安装版：v2.4.0-rc.1（预发布）** — [下载Windows安装包](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.4.0-rc.1/QuantLab-CN-HK-2.4.0-rc.1-Setup.exe) · [发布说明与校验文件](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.4.0-rc.1) · [构建与验证记录](docs/releases/v2.4.0-rc.1.md)
 
 > 用于历史日线学习与模拟研究，不提供实时行情、投资建议或实盘下单。教学样本均明确标记；数据源失败不会替换为模拟行情。
 
@@ -24,21 +24,21 @@
 
 顶部可打开 **使用手册、DeepSeek助手、研究笔记**，支持并排、调整宽度和最大化。内置10篇操作手册与85篇专业文章，阅读和搜索不调用AI。后台任务提供等待、取消和失败状态，切页不会把旧任务结果当成新查询。
 
-源码新增交易回放（2026-11-08）：运行三市场单股价格回测后，在“交易回放”中展开“选择订单”点击一行，或用上一笔/下一笔、交易日定位，核对原始价K线、前日信号、现金持仓和费用。点击“定位最大回撤”查看峰谷、恢复情况及主要亏损日。回放仅解释已有模拟记录，不重新取数或回测；[操作与验收](docs/TRADE_REPLAY_ACCEPTANCE.md)。安装版尚未更新。
+源码新增交易回放（2026-11-08）：运行三市场单股价格回测后，在“交易回放”中展开“选择订单”点击一行，或用上一笔/下一笔、交易日定位，核对原始价K线、前日信号、现金持仓和费用。点击“定位最大回撤”查看峰谷、恢复情况及主要亏损日。回放仅解释已有模拟记录，不重新取数或回测；[操作与验收](docs/TRADE_REPLAY_ACCEPTANCE.md)。已纳入2.4.0-rc.1安装版。
 
-源码新增交互（2026-11-07）：手册、助手、笔记与设置平滑弹出/收起，支持系统减弱动效；拖宽左侧导航栏时工作区与图表及时适配。鼠标悬停图表后，**Ctrl＋滚轮向上放大、向下缩小**，普通滚轮继续滚动页面；工具栏仍可恢复坐标轴。[验证记录](docs/DESKTOP_UX_ACCEPTANCE.md#面板动效宽度与图表手势续修)。安装版尚未包含这些源码改动。
+源码新增交互（2026-11-07）：手册、助手、笔记与设置平滑弹出/收起，支持系统减弱动效；拖宽左侧导航栏时工作区与图表及时适配。鼠标悬停图表后，**Ctrl＋滚轮向上放大、向下缩小**，普通滚轮继续滚动页面；工具栏仍可恢复坐标轴。[验证记录](docs/DESKTOP_UX_ACCEPTANCE.md#面板动效宽度与图表手势续修)。已纳入2.4.0-rc.1安装版。
 
-源码最新体验改进（2026-11-07）：面板拖动支持Esc撤销，AI长输入自适应增高、上翻阅读保持位置并可回到最新回复，空回复失败明确反馈。辅助文字可读性与取消说明同步完善。[验收与限制](docs/DESKTOP_UX_ACCEPTANCE.md)。本轮未重新构建，以上改动尚未进入安装版。
+源码最新体验改进（2026-11-07）：面板拖动支持Esc撤销，AI长输入自适应增高、上翻阅读保持位置并可回到最新回复，空回复失败明确反馈。辅助文字可读性与取消说明同步完善。[验收与限制](docs/DESKTOP_UX_ACCEPTANCE.md)。以上改动已纳入2.4.0-rc.1安装版。
 
 ## 安装与启动
 
 ### Windows安装版
 
-1. 下载 [QuantLab-CN-HK-2.3.0-rc.1-Setup.exe](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.3.0-rc.1/QuantLab-CN-HK-2.3.0-rc.1-Setup.exe)，运行安装器。
-2. 2.3.0-rc.1旧安装包需另装 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。本次2.4.0-rc.1构建将内置运行时；安装包未作商业代码签名。
+1. 下载 [QuantLab-CN-HK-2.4.0-rc.1-Setup.exe](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.4.0-rc.1/QuantLab-CN-HK-2.4.0-rc.1-Setup.exe)，运行安装器。
+2. 本安装包已内置Microsoft WebView2 Fixed Version x64 157.0.4341.42，无需另装WebView2或Python。仍需正常的Windows/.NET Framework系统组件；安装器未作商业代码签名。
 3. 从开始菜单的 **Quant Lab** 启动。首次使用按界面选择资料存放位置；随后默认进入“市场数据”，使用手册默认关闭。
 
-本版为预发布。已完成332项核心测试，以及隔离安装版的实际WebView2关键课程操作、正常关闭和卸载检查。完整真实行情、付费AI及正式性能专项未在本次发行中重新验证，具体范围见[版本验证记录](docs/releases/v2.3.0-rc.1-validation.json)。
+本版为预发布。431项核心测试通过，已在独立安装目录核对全部257个内置运行时文件、实际浏览器版本与进程路径，以及课程/手册/筛选入口、正常关闭和卸载保留资料。未移除共享系统Runtime，未测试无Runtime干净虚拟机或单独Windows 10机器；完整真实行情、付费AI和正式性能专项未重复验证，见[版本验证记录](docs/releases/v2.4.0-rc.1-validation.json)。
 
 安装器已包含Python解释器和应用依赖，使用者无需另装Python、Git或开发工具；系统须有WebView2 Runtime和可用的.NET Framework（pywebview要求高于4.0）。2.4.0-rc.1发行包内置固定版本WebView2，无需另装；旧2.3.0-rc.1安装包及源码桌面运行仍需系统Runtime。源码ZIP则需要自行准备Python及依赖；AI Key仅在使用DeepSeek时需要。
 
@@ -47,7 +47,7 @@
 发行构建使用 Python 3.12。Windows PowerShell：
 
 ```powershell
-git clone https://github.com/Lovis-Log/quant-lab-cn-hk.git
+git clone --branch v2.4.0-rc.1 https://github.com/Lovis-Log/quant-lab-cn-hk.git
 cd quant-lab-cn-hk
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-desktop.txt
@@ -94,6 +94,9 @@ DeepSeek为可选功能，在左上设置中配置用户自己的API Key及模�
 ```powershell
 # 运行核心测试
 .\.venv\Scripts\python.exe -m pytest -q
+
+# 首次构建先获取并校验固定版本WebView2（只写入忽略的.tools目录）
+.\.venv\Scripts\python.exe tools/prepare_webview2.py --download
 
 # 从干净、已提交的源码构建EXE与Windows安装包；流程会先运行测试
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -BuildInstaller
