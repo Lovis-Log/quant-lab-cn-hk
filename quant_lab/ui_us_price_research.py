@@ -6,6 +6,7 @@ import json
 import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
+
 from quant_lab import names
 
 from quant_lab.jobs import JobState
@@ -14,8 +15,9 @@ from quant_lab.research_diagnostics import backtest_diagnostics
 from quant_lab.research_validation import ValidationRecipe
 from quant_lab.statistics import one_sample_return_test, evaluate_linear_model
 from quant_lab.strategy import StrategySpec, STRATEGY_NAMES, build_signals
-from quant_lab.ui_helpers import style_figure
+from quant_lab.ui_helpers import plotly_chart, style_figure
 from quant_lab.ui_jobs import submit_task, take_result, loading_placeholder
+from quant_lab.ui_trade_replay import render_trade_replay
 from quant_lab.us_price_research import (
     ASSUMPTIONS, PRICE_VERSION, USPriceConfig, validate_price_input,
     run_us_price_experiment, run_us_price_validation, price_report,
@@ -80,7 +82,7 @@ def line_chart(series, key, *, height=340):
         figure.add_trace(go.Scatter(x=dates, y=values, name=label))
     figure = style_figure(figure, height)
     figure.update_layout(uirevision=repr(key))
-    st.plotly_chart(figure, width="stretch", theme=None)
+    plotly_chart(figure, width="stretch", theme=None)
 
 
 def render_us_price_research(section=None):
@@ -173,6 +175,11 @@ def _backtest(reference, fingerprint):
     cols[3].metric("策略最大回撤", f"{result.full_stats.max_drawdown:.2%}")
     line_chart({"策略": (result.strategy.equity.date, result.strategy.equity.equity),
                 "买入持有价格基准": (result.benchmark.equity.date, result.benchmark.equity.equity)}, key)
+    render_trade_replay(
+        reference.frame, result, spec, config, market="美股",
+        symbol=reference.observation.symbol, currency="USD", adjustment="",
+        query=key, slot="us", stale=failed,
+    )
     with st.expander("成交、现金、持仓与成本诊断", expanded=True):
         st.dataframe(result.strategy.orders, width="stretch", hide_index=True)
         st.dataframe(result.strategy.equity, width="stretch", hide_index=True)

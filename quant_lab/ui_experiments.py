@@ -15,7 +15,7 @@ from quant_lab.research_reports import prepare_lab_inputs,calculate_lab,replay_v
 from quant_lab.research_validation import ValidationRecipe
 from quant_lab.research_versions import LEGACY_VERSIONS,VALIDATION_VERSIONS
 from quant_lab.storage import list_experiments,save_experiment
-from quant_lab.ui_helpers import require_history,bundle_key,style_figure
+from quant_lab.ui_helpers import plotly_chart, require_history,bundle_key,style_figure
 from quant_lab.ui_jobs import submit_task,take_result,loading_placeholder
 from quant_lab.ui_strategy import _strategy_controls,_backtest_config
 
@@ -49,7 +49,7 @@ def _render_comparison(result):
     if result.curves is not None:
         colors=("#78A7DB","#C6A56D","#B4BCC5","#73B798","#D7797E","#A39CC7")
         figure=go.Figure([go.Scatter(x=result.curves.index,y=result.curves[column],name=column,line={"color":colors[i]}) for i,column in enumerate(result.curves)])
-        st.plotly_chart(style_figure(figure,290),width="stretch",theme=None)
+        plotly_chart(style_figure(figure,290),width="stretch",theme=None)
     st.caption("对比固定基础策略全样本结果；参数、费用和资金假设差异不能只归因为信号。不同币种不相加。滚动结果在各实验报告中单独核对。")
 
 
@@ -180,7 +180,7 @@ def render_experiment_lab(bundle):
             for field in ("训练起点","训练终点","测试起点","测试终点"):table[field]=table[field].dt.strftime("%Y-%m-%d")
             st.dataframe(table.style.format({"样本外收益":"{:.2%}","训练目标值":"{:.2%}" if recipe.score=="return" else "{:.3f}"}),width="stretch",hide_index=True)
             figure=go.Figure(go.Scatter(x=suite.rolling.equity.date,y=suite.rolling.equity.equity/config.initial_cash,name="连续滚动样本外",line={"color":"#78A7DB"}))
-            st.plotly_chart(style_figure(figure,300),width="stretch",theme=None)
+            plotly_chart(style_figure(figure,300),width="stretch",theme=None)
             coverage=suite.manifest["rolling_coverage"]
             st.caption(f"滚动测试 {coverage['first_test']} 至 {coverage['last_test']}，共{coverage['test_rows']}条；尾部{coverage['tail_rows_not_tested']}条未测试。后续训练可包含此前已结束的测试观察。")
     with stress_tab:

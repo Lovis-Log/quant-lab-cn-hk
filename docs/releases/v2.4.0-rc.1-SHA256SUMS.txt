@@ -1,0 +1,4 @@
+af3e8c50186a5ac66a7a1ea8c8ab72b113e8bb3acdb89ed1b1a1765aad1dbf82  QuantLab-CN-HK-2.4.0-rc.1-Setup.exe
+720a767454777669f6170396927f810c8e7c2a9009151b7824ce31e9331e25fc  build-manifest.json
+1eaf5faaccaeac904b92492d2550120e59aeda5c38afcff226ce9c49910fa4a1  validation.json
+7d17c0638ddc6628d28d04e6269036a308d770aade9a564f6f537a59befdbe73  webview2-runtime.json

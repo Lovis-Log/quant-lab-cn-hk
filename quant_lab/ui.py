@@ -32,7 +32,8 @@ from quant_lab.ai_context import bundle_context, experiment_context
 from quant_lab.securities import security_directory
 from quant_lab.ui_jobs import submit_task, take_result, cancel_task, render_background_tasks, loading_placeholder
 from quant_lab.jobs import JobState
-from quant_lab.ui_helpers import reset_main_scroll
+from quant_lab.ui_helpers import plotly_chart, reset_main_scroll
+from quant_lab.ui_chart_interactions import CHART_INTERACTIONS_JS
 from quant_lab.history_ranges import HISTORY_PRESETS, history_window
 from quant_lab.ui_data_quality import render_history_quality, render_quality_summary
 from quant_lab.ui_manual import render_manual_panel
@@ -78,6 +79,7 @@ SIDEBAR_LAYOUT_JS = """
     const width = sidebar.getBoundingClientRect().width;
     if (width > 0 && root.style.getPropertyValue('--ql-sidebar-width') !== `${width}px`) {
       root.style.setProperty('--ql-sidebar-width', `${width}px`);
+      window.__quantLabApplyPanelOrder?.();
     }
   };
   window.__quantLabSidebarResizeObserver = observer;
@@ -108,6 +110,9 @@ DOCK_RESIZE_JS = """
     const handle = panel?.querySelector(`.ql-resize-handle[data-panel="${kind}"]`);
     if (!panel || !handle || handle.dataset.bound === "1") return;
     handle.dataset.bound = "1";
+    handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-description', '拖动调整宽度；左右方向键微调；Esc 撤销拖动');
+    handle.title = '拖动调整宽度；左右方向键微调；Esc 撤销';
     const property = `--ql-${kind}-width`;
     const storageKey = `quantlab.${kind}.panelWidth`;
     const stored = Number.parseFloat(localStorage.getItem(storageKey));
@@ -127,6 +132,7 @@ DOCK_RESIZE_JS = """
     if (Number.isFinite(stored)) applyWidth(stored);
 
     handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
       event.preventDefault();
       const startX = event.clientX;
       const startWidth = panel.getBoundingClientRect().width;
@@ -137,17 +143,11 @@ DOCK_RESIZE_JS = """
         pendingWidth = startWidth - (next.clientX - startX);
         if (!frame) frame = requestAnimationFrame(() => { frame = 0; applyWidth(pendingWidth); });
       };
-      const stop = () => {
+      window.__quantLabStartDrag(handle, move, committed => {
         if (frame) cancelAnimationFrame(frame);
-        applyWidth(pendingWidth, true);
+        applyWidth(committed ? pendingWidth : startWidth, committed);
         handle.classList.remove("is-dragging");
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", stop);
-        window.removeEventListener("pointercancel", stop);
-      };
-      window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", stop);
-      window.addEventListener("pointercancel", stop);
+      });
     });
     handle.addEventListener("keydown", (event) => {
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -168,6 +168,39 @@ DOCK_RESIZE_JS = """
 TOPBAR_REORDER_JS = """
 <script>
 (() => {
+  if (!window.__quantLabStartDrag) {
+    window.__quantLabStartDrag = (element, move, finish) => {
+      window.__quantLabCancelDrag?.();
+      let done = false;
+      const stop = committed => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', commit);
+        window.removeEventListener('pointercancel', cancel);
+        window.removeEventListener('blur', cancel);
+        window.removeEventListener('keydown', key, true);
+        observer.disconnect();
+        window.__quantLabCancelDrag = null;
+        finish(committed);
+      };
+      const commit = () => stop(true);
+      const cancel = () => stop(false);
+      const key = event => {
+        if (event.key === 'Escape') {
+          event.preventDefault(); event.stopImmediatePropagation(); cancel();
+        }
+      };
+      const observer = new MutationObserver(() => { if (!element.isConnected) cancel(); });
+      observer.observe(document.body, {childList:true, subtree:true});
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', commit);
+      window.addEventListener('pointercancel', cancel);
+      window.addEventListener('blur', cancel);
+      window.addEventListener('keydown', key, true);
+      window.__quantLabCancelDrag = cancel;
+    };
+  }
   const root = document.documentElement;
   const newest = selector => [...document.querySelectorAll(selector)].at(-1);
   const storageKey = "quantlab.dock.panelOrder";
@@ -194,6 +227,7 @@ TOPBAR_REORDER_JS = """
   };
   let order = readOrder();
   let savedOrder = JSON.stringify(order);
+  let reordering = false;
 
   const applyOrder = (animate=true) => {
     describeControls();
@@ -244,7 +278,7 @@ TOPBAR_REORDER_JS = """
       if(target){root.dataset.qlRevealToken=reveal.dataset.token;requestAnimationFrame(()=>target.scrollIntoView({inline:'nearest',block:'nearest',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}
     }
     const serializedOrder = JSON.stringify(order);
-    if (savedOrder !== serializedOrder) {
+    if (!reordering && savedOrder !== serializedOrder) {
       localStorage.setItem(storageKey, serializedOrder);
       savedOrder = serializedOrder;
     }
@@ -289,7 +323,9 @@ TOPBAR_REORDER_JS = """
     button.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       const startX = event.clientX;
+      const previousOrder = [...order];
       let dragged = false;
+      reordering = true;
       const move = (next) => {
         if (Math.abs(next.clientX - startX) < 8 && !dragged) return;
         dragged = true;
@@ -306,19 +342,16 @@ TOPBAR_REORDER_JS = """
         updated.splice(target, 0, kind);
         if (updated.join('|') !== order.join('|')) { order = updated; applyOrder(true); }
       };
-      const stop = () => {
+      window.__quantLabStartDrag(button, move, committed => {
+        reordering = false;
+        if (!committed) order = previousOrder;
         button.classList.remove('is-reordering');
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', stop);
-        window.removeEventListener('pointercancel', stop);
+        applyOrder(false);
         if (dragged) {
           button.dataset.suppressClick = '1';
           window.setTimeout(() => { button.dataset.suppressClick = ''; }, 250);
         }
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', stop);
-      window.addEventListener('pointercancel', stop);
+      });
     });
   };
   const initialize = () => {
@@ -612,6 +645,7 @@ def _global_topbar() -> None:
         st.html(f'<span class="ql-dock-reveal" data-panel="{reveal}" data-token="{time.monotonic_ns() if reveal else 0}"></span>')
         st.html(SIDEBAR_LAYOUT_JS, unsafe_allow_javascript=True)
         st.html(TOPBAR_REORDER_JS, unsafe_allow_javascript=True)
+        st.html(CHART_INTERACTIONS_JS, unsafe_allow_javascript=True)
 
 
 def _render_right_dock(context: dict, bundle) -> None:
@@ -681,9 +715,9 @@ def _render_history_chart(bundle, *, candlestick=False):
     figure = builder(bundle.frame, bundle.currency)
     figure.update_layout(title_text=names.cached_security_label(bundle.market, bundle.symbol, bundle.company_name),
                          uirevision=repr(st.session_state.get("_current_query")))
-    st.plotly_chart(figure, width="stretch", theme=None,
+    plotly_chart(figure, width="stretch", theme=None,
         key="market_candle" if candlestick else "market_price",
-        config={"displaylogo": False, "scrollZoom": False},
+        config={"displaylogo": False},
         alt="当前选中区间的历史日线 K 线与成交量。" if candlestick else "当前选中区间的历史收盘价与成交量。")
 
 
@@ -787,14 +821,14 @@ def _main_page(
             else:
                 preview_tab, candle_tab = st.tabs(("走势与活动量 · 演示", "K 线 · 等待数据"))
                 with preview_tab:
-                    st.plotly_chart(
+                    plotly_chart(
                         demo_chart(), width="stretch", theme=None,
-                        config={"displaylogo": False, "scrollZoom": False},
+                        config={"displaylogo": False},
                         alt="由随机数生成的无单位模拟走势及活动量，仅用于页面版式演示。",
                     )
                     st.caption("⚠ 图中数值由固定随机种子生成，非股票价格、成交量或回测结果。")
                 with candle_tab:
-                    st.plotly_chart(
+                    plotly_chart(
                         _empty_candlestick(), width="stretch", theme=None,
                         config={"displayModeBar": False},
                         alt="空白的 K 线图区域，等待真实日线行情加载。",
@@ -955,6 +989,10 @@ def render_app() -> None:
         st.session_state["_comparison_draft_market"] = st.session_state["market_selection"]
         st.session_state["_navigation_initialized"] = True
     rerun_pending_settings()
+    from quant_lab.ui_course_research import apply_pending_course_navigation
+    apply_pending_course_navigation()
+    from quant_lab.ui_screening import apply_screen_navigation
+    apply_screen_navigation()
     initialize_credentials()
     _protect_session_widgets()
     _global_topbar()
@@ -963,11 +1001,19 @@ def render_app() -> None:
     with st.container(key="workbench_scroller"):
         with st.container(key="workbench_track"):
             with st.container(key="main_workspace"):
+                from quant_lab.ui_screening import render_screen_return
+                render_screen_return()
+                from quant_lab.ui_course_research import render_course_origin
+                render_course_origin()
                 if st.session_state["nav_section"] == "研究工作台":
                     research_page = st.radio("研究内容", tuple(RESEARCH), key="research_page", horizontal=True,
                                     format_func=RESEARCH.get, label_visibility="collapsed")
                     page = active_route("研究工作台", market, research_page)
                     st.session_state["nav_page"] = page
+                screening = False
+                if page in ("市场数据", "美股数据"):
+                    view = st.radio("市场视图", ("单股行情", "批量选股"), horizontal=True, key="market_view")
+                    screening = view == "批量选股"
                 bundle: HistoryBundle | None = None
                 error: str | None = None
                 query = None
@@ -975,10 +1021,10 @@ def render_app() -> None:
                 st.session_state["active_analysis_context"] = None
                 st.session_state["active_learning_context"] = None
                 record = None
-                if market == "美股" and page != "多股票比较":
+                if not screening and market == "美股" and page != "多股票比较":
                     from quant_lab.ui_us_prices import sync_us_prices
                     query = sync_us_prices(symbol, dates, clicked, st.session_state.pop("_us_force_refresh", False))
-                elif dates is not None and market != "美股":
+                elif not screening and dates is not None and market != "美股":
                     query = (market, symbol, dates[0], dates[1], adjustment)
                     force = st.session_state.pop("_history_force_refresh", False)
                     if clicked or force:
@@ -1004,7 +1050,10 @@ def render_app() -> None:
                 base_context = bundle_context(page, bundle)
                 context_bundle = bundle
                 st.session_state["active_data_fingerprint"] = None if page == "Quant Academy" else base_context.get("data_fingerprint")
-                if page == "市场数据":
+                if screening:
+                    from quant_lab.ui_screening import render_screening
+                    render_screening(market, dates, adjustment)
+                elif page == "市场数据":
                     _market_workspace(query, market, symbol, adjustment)
                     bundle = st.session_state.get("loaded_bundle") if st.session_state.get("loaded_query") == query else None
                 elif page == "Quant Academy":

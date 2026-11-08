@@ -4,7 +4,7 @@
 
 本仓库为 **public**：[源码](https://github.com/Lovis-Log/quant-lab-cn-hk) · [Release](https://github.com/Lovis-Log/quant-lab-cn-hk/releases) · [问题反馈](https://github.com/Lovis-Log/quant-lab-cn-hk/issues)
 
-**当前安装版：v2.3.0-rc.1（预发布）** — [下载Windows安装包](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.3.0-rc.1/QuantLab-CN-HK-2.3.0-rc.1-Setup.exe) · [发布说明与校验文件](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.3.0-rc.1) · [构建与验证记录](docs/releases/v2.3.0-rc.1.md)
+**当前安装版：v2.4.0-rc.1（预发布）** — [下载Windows安装包](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.4.0-rc.1/QuantLab-CN-HK-2.4.0-rc.1-Setup.exe) · [发布说明与校验文件](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/tag/v2.4.0-rc.1) · [构建与验证记录](docs/releases/v2.4.0-rc.1.md)
 
 > 用于历史日线学习与模拟研究，不提供实时行情、投资建议或实盘下单。教学样本均明确标记；数据源失败不会替换为模拟行情。
 
@@ -12,30 +12,46 @@
 
 | 工作区 | 功能 |
 | --- | --- |
-| 市场数据 | A/H/美股代码与名称搜索、自选股、1/3/5/10年及自定义区间、历史K线与OHLCV、覆盖与质量说明、刷新、表格全屏和CSV导出 |
-| 研究工作台 | 均线与趋势策略、下一交易日开盘模拟成交、费用与滑点、样本内外分析、风险指标、统计检验和时间序列回归 |
+| 市场数据 | 三市场代码/名称搜索、自选股、最多20只同市场候选的批量条件选股与方案保存、历史K线、覆盖与质量、刷新和CSV导出 |
+| 研究工作台 | 均线与趋势策略、下一交易日开盘模拟成交、逐笔交易回放与最大回撤定位、费用与滑点、样本内外分析、风险指标、统计检验和时间序列回归 |
 | 多股票比较 | 同市场同币种2–10只股票的价格/净值、回撤、滚动波动、相关性比较；等权/逆波动率现金持仓组合 |
 | 专业验证 | 有上限的参数扫描、滚动样本外与成本压力测试、2–6个实验比较，以及满足留存条件的报告与离线复算 |
-| Quant Academy | 7个专题、共28节离线课程，包含Python金融数据基础、手算、参数实验、代码说明与思考题；先修课程支持逐层返回 |
+| Quant Academy | 7个专题、共28节离线课程，包含Python金融数据基础、手算、参数实验、代码说明与思考题；先修课程逐层返回，第13–24课可预览参数并直达真实研究 |
 
-顶部可打开 **使用手册、DeepSeek助手、研究笔记**，支持并排、调整宽度和最大化。内置10篇操作手册与85篇专业文章，阅读和搜索不调用AI。后台任务提供等待、取消和失败状态，切页不会把旧任务结果当成新查询。
+顶部可打开 **使用手册、DeepSeek助手、研究笔记**，支持并排、调整宽度和最大化。内置10篇操作手册与85篇专业文章，阅读和搜索不调用AI。后台任务提供等待、取消和失败状态，切页不会把旧任务结果当成新查询。图表支持Ctrl＋滚轮缩放，普通滚轮继续滚页。
 
 ## 安装与启动
 
 ### Windows安装版
 
-1. 下载 [QuantLab-CN-HK-2.3.0-rc.1-Setup.exe](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.3.0-rc.1/QuantLab-CN-HK-2.3.0-rc.1-Setup.exe)，运行安装器。
-2. 电脑需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。安装包未内置该运行时，也未作商业代码签名。
+1. 下载 [QuantLab-CN-HK-2.4.0-rc.1-Setup.exe](https://github.com/Lovis-Log/quant-lab-cn-hk/releases/download/v2.4.0-rc.1/QuantLab-CN-HK-2.4.0-rc.1-Setup.exe)，运行安装器。
+2. 本安装包已内置Microsoft WebView2 Fixed Version x64 157.0.4341.42，无需另装WebView2或Python。仍需正常的Windows/.NET Framework系统组件；安装器未作商业代码签名。
 3. 从开始菜单的 **Quant Lab** 启动。首次使用按界面选择资料存放位置；随后默认进入“市场数据”，使用手册默认关闭。
 
-本版为预发布。已完成332项核心测试，以及隔离安装版的实际WebView2关键课程操作、正常关闭和卸载检查。完整真实行情、付费AI及正式性能专项未在本次发行中重新验证，具体范围见[版本验证记录](docs/releases/v2.3.0-rc.1-validation.json)。
+本版为预发布。431项核心测试通过，已在独立安装目录核对全部257个内置运行时文件、实际浏览器版本与进程路径，以及课程/手册/筛选入口、正常关闭和卸载保留资料。未移除共享系统Runtime，未测试无Runtime干净虚拟机或单独Windows 10机器；完整真实行情、付费AI和正式性能专项未重复验证，见[版本验证记录](docs/releases/v2.4.0-rc.1-validation.json)。
+
+2.4.0-rc.1已包含Python、应用依赖和固定版本WebView2，使用者无需另装Python、Git、开发工具或WebView2。旧2.3.0-rc.1安装包及源码桌面运行仍需系统WebView2；源码ZIP需要自行准备Python及依赖。DeepSeek Key仅在使用AI时需要。
+
+### 升级与版本更新
+
+**当前没有自动更新、软件内检查更新或增量补丁。** GitHub上的源码提交、PR合并和网页手册修改，都不会自动改变已安装的软件。
+
+安装版用户只在新的安装包发布、并希望获得相应功能或修复时更新，不需要每次GitHub提交都重新下载：
+
+1. 到[Releases](https://github.com/Lovis-Log/quant-lab-cn-hk/releases)选择需要的版本，下载其完整`Setup.exe`，阅读发布说明及校验文件。
+2. 关闭正在运行的Quant Lab，运行新安装器，选择原安装目录；正常升级无需先卸载旧版，也不需要重新配置Python或单独安装包内WebView2。
+3. 保留原本的本地资料库，继续使用同一资料位置。数据库、笔记、自选股、实验及用户设置存于安装目录之外，不随程序文件覆盖；重要研究资料可先备份，具体版本迁移与限制以发布说明为准。
+
+只下载源码ZIP不能更新已安装的EXE，替换单个EXE也不够，因为运行时、模块和手册需要配套。源码用户可获取新发行标签、按需更新依赖并重启；下方的源码启动示例固定为本次发行标签。
+
+内置WebView2是固定版本，当前随软件发行更新，不会独立自动更新。开发者需重新构建并发布新版本，安装版用户才会获得更新后的程序、手册及运行时。
 
 ### 从源码运行
 
 发行构建使用 Python 3.12。Windows PowerShell：
 
 ```powershell
-git clone https://github.com/Lovis-Log/quant-lab-cn-hk.git
+git clone --branch v2.4.0-rc.1 https://github.com/Lovis-Log/quant-lab-cn-hk.git
 cd quant-lab-cn-hk
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-desktop.txt
@@ -82,6 +98,9 @@ DeepSeek为可选功能，在左上设置中配置用户自己的API Key及模�
 ```powershell
 # 运行核心测试
 .\.venv\Scripts\python.exe -m pytest -q
+
+# 首次构建先获取并校验固定版本WebView2（只写入忽略的.tools目录）
+.\.venv\Scripts\python.exe tools/prepare_webview2.py --download
 
 # 从干净、已提交的源码构建EXE与Windows安装包；流程会先运行测试
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_windows.ps1 -BuildInstaller

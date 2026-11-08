@@ -1,5 +1,7 @@
 # Windows 安装包发布流程
 
+最新预发布：[v2.4.0-rc.1](releases/v2.4.0-rc.1.md)，已内置WebView2，包含交易回放、课程直达、批量选股和手册更新。
+
 每次完成可交付安装包后，提交并推送源码，发布 GitHub Release，并记录过程。当前仓库为 `Lovis-Log/quant-lab-cn-hk`；源码仓库保持原有可见性，安装包放在 Release 附件中。
 
 1. 更新 `VERSION`、CHANGELOG 和本次发布说明。采用语义版本号；验证尚不完整的版本用 `-rc.N` 并标记预发布。

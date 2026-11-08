@@ -1,9 +1,9 @@
 #define MyAppName "Quant Lab"
 #ifndef MyAppVersion
-  #define MyAppVersion "2.3.0-rc.1"
+  #define MyAppVersion "2.4.0-rc.1"
 #endif
 #ifndef MyAppFileVersion
-  #define MyAppFileVersion "2.3.0.0"
+  #define MyAppFileVersion "2.4.0.0"
 #endif
 #define MyAppExeName "QuantLab.exe"
 #ifndef MyPayloadDir
@@ -42,4 +42,5 @@ Name: "{autoprograms}\Quant Lab"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\Quant Lab"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\_internal\webview2"" /grant *S-1-15-2-2:(OI)(CI)(RX) *S-1-15-2-1:(OI)(CI)(RX)"; Flags: runhidden waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Description: "启动 Quant Lab"; Flags: nowait postinstall skipifsilent

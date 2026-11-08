@@ -21,7 +21,7 @@ input{font:inherit;color:inherit;background:transparent;border:0;outline:0;flex:
 button{font:inherit}.arrow{align-self:stretch;width:28px;flex:0 0 28px;border:0;background:transparent;color:#CAD2DC;cursor:pointer;font-size:19px;border-radius:3px}
 .arrow:hover{background:#303940}.arrow[aria-expanded=true]{rotate:180deg}.candidates{margin-top:5px;border:1px solid #454D56;border-radius:4px;background:#1C1F22;max-height:250px;overflow:auto;padding:4px}
 .candidates[hidden]{display:none}.option{width:100%;display:flex;align-items:center;text-align:left;gap:8px;background:transparent;color:#E8EBEE;border:0;border-radius:3px;padding:8px;cursor:pointer}
-.option:hover,.option.focused{background:#293A4B}.option[aria-selected=true]{color:#A8C9ED}.check{width:14px;flex:0 0 14px}.message{font-size:11px;color:#929AA3;padding:6px 8px}.count{margin-top:5px;font-size:11px;color:#929AA3}
+.option:hover,.option.focused{background:#293A4B}.option[aria-selected=true]{color:#A8C9ED}.check{width:14px;flex:0 0 14px}.message{font-size:12px;color:#929AA3;padding:6px 8px}.count{margin-top:5px;font-size:12px;color:#929AA3}
 button:focus-visible{outline:2px solid #78A7DB;outline-offset:1px}
 """
 

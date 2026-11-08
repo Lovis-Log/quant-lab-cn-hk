@@ -16,7 +16,7 @@ from quant_lab.history_ranges import history_window
 from quant_lab.jobs import JobState
 from quant_lab.portfolio_cash import CashPortfolioConfig,prepare_portfolio_execution,run_portfolio_research
 from quant_lab.ui_jobs import submit_task,take_result,cancel_task,loading_placeholder
-from quant_lab.ui_helpers import style_figure
+from quant_lab.ui_helpers import plotly_chart, style_figure
 from quant_lab.ui_data_quality import render_history_quality
 from quant_lab.market_data import normalize_symbol
 from quant_lab.navigation import comparison_selection
@@ -135,7 +135,7 @@ def _cash_workspace(inputs,labels):
     if result.inverse_error:st.warning("逆波动率不可计算："+result.inverse_error+"；没有静默改用其他权重。")
     st.dataframe(result.weights.rename(index=labels).style.format("{:.2%}"),width="stretch")
     curves=pd.DataFrame({method:run.equity.set_index("date").equity/config.execution.initial_cash for method,run in result.runs.items()})
-    st.plotly_chart(_chart(curves,{},key,280),width="stretch",theme=None)
+    plotly_chart(_chart(curves,{},key,280),width="stretch",theme=None)
     rows=[]
     for method,run in result.runs.items():
         rows.append({"配置":method,"样本外收益":run.stats.cumulative_return,"最大回撤":run.stats.max_drawdown,
@@ -223,12 +223,12 @@ def render_comparison():
         left,right=st.columns((3,1.2))
         with left:
             st.markdown("#### 累计价格收益对比 · 起点100")
-            st.plotly_chart(_chart(result.normalized,labels,key),width="stretch",theme=None)
+            plotly_chart(_chart(result.normalized,labels,key),width="stretch",theme=None)
             first,second=st.tabs(("回撤对比","滚动波动"),key="comparison_risk_tab",on_change="rerun")
             with first:
-                if first.open:st.plotly_chart(_chart(result.drawdowns,labels,key,220,True),width="stretch",theme=None)
+                if first.open:plotly_chart(_chart(result.drawdowns,labels,key,220,True),width="stretch",theme=None)
             with second:
-                if second.open:st.plotly_chart(_chart(result.rolling_volatility,labels,key,220,True),width="stretch",theme=None)
+                if second.open:plotly_chart(_chart(result.rolling_volatility,labels,key,220,True),width="stretch",theme=None)
         with right:
             st.markdown("#### 收益率相关性")
             heat=go.Figure(go.Heatmap(z=result.correlation.to_numpy(),x=codes,y=codes,zmin=-1,zmax=1,
@@ -237,7 +237,7 @@ def render_comparison():
             style_figure(heat,max(300,40*len(codes)+100));heat.update_layout(margin={"l":55,"r":10,"t":10,"b":70})
             heat.update_xaxes(type="category",tickangle=-45,tickfont={"size":10})
             heat.update_yaxes(type="category",tickfont={"size":10})
-            st.plotly_chart(heat,width="stretch",theme=None)
+            plotly_chart(heat,width="stretch",theme=None)
             st.caption("基于共同观测间隔的价格收益；零波动时相关性留空，不填成0。")
     st.markdown("#### 风险收益对比 · 共同覆盖区间")
     table=result.risk_return.rename(index=labels,columns={"price_return":"区间价格收益","relative_to_benchmark":"相对基准收益","annualized_volatility":"年化波动估计","max_drawdown":"最大回撤","observations":"共同记录数"})
@@ -256,7 +256,7 @@ def render_comparison():
         code=st.selectbox("查看单股完整请求数据",codes,format_func=lambda s:labels[s],key="comparison_detail_symbol")
         st.dataframe(inputs.bundles[code].frame,width="stretch",height=220,hide_index=True)
         render_history_quality(inputs.bundles[code])
-    with st.expander("进入现金持仓组合研究"):
+    with st.expander("进入现金持仓组合研究", expanded=st.session_state.get("_course_comparison_focus") in {"portfolio_weights", "rebalance_cash"}):
         _cash_workspace(inputs,labels)
     st.session_state["active_comparison_context"]={"page":"多股票比较","data_fingerprint":inputs.fingerprint,
         "market":market,"currency":currency,"symbols":list(codes),"benchmark":benchmark,"common_rows":len(result.closes),

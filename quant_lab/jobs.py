@@ -68,7 +68,9 @@ class JobManager:
         self._closed = False
 
     def submit(self, scope: str, kind: str, fingerprint: str, function: Callable,
-               *args, cpu=False, timeout=180, **kwargs) -> str:
+               *args, cpu=False, timeout=180, cooperative_io=False, **kwargs) -> str:
+        if cooperative_io and cpu:
+            raise ValueError("协作取消仅适用于I/O任务。")
         if not scope or not kind or not fingerprint or timeout <= 0:
             raise ValueError("任务需要作用域、类型、输入指纹与有效超时。")
         with self._lock:
@@ -90,6 +92,10 @@ class JobManager:
             self._jobs[identifier] = JobSnapshot(identifier, scope, kind, fingerprint, JobState.QUEUED, time.monotonic())
             self._cancel[identifier] = Event()
             self._deadlines[identifier] = time.monotonic() + timeout
+            if cooperative_io:
+                event = self._cancel[identifier]
+                deadline = self._deadlines[identifier]
+                frozen_kwargs["cancelled"] = lambda: event.is_set() or time.monotonic() >= deadline
             # Snapshot the request before another render can change its inputs.
             executor = self._cpu if cpu else self._io
             self._futures[identifier] = executor.submit(self._run, identifier, function, frozen_args, frozen_kwargs, cpu)

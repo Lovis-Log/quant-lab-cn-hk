@@ -1,5 +1,18 @@
 # 架构与数据流
 
+2026-11-08 内置浏览器发行：QuantLab.spec校验并携带固定WebView2 x64 157.0.4341.42及来源/逐文件哈希清单。desktop_launcher.configure_webview_runtime在创建窗口前选择resource_root/webview2，并覆盖继承的浏览器目录环境变量；冻结版缺失/损坏拒绝启动，不静默使用系统Runtime。源码未带运行时则沿用系统模式。安装器仅向包内浏览器目录添加AppContainer只读执行权限，资料仍在user_data_dir。固定版本须随软件更新维护。
+
+2026-11-08 批量选股：screening提供ScreenRecipe、price_metrics、collect_screen与evaluate_screen，按统一已收市截止日校验独立证券输入，最多2请求并发且全局启动间隔1秒。JobManager新增可选cooperative_io，给I/O工作者注入cancelled回调；CPU拒绝该选项，原调用默认不变。screen_presets只在user_data_dir原子保存版本1白名单配置并备份旧文件，无行情留存或SQLite变更。ui_screening以现有市场页内视图接入、查询指纹绑定后台任务，保留逐股失败；跳转和返回经一次性导航请求在控件创建前应用。
+
+2026-11-08 课程直达：course_research提供ResearchLaunch及12课纯映射，校验教学参数与证券；ui_course_research以一次性待处理请求在控件创建前应用研究草稿，仅覆盖列明字段。来源快照恢复课程ID、专题、搜索、滑块和先修链；不传教学行情，不自动提交行情、计算或AI请求。无数据库/报告协议变更。
+
+2026-11-08 单股交易回放：`trade_replay.py`提供纯计算`build_trade_replay(raw, signals, result, spec, config) -> TradeReplay`，返回逐日账户/隔夜与日内盈亏、实际费用/滑点、订单事件及确定性最大回撤区间；结构化费用接口同时接收原A/H和US价格模型。校验保存信号、订单、现金/股数变化及权益勾稽，不取数或重新回测。`ui_trade_replay.py`由A/H和US历史回测共用，以会话缓存和fragment局部更新展示；选择状态独立于控件生命周期，绑定市场、代码、查询及实验指纹。切页保留位置、换实验重置，失败保留结果时显示旧结果提示。原始价K线与信号价均线分图，不更改执行算法、审计指纹、持久化、报告格式或SQLite。
+
+2026-11-07 面板/图表续修：侧栏 `ResizeObserver` 更新 `--ql-sidebar-width` 的同一帧调用现有轨道布局，消除主区仍用旧像素宽度的遮挡；图表尺寸仍交给 Streamlit 自有观察器，不重建图表或重置范围。所有 UI 图表统一经过 `ui_helpers.plotly_chart` 合并原配置并启用原生滚轮缩放；`ui_chart_interactions` 使用可替换的 document 捕获监听，仅让 Ctrl＋滚轮到达 Plotly，并阻止图表区域的浏览器页面缩放，普通滚轮保留默认页面滚动。CSS以透明度/位移呈现240ms入场，退出150ms后调用既有按钮，按面板去重连续关闭，不克隆表单；系统/根属性减弱动效守卫同时生效。无依赖、启动、schema或金融计算变更。
+
+2026-11-07 桌面体验：`ui_chat_interactions`提供输入组合事件、控件重建后的重绑定、自适应高度及会话内阅读位置管理；JavaScript仅调用既有发送按钮，付费请求仍由Python显式动作、单一待处理槽、busy与已消费请求ID防重。首次创建会话保留原阅读键别名，避免落库后滚回底部。`ui`共享拖动生命周期在Esc、取消、失焦和节点移除时回滚，不保存预览；保持四栏横向轨道。`ui_jobs`明确I/O取消仅丢弃结果，不撤回已发HTTP请求。无计算API/schema/工作区格式/依赖变化。
+
+
 2026-11-01 Academy先修返回：ui_learning使用最多32层的会话返回栈，保存来源课程ID、专题、搜索与参数；先修跳转入栈，返回恢复，不写盘。手动目录/专题/搜索及前后课导航清空旧链；课程AI摘要仍由恢复后的实验更新。
 
 2026-10-31 Academy 28课：`quant_lab.courses`注册稳定ID、专题、先修、文章和实验入口。`run_experiment(course_id, {"value": number})`返回TeachingResult（表格、ChartSpec、数值指标、百分比列和解释/可选教学报告）；模型与计算不导入Streamlit、无网络或存储副作用。内容/引用/先修环在启动与首次进入学院时校验，错误显式显示。`ui_learning`按元数据呈现，`course_chart`不依赖课程排序。原`learning.LESSONS`、`lesson_experiment`与`teaching_chart`保持8课兼容；旧数字选择映射到稳定ID而非新课程位置。SQLite/生产算法/指纹均不变。详情见docs/ACADEMY_STAGE4.md。
